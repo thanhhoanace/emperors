@@ -1,0 +1,136 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "name": "Kenney Nature Kit",
+      "url": "https://kenney.nl/assets/nature-kit",
+      "license": "CC0 1.0 Universal",
+      "licensePath": "assets/licenses/kenney_nature-kit-license.txt"
+    },
+    {
+      "name": "Kenney City Kit Roads",
+      "url": "https://kenney.nl/assets/city-kit-roads",
+      "license": "CC0 1.0 Universal",
+      "licensePath": "assets/licenses/kenney_city-kit-roads-license.txt"
+    }
+  ],
+  "models": {
+    "treePine": {
+      "path": "assets/models/nature/tree_cone.glb",
+      "category": "nature",
+      "scale": 0.08,
+      "biomes": ["mountains", "steppes", "capital"]
+    },
+    "treePineDark": {
+      "path": "assets/models/nature/tree_cone_dark.glb",
+      "category": "nature",
+      "scale": 0.08,
+      "biomes": ["mountains", "steppes", "capital"]
+    },
+    "treeBroadleaf": {
+      "path": "assets/models/nature/tree_default.glb",
+      "category": "nature",
+      "scale": 0.08,
+      "biomes": ["plains", "riverlands", "capital"]
+    },
+    "treeBlock": {
+      "path": "assets/models/nature/tree_blocks.glb",
+      "category": "nature",
+      "scale": 0.07,
+      "biomes": ["plains", "coastal", "riverlands"]
+    },
+    "treeFat": {
+      "path": "assets/models/nature/tree_fat.glb",
+      "category": "nature",
+      "scale": 0.08,
+      "biomes": ["tropical", "coastal"]
+    },
+    "bamboo": {
+      "path": "assets/models/nature/crops_bambooStageB.glb",
+      "category": "nature",
+      "scale": 0.08,
+      "biomes": ["tropical", "riverlands"]
+    },
+    "brush": {
+      "path": "assets/models/nature/plant_bushLarge.glb",
+      "category": "nature",
+      "scale": 0.075,
+      "biomes": ["plains", "riverlands", "coastal", "tropical"]
+    },
+    "grassLarge": {
+      "path": "assets/models/nature/grass_large.glb",
+      "category": "nature",
+      "scale": 0.08,
+      "biomes": ["plains", "riverlands", "steppes"]
+    },
+    "mountainTallA": {
+      "path": "assets/models/nature/rock_tallA.glb",
+      "category": "mountain",
+      "scale": 0.58
+    },
+    "mountainTallB": {
+      "path": "assets/models/nature/rock_tallB.glb",
+      "category": "mountain",
+      "scale": 0.62
+    },
+    "mountainLargeA": {
+      "path": "assets/models/nature/rock_largeA.glb",
+      "category": "mountain",
+      "scale": 0.72
+    },
+    "mountainCliffLarge": {
+      "path": "assets/models/nature/cliff_large_rock.glb",
+      "category": "mountain",
+      "scale": 0.62
+    },
+    "mountainCliff": {
+      "path": "assets/models/nature/cliff_rock.glb",
+      "category": "mountain",
+      "scale": 0.64
+    },
+    "riverStraight": {
+      "path": "assets/models/nature/ground_riverStraight.glb",
+      "category": "water",
+      "scale": 0.16
+    },
+    "riverBend": {
+      "path": "assets/models/nature/ground_riverBend.glb",
+      "category": "water",
+      "scale": 0.16
+    },
+    "roadStraight": {
+      "path": "assets/models/roads/road-straight.glb",
+      "category": "road",
+      "scale": 0.16
+    },
+    "roadBend": {
+      "path": "assets/models/roads/road-bend.glb",
+      "category": "road",
+      "scale": 0.16
+    },
+    "roadBridge": {
+      "path": "assets/models/roads/road-bridge.glb",
+      "category": "road",
+      "scale": 0.18
+    },
+    "bridgePillar": {
+      "path": "assets/models/roads/bridge-pillar.glb",
+      "category": "road",
+      "scale": 0.16
+    }
+  },
+  "textures": {
+    "grass": { "path": "assets/textures/terrain/grass.svg", "repeat": [10, 10] },
+    "grassDark": { "path": "assets/textures/terrain/grass_dark.svg", "repeat": [9, 9] },
+    "dirt": { "path": "assets/textures/terrain/dirt.svg", "repeat": [8, 8] },
+    "rock": { "path": "assets/textures/terrain/rock.svg", "repeat": [7, 7] },
+    "snow": { "path": "assets/textures/terrain/snow.svg", "repeat": [11, 11] },
+    "sand": { "path": "assets/textures/terrain/sand.svg", "repeat": [10, 10] },
+    "forest": { "path": "assets/textures/terrain/forest.svg", "repeat": [8, 8] },
+    "mud": { "path": "assets/textures/terrain/mud.svg", "repeat": [7, 7] },
+    "shore": { "path": "assets/textures/terrain/shore.svg", "repeat": [12, 3] },
+    "waterBase": { "path": "assets/textures/water/water_base.svg", "repeat": [12, 12] },
+    "waterNoise": { "path": "assets/textures/water/water_noise.svg", "repeat": [16, 16] },
+    "roadColorMap": { "path": "assets/models/roads/colormap.png", "repeat": [1, 1] }
+  }
+}

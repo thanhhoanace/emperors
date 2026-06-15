@@ -1,0 +1,57 @@
+{
+  "world": {
+    "year": 200,
+    "era": "Jian'an, Eastern Han",
+    "description": "The Han dynasty crumbles. Warlords carve the land. The Child Emperor Xian is a puppet. Coalitions form and break. This is the age of chaos — and opportunity."
+  },
+  "provinces": [
+    {"id": "si_li", "name": "Sili", "capital": "Luoyang", "owner": "neutral", "population": 800000, "fertility": 9, "strategic": true, "neighbors": ["ji", "yu", "jing", "yi"]},
+    {"id": "ji", "name": "Ji", "capital": "Ye", "owner": "cao_cao", "population": 1200000, "fertility": 8, "strategic": true, "neighbors": ["si_li", "qing", "you", "bing"]},
+    {"id": "qing", "name": "Qing", "capital": "Linzi", "owner": "cao_cao", "population": 900000, "fertility": 7, "strategic": false, "neighbors": ["ji", "xu"]},
+    {"id": "xu", "name": "Xu", "capital": "Pengcheng", "owner": "cao_cao", "population": 700000, "fertility": 8, "strategic": true, "neighbors": ["qing", "yu", "yan"]},
+    {"id": "yan", "name": "Yan", "capital": "Jibei", "owner": "cao_cao", "population": 600000, "fertility": 7, "strategic": false, "neighbors": ["xu", "yu", "ji"]},
+    {"id": "yu", "name": "Yu", "capital": "Chenliu", "owner": "cao_cao", "population": 1000000, "fertility": 9, "strategic": true, "neighbors": ["si_li", "xu", "yan", "jing", "yang"]},
+    {"id": "jing", "name": "Jing", "capital": "Xiangyang", "owner": "liu_bei", "population": 1100000, "fertility": 8, "strategic": true, "neighbors": ["si_li", "yu", "yang", "yi", "jiao", "jiang"]},
+    {"id": "yang", "name": "Yang", "capital": "Jianye", "owner": "sun_quan", "population": 900000, "fertility": 8, "strategic": true, "neighbors": ["yu", "jing", "jiao", "jiang"]},
+    {"id": "yi", "name": "Yi", "capital": "Chengdu", "owner": "liu_bei", "population": 800000, "fertility": 9, "strategic": true, "neighbors": ["si_li", "jing", "liang"]},
+    {"id": "liang", "name": "Liang", "capital": "Chang'an", "owner": "neutral", "population": 500000, "fertility": 5, "strategic": false, "neighbors": ["yi", "si_li", "bing"]},
+    {"id": "bing", "name": "Bing", "capital": "Jinyang", "owner": "neutral", "population": 400000, "fertility": 5, "strategic": false, "neighbors": ["ji", "liang"]},
+    {"id": "you", "name": "You", "capital": "Ji", "owner": "neutral", "population": 300000, "fertility": 4, "strategic": false, "neighbors": ["ji", "bing"]},
+    {"id": "jiang", "name": "Jiang", "capital": "Guangling", "owner": "sun_quan", "population": 400000, "fertility": 6, "strategic": false, "neighbors": ["jing", "yang"]},
+    {"id": "jiao", "name": "Jiao", "capital": "Panyu", "owner": "sun_quan", "population": 300000, "fertility": 6, "strategic": false, "neighbors": ["jing", "yang"]}
+  ],
+  "factions": [
+    {"id": "li_shimin", "name": "Li Shimin (Tang Taizong)", "type": "time_displaced", "color": "#3b82f6", "origin_era": "Tang 626", "personality": "decisive, meritocratic, cavalry_master, cautious_on_succession", "knowledge": ["equal_field_system", "fubing_militia", "tang_legal_code", "cavalry_tactics", "imperial_examination"], "starting_province": "bing", "stats": {"troops": 8000, "grain": 12000, "territory": 1, "loyalty": 75, "prestige": 80}},
+    {"id": "qin_shihuang", "name": "Qin Shi Huang", "type": "time_displaced", "color": "#fbbf24", "origin_era": "Qin 221 BC", "personality": "legalist, centralizing, monumental, harsh, fears_death", "knowledge": ["commandery_county_system", "standardization", "legalist_law", "mass_mobilization", "great_wall_logistics"], "starting_province": "liang", "stats": {"troops": 10000, "grain": 15000, "territory": 1, "loyalty": 50, "prestige": 95}},
+    {"id": "zhu_yuanzhang", "name": "Zhu Yuanzhang (Ming Taizu)", "type": "time_displaced", "color": "#dc2626", "origin_era": "Ming 1368", "personality": "peasant_origin, guerrilla_master, paranoid, purges_ministers, administrative_genius", "knowledge": ["weisuo_system", "baojia_surveillance", "yellow_registers", "land_reform", "anti_corruption"], "starting_province": "xu", "stats": {"troops": 7000, "grain": 10000, "territory": 1, "loyalty": 70, "prestige": 75}},
+    {"id": "liu_che", "name": "Liu Che (Han Wudi)", "type": "time_displaced", "color": "#a855f7", "origin_era": "Han 141 BC", "personality": "expansionist, confucian_patron, exhausts_treasury, late_life_superstition", "knowledge": ["state_monopolies", "cash_taxation", "confucian_statecraft", "western_regions_expansion", "xiongnu_warfare"], "starting_province": "yi", "stats": {"troops": 9000, "grain": 11000, "territory": 1, "loyalty": 65, "prestige": 85}},
+    {"id": "cao_cao", "name": "Cao Cao", "type": "historical_warlord", "color": "#16a34a", "personality": "cunning, pragmatic, values_talent, holds_emperor", "starting_provinces": ["ji", "qing", "xu", "yan", "yu"], "stats": {"troops": 180000, "grain": 300000, "territory": 5, "loyalty": 80, "prestige": 90}},
+    {"id": "liu_bei", "name": "Liu Bei", "type": "historical_warlord", "color": "#22c55e", "personality": "benevolent, patient, wins_hearts, claims_han_lineage", "starting_provinces": ["jing", "yi"], "stats": {"troops": 60000, "grain": 100000, "territory": 2, "loyalty": 85, "prestige": 75}},
+    {"id": "sun_quan", "name": "Sun Quan", "type": "historical_warlord", "color": "#f97316", "personality": "defensive, naval_master, flexible_alliances, inherits_legacy", "starting_provinces": ["yang", "jiang", "jiao"], "stats": {"troops": 80000, "grain": 150000, "territory": 3, "loyalty": 80, "prestige": 80}}
+  ],
+  "technology": {
+    "available": ["crossbow", "cavalry_saddle_stirrup_early", "wheelbarrow", "cast_iron", "paper", "bellows", "watermill", "siege_ladders", "battering_ram", "fire_oil"],
+    "unavailable": ["gunpowder", "printing_press", "compass_navigation", "stirrup_mature", "heavy_cavalry_armor", "trebuchet_counterweight", "paper_money", "examination_system_mature"]
+  },
+  "economy": {
+    "base_tax_per_pop": 0.02,
+    "grain_consumption_per_troop": 0.05,
+    "max_grain_storage_years": 3
+  },
+  "combat": {
+    "base_casualty_rate": 0.15,
+    "morale_factor": 1.5,
+    "terrain_modifiers": {"plains": 1.0, "hills": 1.2, "mountains": 1.5, "river": 1.3, "city": 1.8},
+    "cavalry_bonus_plains": 1.3,
+    "naval_bonus_river_coast": 1.4
+  },
+  "diplomacy": {
+    "alliance_max": 2,
+    "truce_duration_ticks": 4,
+    "marriage_alliance_bonus": 20
+  },
+  "victory": {
+    "unification_threshold": 12,
+    "max_ticks": 100
+  }
+}

@@ -1,0 +1,2996 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tam Quốc Loạn Nhập — 3D Simulation</title>
+  <style>
+    :root {
+      --bg: #071524;
+      --bg-canvas: #071524;
+      --panel: rgba(8, 24, 40, 0.94);
+      --panel-solid: #081828;
+      --border: #2b5272;
+      --gold: #d8b45a;
+      --gold-dim: #9b7a35;
+      --text: #f7eed4;
+      --text-dim: #c7b78c;
+      --text-muted: #8aa0ad;
+      --shadow: rgba(0, 0, 0, 0.5);
+      --stat-bar-bg: #10283d;
+      --event-border: rgba(216, 180, 90, 0.16);
+      --hover-bg: rgba(216, 180, 90, 0.12);
+      --selected-bg: rgba(35, 110, 166, 0.38);
+      --btn-bg: transparent;
+      --btn-hover-bg: #d4a843;
+      --btn-hover-color: #0a0806;
+      --eliminated-opacity: 0.4;
+    }
+
+    [data-theme="light"] {
+      --bg: #efe4c8;
+      --bg-canvas: #f3ead2;
+      --panel: rgba(248, 238, 210, 0.9);
+      --panel-solid: #f8eed2;
+      --border: #b58e45;
+      --gold: #9c6a1f;
+      --gold-dim: #6d5225;
+      --text: #1e2b28;
+      --text-dim: #4d5745;
+      --text-muted: #786749;
+      --shadow: rgba(0, 0, 0, 0.15);
+      --stat-bar-bg: #dfd0a9;
+      --event-border: rgba(110, 82, 37, 0.18);
+      --hover-bg: rgba(156, 106, 31, 0.12);
+      --selected-bg: rgba(80, 160, 190, 0.28);
+      --btn-bg: transparent;
+      --btn-hover-bg: #b8962e;
+      --btn-hover-color: #fdfbf7;
+      --eliminated-opacity: 0.5;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { overflow: hidden; background: var(--bg); font-family: 'Noto Sans SC', sans-serif; color: var(--text); transition: background 0.3s, color 0.3s; }
+    #canvas { display: block; width: 100vw; height: 100vh; background: var(--bg-canvas); }
+    #ui { position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 10; }
+    .panel { pointer-events: auto; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; color: var(--text); backdrop-filter: blur(8px); box-shadow: 0 10px 24px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.18); transition: background 0.3s, border-color 0.3s, color 0.3s; }
+    .panel h3 { font-family: 'Noto Serif SC', serif; color: var(--gold); margin-bottom: 0.75rem; font-size: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+    #topBar { position: absolute; top: 1rem; left: 50%; transform: translateX(-50%); display: flex; gap: 1rem; z-index: 20; flex-wrap: wrap; justify-content: center; }
+    #topBar .panel { min-width: 180px; text-align: center; }
+    #leftPanel { position: absolute; top: 5rem; left: 1rem; bottom: 1rem; width: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; }
+    #rightPanel { position: absolute; top: 5rem; right: 1rem; bottom: 1rem; width: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; }
+    .factionRow { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; border-radius: 4px; transition: background 0.2s; cursor: pointer; }
+    .factionRow:hover { background: var(--hover-bg); }
+    .factionRow.selected { background: var(--selected-bg); border: 1px solid var(--gold); }
+    .factionColor { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+    .factionName { flex: 1; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+    .factionStats { font-size: 0.7rem; color: var(--text-dim); font-family: monospace; }
+    .statBar { height: 4px; background: var(--stat-bar-bg); border-radius: 2px; overflow: hidden; margin: 2px 0; }
+    .statBarFill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+    .eventLog { max-height: 300px; overflow-y: auto; font-size: 0.75rem; line-height: 1.5; }
+    .eventEntry { padding: 0.25rem 0; border-bottom: 1px solid var(--event-border); display: flex; gap: 0.5rem; }
+    .eventTime { color: var(--gold); font-family: monospace; flex-shrink: 0; }
+    .eventText { color: var(--text); }
+    .eventText.combat { color: #ef4444; }
+    .eventText.diplomacy { color: #22c55e; }
+    .eventText.subterfuge { color: #a855f7; }
+    .eventText.internal { color: #3b82f6; }
+    .legend { display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.7rem; }
+    .legendItem { display: flex; align-items: center; gap: 0.25rem; }
+    .legendColor { width: 10px; height: 10px; border-radius: 2px; }
+    .speedControl { display: flex; align-items: center; gap: 0.5rem; }
+    .speedControl input { flex: 1; accent-color: var(--gold); }
+    .btn { padding: 0.4rem 1rem; border: 1px solid var(--gold); background: var(--btn-bg); color: var(--gold); border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 0.8rem; transition: all 0.2s; }
+    .btn:hover { background: var(--btn-hover-bg); color: var(--btn-hover-color); }
+    .btn.primary { background: var(--gold); color: var(--btn-hover-color); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .entityInfo { display: none; }
+    .entityInfo.visible { display: block; animation: fadeIn 0.2s; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 1200px) { #leftPanel, #rightPanel { display: none; } }
+    .theme-toggle { padding: 0.3rem 0.6rem; font-size: 0.85rem; min-width: 44px; }
+    .diplomacy-line { pointer-events: none; }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <div id="ui">
+    <div id="topBar">
+      <div class="panel" style="min-width: 200px;">
+        <div style="font-size: 0.75rem; color: var(--text-dim);">Năm <span id="yearDisplay" style="color:var(--gold);font-family:monospace">200</span> — Mùa <span id="seasonDisplay" style="color:var(--gold)">Xuân</span></div>
+        <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem;">Lượt: <span id="tickDisplay" style="color:var(--gold);font-family:monospace">0</span> — Tốc độ: <span id="speedDisplay">1.0x</span></div>
+      </div>
+      <div class="panel">
+        <div class="speedControl" style="margin-top: 0.5rem;">
+          <input type="range" id="speedSlider" min="0.1" max="5" step="0.1" value="1">
+          <button id="pauseBtn" class="btn" style="padding: 0.3rem 0.75rem;">⏸ Tạm dừng</button>
+          <button id="resetBtn" class="btn" style="padding: 0.3rem 0.75rem;">↺ Reset</button>
+          <div style="display:flex; gap:0.25rem; margin-left:0.5rem; padding-left:0.5rem; border-left:1px solid var(--border);">
+            <button id="zoomInBtn" class="btn" style="width:32px;height:32px;padding:0;font-size:14px;line-height:1" title="Zoom in">＋</button>
+            <button id="zoomOutBtn" class="btn" style="width:32px;height:32px;padding:0;font-size:14px;line-height:1" title="Zoom out">−</button>
+            <span id="zoomLevel" style="display:flex;align-items:center;padding:0 0.5rem;font-family:monospace;font-size:0.75rem;color:var(--text-dim)">100%</span>
+          </div>
+          <button id="themeBtn" class="btn theme-toggle" style="padding: 0.3rem 0.6rem;">🌙</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="leftPanel">
+      <div class="panel" style="flex: 1; display: flex; flex-direction: column;">
+        <h3>Thế Lực</h3>
+        <div id="factionList" style="flex: 1; overflow-y: auto;"></div>
+      </div>
+      <div class="panel">
+        <h3>Nhật Ký</h3>
+        <div id="eventLog" class="eventLog"></div>
+      </div>
+    </div>
+
+    <div id="rightPanel">
+      <div class="panel entityInfo" id="entityInfo">
+        <h3 id="selectedName">Chọn một thế lực</h3>
+        <div style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 0.5rem;" id="selectedType"></div>
+        <div class="statBar" style="margin: 0.5rem 0;"><div class="statBarFill" id="barTroops" style="width: 0%; background: linear-gradient(90deg, #ef4444, #f87171);"></div></div>
+        <div class="statBar" style="margin: 0.5rem 0;"><div class="statBarFill" id="barGrain" style="width: 0%; background: linear-gradient(90deg, #eab308, #facc15);"></div></div>
+        <div class="statBar" style="margin: 0.5rem 0;"><div class="statBarFill" id="barLoyalty" style="width: 0%; background: linear-gradient(90deg, #3b82f6, #60a5fa);"></div></div>
+        <div class="statBar" style="margin: 0.5rem 0;"><div class="statBarFill" id="barPrestige" style="width: 0%; background: linear-gradient(90deg, #a855f7, #c084fc);"></div></div>
+        <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.5rem;" id="selectedQuote">—</div>
+        <div style="margin-top: 0.75rem; font-size: 0.7rem; color: var(--gold);" id="selectedAction">Đang quan sát...</div>
+      </div>
+      <div class="panel">
+        <h3>Chữ Thích</h3>
+        <div class="legend" id="legend"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+    import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
+
+    console.log('Three.js loaded:', THREE.REVISION);
+
+    window.addEventListener('error', (e) => {
+      console.error('Global error:', e.error);
+      document.getElementById('canvas').style.display = 'none';
+      const errDiv = document.createElement('div');
+      errDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1612;border:2px solid #ef4444;padding:2rem;color:#f5f0e8;font-family:monospace;z-index:9999;max-width:80%';
+      errDiv.innerHTML = '<h3>Lỗi khởi tạo 3D</h3><pre>' + (e.error?.stack || e.message) + '</pre><button onclick="location.reload()" style="margin-top:1rem;padding:0.5rem 1rem;background:#d4a843;color:#0a0806;border:none;border-radius:4px;cursor:pointer">Tải lại</button>';
+      document.body.appendChild(errDiv);
+    });
+
+    // ============================================
+    // LOCAL ASSET MANIFEST - CC0 GLB + SVG textures
+    // ============================================
+    const ASSET_MANIFEST_URL = 'assets/manifest.json';
+    const ASSET_MANIFEST_FALLBACK = {
+      models: {
+        treePine: { path: 'assets/models/nature/tree_cone.glb', scale: 0.08 },
+        treePineDark: { path: 'assets/models/nature/tree_cone_dark.glb', scale: 0.08 },
+        treeBroadleaf: { path: 'assets/models/nature/tree_default.glb', scale: 0.08 },
+        treeBlock: { path: 'assets/models/nature/tree_blocks.glb', scale: 0.07 },
+        treeFat: { path: 'assets/models/nature/tree_fat.glb', scale: 0.08 },
+        bamboo: { path: 'assets/models/nature/crops_bambooStageB.glb', scale: 0.08 },
+        brush: { path: 'assets/models/nature/plant_bushLarge.glb', scale: 0.075 },
+        grassLarge: { path: 'assets/models/nature/grass_large.glb', scale: 0.08 },
+        mountainTallA: { path: 'assets/models/nature/rock_tallA.glb', scale: 0.58 },
+        mountainTallB: { path: 'assets/models/nature/rock_tallB.glb', scale: 0.62 },
+        mountainLargeA: { path: 'assets/models/nature/rock_largeA.glb', scale: 0.72 },
+        mountainCliffLarge: { path: 'assets/models/nature/cliff_large_rock.glb', scale: 0.62 },
+        mountainCliff: { path: 'assets/models/nature/cliff_rock.glb', scale: 0.64 },
+        roadBridge: { path: 'assets/models/roads/road-bridge.glb', scale: 0.18 },
+      },
+      textures: {
+        grass: { path: 'assets/textures/terrain/grass.svg', repeat: [10, 10] },
+        grassDark: { path: 'assets/textures/terrain/grass_dark.svg', repeat: [9, 9] },
+        dirt: { path: 'assets/textures/terrain/dirt.svg', repeat: [8, 8] },
+        rock: { path: 'assets/textures/terrain/rock.svg', repeat: [7, 7] },
+        snow: { path: 'assets/textures/terrain/snow.svg', repeat: [11, 11] },
+        sand: { path: 'assets/textures/terrain/sand.svg', repeat: [10, 10] },
+        forest: { path: 'assets/textures/terrain/forest.svg', repeat: [8, 8] },
+        mud: { path: 'assets/textures/terrain/mud.svg', repeat: [7, 7] },
+        shore: { path: 'assets/textures/terrain/shore.svg', repeat: [12, 3] },
+        waterBase: { path: 'assets/textures/water/water_base.svg', repeat: [12, 12] },
+        waterNoise: { path: 'assets/textures/water/water_noise.svg', repeat: [16, 16] },
+      },
+    };
+
+    const TERRAIN_TEXTURES = {
+      grass: 'assets/textures/terrain/grass.svg',
+      dirt: 'assets/textures/terrain/dirt.svg',
+      rock: 'assets/textures/terrain/rock.svg',
+      snow: 'assets/textures/terrain/snow.svg',
+      sand: 'assets/textures/terrain/sand.svg',
+      forest: 'assets/textures/terrain/forest.svg',
+      grassDark: 'assets/textures/terrain/grass_dark.svg',
+      mud: 'assets/textures/terrain/mud.svg',
+    };
+
+    // Texture tiling scales (world units per repeat)
+    const TEXTURE_TILING = {
+      grass: 30, grassDark: 25, dirt: 20, rock: 15,
+      snow: 40, sand: 50, forest: 20, mud: 15
+    };
+    // Terrain height multiplier. Mountains need enough relief to read as ranges.
+    const TERRAIN_HEIGHT_MULT = 1.15;
+
+    // Scale factor for map coordinates to Three.js units.
+    // FEATURE_SCALE keeps visual markers compact while MAP_SCALE spreads provinces out.
+    const MAP_SCALE = 22;
+    const FEATURE_SCALE = 16;
+
+    class AssetManager {
+      constructor(manifestUrl, fallbackManifest) {
+        this.manifestUrl = manifestUrl;
+        this.fallbackManifest = fallbackManifest;
+        this.manifest = fallbackManifest;
+        this.gltfLoader = new GLTFLoader();
+        this.textureLoader = new THREE.TextureLoader();
+        this.models = new Map();
+        this.textures = new Map();
+        this.failedAssets = [];
+      }
+
+      async preload() {
+        if (window.location.protocol === 'file:') {
+          console.warn('[AssetManager] file:// can block GLB/manifest loading. Use http://localhost:3000/ for full local asset rendering.');
+        }
+
+        try {
+          const response = await fetch(this.manifestUrl, { cache: 'no-store' });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          this.manifest = await response.json();
+        } catch (error) {
+          console.warn('[AssetManager] Failed to fetch assets/manifest.json; using embedded fallback manifest.', error);
+          this.manifest = this.fallbackManifest;
+        }
+
+        const modelEntries = Object.entries(this.manifest.models || {});
+        const textureEntries = Object.entries(this.manifest.textures || {});
+        const tasks = [
+          ...modelEntries.map(([id, entry]) => this.loadModelAsset(id, entry)),
+          ...textureEntries.map(([id, entry]) => this.loadTextureAsset(id, entry)),
+        ];
+        await Promise.allSettled(tasks);
+
+        if (this.failedAssets.length > 0) {
+          console.warn('[AssetManager] Some assets failed and procedural fallback will be used:', this.failedAssets);
+        } else {
+          console.log(`[AssetManager] Loaded ${this.models.size} models and ${this.textures.size} textures.`);
+        }
+      }
+
+      async loadModelAsset(id, entry) {
+        try {
+          const gltf = await this.gltfLoader.loadAsync(entry.path);
+          this.normalizeModel(gltf.scene);
+          this.models.set(id, gltf.scene);
+        } catch (error) {
+          this.failedAssets.push({ id, path: entry.path, type: 'model', error: error.message });
+        }
+      }
+
+      async loadTextureAsset(id, entry) {
+        try {
+          const texture = await this.textureLoader.loadAsync(entry.path);
+          texture.colorSpace = THREE.SRGBColorSpace;
+          texture.wrapS = THREE.RepeatWrapping;
+          texture.wrapT = THREE.RepeatWrapping;
+          if (Array.isArray(entry.repeat)) texture.repeat.set(entry.repeat[0], entry.repeat[1]);
+          this.textures.set(id, texture);
+        } catch (error) {
+          this.failedAssets.push({ id, path: entry.path, type: 'texture', error: error.message });
+        }
+      }
+
+      normalizeModel(root) {
+        root.traverse(child => {
+          if (!child.isMesh) return;
+          child.castShadow = false;
+          child.receiveShadow = false;
+          if (Array.isArray(child.material)) {
+            child.material = child.material.map(mat => this.normalizeMaterial(mat));
+          } else if (child.material) {
+            child.material = this.normalizeMaterial(child.material);
+          }
+        });
+      }
+
+      normalizeMaterial(material) {
+        const cloned = material.clone();
+        if ('roughness' in cloned) cloned.roughness = Math.max(cloned.roughness ?? 0.8, 0.78);
+        if ('metalness' in cloned) cloned.metalness = Math.min(cloned.metalness ?? 0, 0.08);
+        return cloned;
+      }
+
+      getTexture(id) {
+        return this.textures.get(id) || null;
+      }
+
+      createModelInstance(id, options = {}) {
+        const source = this.models.get(id);
+        if (!source) return null;
+        const entry = this.manifest.models?.[id] || {};
+        const instance = cloneSkeleton(source);
+        const scale = options.worldScale ?? ((options.scale ?? entry.scale ?? 1) * FEATURE_SCALE);
+
+        if (Array.isArray(scale)) instance.scale.set(scale[0], scale[1], scale[2]);
+        else instance.scale.setScalar(scale);
+
+        if (options.position) instance.position.copy(options.position);
+        if (typeof options.rotationY === 'number') instance.rotation.y = options.rotationY;
+
+        if (options.tint) {
+          const tint = new THREE.Color(options.tint);
+          instance.traverse(child => {
+            if (!child.isMesh || !child.material?.color) return;
+            child.material = child.material.clone();
+            child.material.color.lerp(tint, 0.35);
+          });
+        }
+
+        return instance;
+      }
+    }
+
+    const assetManager = new AssetManager(ASSET_MANIFEST_URL, ASSET_MANIFEST_FALLBACK);
+    await assetManager.preload();
+
+    // ============================================
+    // EXPANDED GEOGRAPHY - Three Kingdoms + Neighbors
+    // Covers: China proper, East Sea, Tibet, Mongolia, Southeast Asia
+    // Coordinates in map units (1 unit ≈ 100km)
+    // Origin near Luoyang, X=East, Z=South
+    // ============================================
+    // ============================================
+    // EXPANDED PROVINCES - Three Kingdoms + Neighbors
+    // ~30 provinces covering China + Neighbors
+    // Coordinates expanded: X=East, Z=South, 1 unit ≈ 100km
+    // Origin near Luoyang
+    // ============================================
+    const PROVINCES = [
+      // === CHINA PROPER - Three Kingdoms Core ===
+      // NORTH - Wei territory
+      {id:'si_li', name:'Sili 司隸 (Lạc Dương 洛陽)', pos:[0, -0.5], neighbors:['ji','yu','jing','yi','henei'], strategic:true, terrain:'capital', capital:'Lạc Dương'},
+      {id:'ji', name:'Jizhou 冀州 (Cơ - Dã 鄴)', pos:[-2.0, -3.5], neighbors:['si_li','qing','you','bing','henei','guangyang'], strategic:true, terrain:'plains', capital:'Dã 鄴'},
+      {id:'qing', name:'Qingzhou 青州 (Thanh - Lâm Tú 臨淄)', pos:[-1.0, -4.5], neighbors:['ji','xu','beihai','donglai'], strategic:false, terrain:'coastal', capital:'Lâm Tú 臨淄'},
+      {id:'yan', name:'Yanzhou 兗州 (Yển - Cổ Thành 鄄城)', pos:[-2.3, -2.0], neighbors:['xu','yu','ji','taishan'], strategic:false, terrain:'plains', capital:'Cổ Thành 鄄城'},
+      {id:'yu', name:'Yuzhou 豫州 (Dư - Trần Lưu 陳留)', pos:[-0.8, -1.8], neighbors:['si_li','xu','yan','jing','yang','henei','ruannan'], strategic:true, terrain:'plains', capital:'Trần Lưu 陳留'},
+
+      // CENTRAL
+      {id:'xu', name:'Xuzhou 徐州 (Tự - Bằng昌 鄒平)', pos:[0.2, -2.8], neighbors:['qing','yu','yan','taishan','pengcheng'], strategic:true, terrain:'plains', capital:'Bằng昌 鄒平'},
+
+      // WEST - Shu/Liang
+      {id:'yi', name:'Yizhou 益州 (Ích - Thành Đô 成都)', pos:[3.8, 0.8], neighbors:['si_li','jing','liang','ba','hanzhong','yuexi'], strategic:true, terrain:'basin', capital:'Thành Đô 成都'},
+      {id:'liang', name:'Liangzhou 凉州 (Lương - Trương An 長安)', pos:[2.2, -2.2], neighbors:['yi','si_li','bing','hanzhong','wudu','jinyang'], strategic:true, terrain:'mountains', capital:'Trương An 長安'},
+      {id:'bing', name:'Bingzhou 并州 (Bình - Thái Nguyên 太原)', pos:[1.2, -3.8], neighbors:['ji','liang','yanmen','shuofang'], strategic:false, terrain:'mountains', capital:'Thái Nguyên 太原'},
+
+      // SOUTH - Wu territory
+      {id:'jing', name:'Jingzhou 荊州 (Tinh - Tương Dương 襄陽)', pos:[1.8, 1.5], neighbors:['si_li','yu','yang','yi','jiao','jiang','ruannan','hanzhong'], strategic:true, terrain:'riverlands', capital:'Tương Dương 襄陽'},
+      {id:'yang', name:'Yangzhou 揚州 (Dương - Kiến Nghiệp 建業)', pos:[3.2, 1.2], neighbors:['yu','jing','jiao','jiang','kuaiji','danyang'], strategic:true, terrain:'riverlands', capital:'Kiến Nghiệp 建業'},
+      {id:'jiang', name:'Jiangzhou 江州 (Giang - Quảng Lăng 廣陵)', pos:[4.0, 1.8], neighbors:['jing','yang','jiao','po yang','luling'], strategic:false, terrain:'coastal', capital:'Quảng Lăng 廣陵'},
+      {id:'jiao', name:'Jiaozhou 交州 (Giao - Phiên Ngung 番禺)', pos:[4.5, 4.2], neighbors:['jing','yang','jiang','nanhai','cangwu'], strategic:false, terrain:'tropical', capital:'Phiên Ngung 番禺'},
+
+      // NORTHERN FRONTIER
+      {id:'you', name:'Youzhou 幽州 (Du - Cửu Châu 薊)', pos:[-2.8, -5.0], neighbors:['ji','bing','liaoxi','guangyang'], strategic:false, terrain:'steppes', capital:'Cửu Châu 薊'},
+
+      // === ADDITIONAL CHINESE PROVINCES ===
+      {id:'henei', name:'Henei 河內', pos:[-1.0, -1.0], neighbors:['si_li','ji','yu','hongnong','hongnong2'], terrain:'plains', capital:'H reçut'},
+      {id:'guangyang', name:'Guangyang 廣陽', pos:[-2.5, -4.0], neighbors:['ji','you','liaoxi'], terrain:'plains', capital:'Guangyang'},
+      {id:'beihai', name:'Béhải 北海', pos:[-0.5, -5.0], neighbors:['qing','donglai'], terrain:'coastal', capital:'Béhải'},
+      {id:'donglai', name:'Đông Lai 東萊', pos:[0.5, -5.5], neighbors:['qing','beihai'], terrain:'coastal', capital:'Đông Lai'},
+      {id:'taishan', name:'Thái Sơn 泰山', pos:[-1.5, -3.0], neighbors:['yan','xu','pengcheng'], terrain:'mountains', capital:'Thái Sơn'},
+      {id:'pengcheng', name:'Bằng Chang 彭城', pos:[0.5, -2.5], neighbors:['xu','taishan'], terrain:'plains', capital:'Bằng Chang'},
+      {id:'ruannan', name:'Ruannan 汝南', pos:[0.5, -0.5], neighbors:['yu','jing','yang','hongnong'], terrain:'plains', capital:'Ruannan'},
+      {id:'hongnong', name:'Hồng Nông 弘農', pos:[-0.5, -1.5], neighbors:['si_li','henei','ruannan','hanzhong'], terrain:'plains', capital:'Hồng Nông'},
+      {id:'hanzhong', name:'Hán Trung 漢中', pos:[2.0, 0.0], neighbors:['liang','yi','jing','ruannan','ba'], terrain:'mountains', capital:'Hán Trung'},
+      {id:'ba', name:'Ba 巴郡', pos:[3.0, 1.0], neighbors:['yi','hanzhong','jiangyang'], terrain:'riverlands', capital:'Ba'},
+      {id:'jiangyang', name:'Giang Dương 江陽', pos:[2.5, 1.8], neighbors:['ba','jiang','yizhou_south'], terrain:'riverlands', capital:'Giang Dương'},
+      {id:'yuexi', name:'Việt Tự 越嶲', pos:[3.5, 2.0], neighbors:['yi','jiao'], terrain:'mountains', capital:'Việt Tự'},
+      {id:'wudu', name:'Vũ Đô 武都', pos:[1.5, -1.5], neighbors:['liang','hanzhong','tian shui'], terrain:'mountains', capital:'Vũ Đô'},
+      {id:'tian_shui', name:'Thiên Thủy 天水', pos:[1.0, -2.0], neighbors:['liang','wudu','and ing'], terrain:'mountains', capital:'Thiên Thủy'},
+      {id:'and ing', name:'An Ding 安定', pos:[0.5, -3.0], neighbors:['tian_shui','beidi'], terrain:'plains', capital:'An Ding'},
+      {id:'beidi', name:'Bắc Địa 北地', pos:[0.0, -4.0], neighbors:['an ding','shuofang'], terrain:'steppes', capital:'Bắc Địa'},
+      {id:'shuofang', name:'Thoát Phường 朔方', pos:[-0.5, -4.5], neighbors:['beidi','bing','wuyuan'], terrain:'steppes', capital:'Thoát Phường'},
+      {id:'wuyuan', name:'Ngũ Nguyên 五原', pos:[-1.0, -5.0], neighbors:['shuofang','you'], terrain:'steppes', capital:'Ngũ Nguyên'},
+      {id:'yanmen', name:'Yến Môn 雁門', pos:[0.5, -4.0], neighbors:['bing','daijun'], terrain:'mountains', capital:'Yến Môn'},
+      {id:'daijun', name:'Đại Quân 代郡', pos:[-0.5, -4.5], neighbors:['yanmen','shanggu'], terrain:'mountains', capital:'Đại Quân'},
+      {id:'shanggu', name:'Thượng Cốc 上谷', pos:[-1.0, -5.0], neighbors:['daijun','guangyang'], terrain:'mountains', capital:'Thượng Cốc'},
+      {id:'liaoxi', name:'Liêu Tây 遼西', pos:[-2.0, -5.5], neighbors:['guangyang','you','liaodong'], terrain:'steppes', capital:'Liêu Tây'},
+      {id:'liaodong', name:'Liêu Đông 遼東', pos:[-1.5, -6.5], neighbors:['liaoxi','xuantu'], terrain:'steppes', capital:'Liêu Đông'},
+      {id:'xuantu', name:'Huyền Đô 玄菟', pos:[-1.0, -7.0], neighbors:['liaodong'], terrain:'mountains', capital:'Huyền Đô'},
+      {id:'danyang', name:'Đan Dương 丹陽', pos:[3.8, 1.0], neighbors:['yang','kuaiji'], terrain:'riverlands', capital:'Đan Dương'},
+      {id:'kuaiji', name:'Khuiji 會稽', pos:[4.5, 0.5], neighbors:['yang','danyang','linhai'], terrain:'coastal', capital:'Khuiji'},
+      {id:'linhai', name:'Lâm Hải 臨海', pos:[5.0, 0.0], neighbors:['kuaiji','yongjia'], terrain:'coastal', capital:'Lâm Hải'},
+      {id:'yongjia', name:'Vĩnh Gia 永嘉', pos:[5.5, 0.5], neighbors:['linhai','wuzhou'], terrain:'coastal', capital:'Vĩnh Gia'},
+      {id:'wuzhou', name:'Ngũ Châu 吳州', pos:[5.8, 1.0], neighbors:['yongjia','fuzhou'], terrain:'coastal', capital:'Ngũ Châu'},
+      {id:'fuzhou', name:'Phú Châu 福州', pos:[6.0, 1.5], neighbors:['wuzhou'], terrain:'coastal', capital:'Phú Châu'},
+      {id:'po yang', name:'Bạc Giang 鄱陽', pos:[4.2, 1.0], neighbors:['jiang','luling','yuzhang'], terrain:'riverlands', capital:'Bạc Giang'},
+      {id:'luling', name:'Lữ Ling 廬陵', pos:[4.0, 0.5], neighbors:['po yang','yuzhang','jian an'], terrain:'riverlands', capital:'Lữ Ling'},
+      {id:'yuzhang', name:'Dương Trương 豫章', pos:[4.5, 0.0], neighbors:['po yang','luling','jian an','nankang'], terrain:'riverlands', capital:'Dương Trương'},
+      {id:'jian an', name:'Giản An 建安', pos:[5.0, 0.0], neighbors:['yuzhang','luling','fuzhou'], terrain:'coastal', capital:'Giản An'},
+      {id:'nankang', name:'Nam Cang 南康', pos:[4.8, -0.5], neighbors:['yuzhang','gan zhou'], terrain:'riverlands', capital:'Nam Cang'},
+      {id:'gan zhou', name:'Càn Châu 贛州', pos:[4.5, -1.0], neighbors:['nankang','nanxiong'], terrain:'mountains', capital:'Càn Châu'},
+      {id:'nanxiong', name:'Nam Hùng 南雄', pos:[4.5, -2.0], neighbors:['gan zhou','nan hai'], terrain:'mountains', capital:'Nam Hùng'},
+      {id:'nan hai', name:'Nam Hải 南海', pos:[4.8, 3.5], neighbors:['jiao','cangwu','hoan'], terrain:'tropical', capital:'Phiên Ngung (Nam Hải)'},
+      {id:'cangwu', name:'Cang Ngwu 蒼梧', pos:[4.0, 3.8], neighbors:['nan hai','goulong'], terrain:'tropical', capital:'Cang Ngwu'},
+      {id:'goulong', name:'Câu Long 九真', pos:[3.5, 4.5], neighbors:['cangwu','ri ninh'], terrain:'tropical', capital:'Câu Long'},
+      {id:'ri ninh', name:'Nhật Ninh 日南', pos:[3.0, 5.0], neighbors:['goulong'], terrain:'tropical', capital:'Nhật Ninh'},
+
+      // === TIBET / WESTERN REGIONS ===
+      {id:'tibet_e', name:'Tây Ninh (Tibet Đông)', pos:[5.0, -1.0], neighbors:['yi','tibet_c'], terrain:'mountains', capital:'Changdu'},
+      {id:'tibet_c', name:'Tây Tạng (Trung Tâm)', pos:[4.0, -2.5], neighbors:['tibet_e','tibet_w','qiang'], terrain:'mountains', capital:'Lhasa'},
+      {id:'tibet_w', name:'Tây Tạng (Tây)', pos:[3.0, -3.5], neighbors:['tibet_c','qiang'], terrain:'mountains', capital:'Shigatse'},
+      {id:'qiang', name:'Qiang 羌 (Tây Tạng Đông Nam)', pos:[3.5, -1.5], neighbors:['yi','liang','tibet_c','tibet_w'], terrain:'mountains', capital:'Qiang'},
+
+      // === MONGOLIA / NORTHERN STEPPES ===
+      {id:'mongolia_s', name:'Mông Cổ (Nam)', pos:[-3.0, -7.0], neighbors:['you','mongolia_c'], terrain:'steppes', capital:'Ulaanbaatar (Nam)'},
+      {id:'mongolia_c', name:'Mông Cổ (Trung Tâm)', pos:[-2.5, -9.0], neighbors:['mongolia_s','mongolia_n'], terrain:'steppes', capital:'Ulaanbaatar'},
+      {id:'mongolia_n', name:'Mông Cổ (Bắc)', pos:[-2.0, -11.0], neighbors:['mongolia_c'], terrain:'steppes', capital:'Mông Cổ Bắc'},
+
+      // === KOREA ===
+      {id:'goguryeo', name:'Cao C麗 (Cao Câu Lý)', pos:[-3.0, -6.0], neighbors:['you','buyeo'], terrain:'mountains', capital:'Pyongyang'},
+      {id:'buyeo', name:'Bùy Déc', pos:[-3.5, -5.5], neighbors:['goguryeo','okjeo'], terrain:'mountains', capital:'Buyeo'},
+      {id:'okjeo', name:'Ngọc Thú', pos:[-3.0, -5.0], neighbors:['buyeo','ye'], terrain:'mountains', capital:'Okjeo'},
+      {id:'ye', name:'Diếp', pos:[-2.5, -5.5], neighbors:['okjeo','samhan'], terrain:'steppes', capital:'Ye'},
+      {id:'samhan', name:'Sam Hán (Ba Hán)', pos:[-2.0, -5.0], neighbors:['ye','silla','baekje','gaya'], terrain:'plains', capital:'Samhan'},
+      {id:'silla', name:'Tân La', pos:[-1.5, -4.5], neighbors:['samhan','gaya'], terrain:'mountains', capital:'Gyeongju'},
+      {id:'baekje', name:'Baekje', pos:[-2.0, -4.0], neighbors:['samhan','gaya'], terrain:'plains', capital:'Buyeo (Baekje)'},
+      {id:'gaya', name:'Gaya', pos:[-1.8, -4.5], neighbors:['baekje','silla','samhan'], terrain:'plains', capital:'Gimhae'},
+
+      // === VIETNAM / SOUTHEAST ASIA ===
+      {id:'dai_viet', name:'Đại Việt (Bắc)', pos:[3.5, 5.5], neighbors:['jiao','champa','dai_viet_c'], terrain:'tropical', capital:'Thăng Long'},
+      {id:'dai_viet_c', name:'Đại Việt (Trung)', pos:[3.0, 6.5], neighbors:['dai_viet','dai_viet_n','champa'], terrain:'tropical', capital:'Đại Việt Trung'},
+      {id:'dai_viet_n', name:'Đại Việt (Nam)', pos:[2.5, 7.5], neighbors:['dai_viet_c','champa'], terrain:'tropical', capital:'Đại Việt Nam'},
+      {id:'champa', name:'Chiêm Thành', pos:[3.5, 7.0], neighbors:['dai_viet_c','dai_viet_n','khmer'], terrain:'tropical', capital:'Vijaya'},
+      {id:'khmer', name:'Chenla (Cao Miện)', pos:[2.5, 8.0], neighbors:['champa','funan'], terrain:'tropical', capital:'Sambor'},
+      {id:'funan', name:'Phù Nam', pos:[2.0, 9.0], neighbors:['khmer','malay'], terrain:'tropical', capital:'Óc Eo'},
+      {id:'malay', name:'Malay Peninsula', pos:[1.5, 10.0], neighbors:['funan','srivijaya'], terrain:'tropical', capital:'Kedah'},
+      {id:'srivijaya', name:'Srivijaya', pos:[1.0, 11.0], neighbors:['malay','java'], terrain:'tropical', capital:'Palembang'},
+      {id:'java', name:'Java', pos:[0.5, 12.0], neighbors:['srivijaya'], terrain:'tropical', capital:'Mataram'},
+    ];
+
+    // Strategic Passes (关隘) - Critical chokepoints
+    const STRATEGIC_PASSES = [
+      {name:'Hangu Pass 潼關', pos:[1.0, -2.5], province:'si_li', connects:['si_li','liang'], desc:'Key pass guarding Luoyang from West'},
+      {name:'Hulao Pass 虎牢關', pos:[-0.5, -2.0], province:'si_li', connects:['si_li','yu'], desc:'Gateway to Luoyang from East'},
+      {name:'Tong Pass 潼關', pos:[1.5, -2.2], province:'si_li', connects:['si_li','liang'], desc:'Guards Yellow River crossing'},
+      {name:'Wu Pass 武關', pos:[0.5, 0.5], province:'jing', connects:['jing','si_li','yi'], desc:'Entry to Jingzhou from North'},
+      {name:'Jiameng Pass 劍門關', pos:[3.0, 0.5], province:'yi', connects:['yi','liang'], desc:'Guards Sichuan Basin from North'},
+      {name:'Kui Pass 夔關', pos:[2.5, 1.8], province:'jing', connects:['jing','yang'], desc:'Yangtze river gate'},
+      {name:'Qi Pass 祁關', pos:[-1.5, -3.0], province:'ji', connects:['ji','you'], desc:'Northern frontier pass'},
+      {name:'San Pass 三關', pos:[-2.0, -1.5], province:'ji', connects:['ji','yan'], desc:'Mountain pass in Taihang'},
+      {name:'Gu Pass 谷關', pos:[2.8, 1.0], province:'jing', connects:['jing','yi'], desc:'Yangtze Three Gorges entrance'},
+    ];
+
+    // Major Rivers - flat ribbon style on terrain
+    const RIVERS = [
+      {name:'Trường Giang 長江', color:0x5a8ab0, width:1.0, path:[
+        [3.8,0.8],[3.5,1.0],[3.2,1.2],[2.8,1.5],[2.5,1.8],
+        [2.0,1.6],[1.8,1.5],[2.2,1.3],[2.8,1.2],[3.2,1.2],
+        [3.6,1.4],[4.0,1.8],[4.2,2.0],
+      ]},
+      {name:'Hán Thủy 漢水', color:0x6a9ab8, width:0.4, path:[
+        [2.0,0.0],[1.9,0.5],[1.8,1.0],[1.8,1.5],
+      ]},
+      {name:'Hoàng Hà 黃河', color:0x9a8a5a, width:0.8, path:[
+        [2.2,-2.2],[1.8,-2.8],[1.2,-3.2],[0.5,-3.0],
+        [0.0,-2.5],[-0.5,-2.8],[-1.0,-3.2],[-1.5,-3.5],
+      ]},
+      {name:'Hoài Thủy 淮水', color:0x6a9ab8, width:0.35, path:[
+        [1.0,-1.0],[0.5,-1.5],[0.2,-2.0],[-0.2,-2.8],
+      ]},
+      {name:'Lạc Thủy 洛水', color:0x7aaac0, width:0.3, path:[
+        [0.8,-1.2],[0.4,-0.8],[0,-0.5],
+      ]},
+      {name:'Châu Giang 珠江', color:0x6a9ab8, width:0.35, path:[
+        [3.8,3.5],[4.0,3.8],[4.5,4.2],[4.3,4.6],
+      ]},
+    ];
+
+    // Historical Roads connecting citadels (ancient military/trade routes)
+    const HISTORICAL_ROADS = [
+      {name:'Hàm Cốc Đạo 函谷道', type:'major', path:[[0,-0.5],[0.5,-1.0],[1.0,-1.5],[1.5,-2.0],[2.2,-2.2]]},
+      {name:'Bắc Đạo 北道', type:'major', path:[[0,-0.5],[-0.5,-1.2],[-1.0,-2.0],[-1.5,-2.8],[-2.0,-3.5]]},
+      {name:'Đông Đạo 東道', type:'major', path:[[0,-0.5],[-0.4,-1.0],[-0.8,-1.8],[-1.5,-2.2],[-2.3,-2.0]]},
+      {name:'Nam Đạo 南道', type:'major', path:[[0,-0.5],[0.5,0.0],[1.0,0.5],[1.5,1.0],[1.8,1.5]]},
+      {name:'Thục Đạo 蜀道', type:'major', path:[[2.2,-2.2],[2.0,-1.5],[2.0,-0.5],[2.0,0.0],[2.5,0.3],[3.0,0.5],[3.5,0.7],[3.8,0.8]]},
+      {name:'Giang Đông Đạo', type:'major', path:[[1.8,1.5],[2.2,1.4],[2.8,1.3],[3.2,1.2]]},
+      {name:'U Châu Đạo', type:'minor', path:[[-2.0,-3.5],[-2.2,-4.0],[-2.5,-4.5],[-2.8,-5.0]]},
+      {name:'Thanh Từ Đạo', type:'minor', path:[[0.2,-2.8],[-0.3,-3.5],[-0.8,-4.0],[-1.0,-4.5]]},
+      {name:'Đông Nam Đạo', type:'minor', path:[[3.2,1.2],[3.8,1.0],[4.2,0.8],[4.5,0.5]]},
+      {name:'Lĩnh Nam Đạo', type:'minor', path:[[1.8,1.5],[2.5,2.2],[3.2,3.0],[4.0,3.8],[4.5,4.2]]},
+      {name:'Ba Thục Đạo', type:'minor', path:[[3.8,0.8],[3.2,1.0],[2.5,1.5],[1.8,1.5]]},
+      {name:'Tần Lũng Đạo', type:'minor', path:[[1.2,-3.8],[1.5,-3.2],[1.8,-2.8],[2.2,-2.2]]},
+    ];
+
+    // Mountain Ranges with peaks
+    const MOUNTAINS = [
+      {name:'Qinling 秦嶺 (Tần Lĩnh)', color:0x6b5b4a, peaks:[
+        [1.8, -1.5], [2.2, -1.0], [2.5, -0.5], [2.8, 0.0], [3.0, 0.5], [3.2, 1.0]
+      ]},
+      {name:'Taihang 太行 (Thái Hành)', color:0x5d4e3d, peaks:[
+        [-1.2, -3.0], [-1.0, -2.5], [-0.8, -2.0], [-0.5, -1.5], [0.0, -1.0]
+      ]},
+      {name:'Daba 大巴 (Đại Bạt)', color:0x5d4e3d, peaks:[
+        [2.5, 1.5], [2.8, 1.0], [3.0, 0.5], [3.2, 0.0]
+      ]},
+      {name:'Wushan 巫山 (Wu Sơn)', color:0x6b5b4a, peaks:[
+        [2.2, 1.8], [2.5, 1.3], [2.8, 1.0]
+      ]},
+      {name:'Dongbei Mountains 東北山脈', color:0x4a3d30, peaks:[
+        [-2.5, -4.8], [-2.0, -4.2], [-1.5, -3.8]
+      ]},
+      {name:'Emei 峨眉山', color:0x7a6a5a, peaks:[[3.8, -0.2]]},
+      {name:'Huashan 華山', color:0x7a6a5a, peaks:[[1.5, -2.0]]},
+      {name:'Taishan 泰山', color:0x7a6a5a, peaks:[[-1.0, -4.0]]},
+    ];
+
+    // Coastline
+    const COASTLINE = [-2.5,-5.2, -1.0,-4.8, 0.0,-4.0, 0.5,-3.2, 1.5,-2.0, 2.2,-1.0, 3.2,-0.5, 4.0,0.8, 4.5,2.0, 4.8,4.2, 4.3,4.8, 3.8,5.0, 3.0,4.2, 2.5,3.0];
+
+    // Major Cities / Citadels (with historical accuracy from Total War)
+    const CITADELS = [
+      // Capitals & Major Cities
+      {name:'Lạc Dương 洛陽', pos:[0, -0.5], province:'si_li', type:'capital', owner:'neutral', size:1.4, desc:'Han Dynasty Capital'},
+      {name:'Dã 鄴', pos:[-2.0, -3.5], province:'ji', type:'capital', owner:'cao_cao', size:1.4, desc:'Wei Capital (Cao Cao)'},
+      {name:'Trương An 長安', pos:[2.2, -2.2], province:'liang', type:'capital', owner:'qin_shihuang', size:1.4, desc:'Ancient Capital'},
+      {name:'Thành Đô 成都', pos:[3.8, 0.8], province:'yi', type:'capital', owner:'liu_che', size:1.4, desc:'Shu Han Capital'},
+      {name:'Tương Dương 襄陽', pos:[1.8, 1.5], province:'jing', type:'capital', owner:'liu_bei', size:1.4, desc:'Jingzhou Capital'},
+      {name:'Kiến Nghiệp 建業', pos:[3.2, 1.2], province:'yang', type:'capital', owner:'sun_quan', size:1.4, desc:'Wu Capital'},
+
+      // Major Cities
+      {name:'Bằng昌 鄒平', pos:[0.2, -2.8], province:'xu', type:'city', owner:'', size:0.9},
+      {name:'Cổ Thành 鄄城', pos:[-2.3, -2.0], province:'yan', type:'city', owner:'', size:0.9},
+      {name:'Trần Lưu 陳留', pos:[-0.8, -1.8], province:'yu', type:'city', owner:'', size:0.9},
+      {name:'Lâm Tú 臨淄', pos:[-1.0, -4.5], province:'qing', type:'city', owner:'', size:0.9},
+      {name:'Cửu Châu 薊', pos:[-2.8, -5.0], province:'you', type:'city', owner:'', size:0.9},
+      {name:'Thái Nguyên 太原', pos:[1.2, -3.8], province:'bing', type:'city', owner:'', size:0.9},
+      {name:'Quảng Lăng 廣陵', pos:[4.0, 1.8], province:'jiang', type:'city', owner:'', size:0.9},
+      {name:'Phiên Ngung 番禺', pos:[4.5, 4.2], province:'jiao', type:'city', owner:'', size:0.9},
+    ];
+
+    // Commanderies (from Total War) for province ownership
+    const COMMANDERIES = PROVINCES.map(p => ({
+      province: p.id,
+      name: p.name,
+      capital: p.capital,
+      terrain: p.terrain,
+      strategic: p.strategic,
+    }));
+
+    // Factions - 7 leaders (4 time-displaced + 3 historical)
+    const FACTIONS = [
+      {id:'li_shimin', name:'Lý Thế Dân (Đường Thái Tông)', color:0x3b82f6, type:'time_displaced', start:'bing', troops:8000, grain:12000, loyalty:75, prestige:80, personality:'Kỵ binh, trọng tài, quyết đoán'},
+      {id:'qin_shihuang', name:'Tần Thủy Hoàng', color:0xfbbf24, type:'time_displaced', start:'liang', troops:10000, grain:15000, loyalty:50, prestige:95, personality:'Pháp trị, tập quyền, hà khắc'},
+      {id:'zhu_yuanzhang', name:'Chu Nguyên Chương (Minh Thái Tổ)', color:0xdc2626, type:'time_displaced', start:'xu', troops:7000, grain:10000, loyalty:70, prestige:75, personality:'Du kích, đa nghi, cải cách đất đai'},
+      {id:'liu_che', name:'Lưu Triệt (Hán Vũ Đế)', color:0xa855f7, type:'time_displaced', start:'yi', troops:9000, grain:11000, loyalty:65, prestige:85, personality:'Bành trúng, độc tài, cưng Nho'},
+      {id:'cao_cao', name:'Tào Tháo', color:0x16a34a, type:'historical', start:['ji','qing','xu','yan','yu'], troops:180000, grain:300000, loyalty:80, prestige:90, personality:'Gian hùng, nắm Hoàng đế, tân điền'},
+      {id:'liu_bei', name:'Lưu Bị', color:0x22c55e, type:'historical', start:['jing','yi'], troops:60000, grain:100000, loyalty:85, prestige:75, personality:'Nhân nghĩa, kiên nhẫn, hoàng tộc'},
+      {id:'sun_quan', name:'Tôn Quyền', color:0xf97316, type:'historical', start:['yang','jiang','jiao'], troops:80000, grain:150000, loyalty:80, prestige:80, personality:'Thủy quân, liên minh linh hoạt, thủ thành'},
+    ];
+
+    const SEASONS = ['Xuân', 'Hạ', 'Thu', 'Đông'];
+
+    // ============================================
+    // TEXTURE LOADING
+    // ============================================
+    const textureLoader = new THREE.TextureLoader();
+    const terrainTextures = {};
+    const textureKeys = ['grass', 'grassDark', 'dirt', 'rock', 'snow', 'sand', 'forest', 'mud'];
+    
+    // Fallback procedural texture generator
+    function createFallbackTexture(color, size = 256) {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const imageData = ctx.createImageData(size, size);
+      const data = imageData.data;
+      
+      for (let i = 0; i < size * size; i++) {
+        const x = (i % size) / size;
+        const y = Math.floor(i / size) / size;
+        const noise = (Math.sin(x * 20) * Math.cos(y * 20) + Math.sin(x * 50) * Math.cos(y * 50) * 0.3) * 0.5;
+        const r = Math.floor((color.r + noise) * 255);
+        const g = Math.floor((color.g + noise) * 255);
+        const b = Math.floor((color.b + noise) * 255);
+        data[i * 4] = r;
+        data[i * 4 + 1] = g;
+        data[i * 4 + 2] = b;
+        data[i * 4 + 3] = 255;
+      }
+      ctx.putImageData(imageData, 0, 0);
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.minFilter = THREE.LinearMipmapLinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      tex.generateMipmaps = true;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function configureTerrainTexture(texture, repeat = 1) {
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.minFilter = THREE.LinearMipmapLinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.generateMipmaps = true;
+      texture.repeat.set(repeat, repeat);
+	      if (renderer?.capabilities?.getMaxAnisotropy) {
+	        texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+	      }
+	      const image = texture.image;
+	      const hasImageData = image && (image.data || image.width || image.videoWidth || image.complete);
+	      if (hasImageData) texture.needsUpdate = true;
+	    }
+    
+    const fallbackColors = {
+      grass: new THREE.Color(0x78a844), grassDark: new THREE.Color(0x456f35),
+      dirt: new THREE.Color(0xa6743e), rock: new THREE.Color(0x8c7f70),
+      snow: new THREE.Color(0xf1eee2), sand: new THREE.Color(0xd7b86f),
+      forest: new THREE.Color(0x2f7c42), mud: new THREE.Color(0x7a5a35),
+    };
+    
+    for (const key of textureKeys) {
+      // Try CDN first, fallback to procedural
+      const url = TERRAIN_TEXTURES[key];
+      if (url) {
+        const tex = textureLoader.load(url,
+          (loadedTex) => {
+            loadedTex.colorSpace = THREE.SRGBColorSpace;
+            const tile = TEXTURE_TILING[key] || 30;
+            configureTerrainTexture(loadedTex, tile);
+            terrainTextures[key] = loadedTex;
+          },
+          undefined,
+          (err) => {
+            console.warn(`Failed to load texture ${key}, using fallback`);
+            const fallbackTex = createFallbackTexture(fallbackColors[key]);
+            configureTerrainTexture(fallbackTex, TEXTURE_TILING[key] || 30);
+            terrainTextures[key] = fallbackTex;
+          }
+        );
+        terrainTextures[key] = tex;
+      } else {
+        const fallbackTex = createFallbackTexture(fallbackColors[key]);
+        configureTerrainTexture(fallbackTex, TEXTURE_TILING[key] || 30);
+        terrainTextures[key] = fallbackTex;
+      }
+    }
+
+    // Generate procedural splat map (RGBA channels = different terrain types)
+    function generateSplatMap(width = 1024, height = 1024) {
+      const data = new Uint8Array(width * height * 4);
+      for (let i = 0; i < width * height; i++) {
+        const x = (i % width) / width;
+        const z = Math.floor(i / width) / height;
+        const mx = x * 200 - 100; // Map to world coords
+        const mz = z * 200 - 100;
+        
+        // Determine biome at this position
+        let minDist = Infinity;
+        let baseTerrain = 'plains';
+        let moisture = 0.5;
+        let temp = 1.0;
+        
+        for (const prov of PROVINCES) {
+          const d = Math.sqrt((mx / MAP_SCALE - prov.pos[0]) ** 2 + (mz / MAP_SCALE - prov.pos[1]) ** 2);
+          if (d < minDist) {
+            minDist = d;
+            baseTerrain = prov.terrain || 'plains';
+          }
+        }
+        
+        // Simplified biome assignment
+        // R: grass/grassDark, G: dirt/mud, B: rock/snow, A: sand/forest
+        let r = 0, g = 0, b = 0, a = 0;
+        
+        switch(baseTerrain) {
+          case 'plains': r = 255; g = 50; break;
+          case 'capital': r = 200; g = 100; break;
+          case 'riverlands': r = 100; g = 100; b = 50; break;
+          case 'coastal': r = 50; g = 200; a = 50; break;
+          case 'tropical': r = 150; g = 50; a = 100; break;
+          case 'mountains': g = 100; b = 200; break;
+          case 'steppes': r = 150; g = 150; g = 50; break;
+          case 'basin': r = 180; g = 80; break;
+          case 'desert': r = 200; g = 150; a = 50; break;
+          default: r = 200; g = 100;
+        }
+        
+        // Add some noise for natural transitions
+        const noise = (Math.sin(x * 10) * Math.cos(z * 10)) * 30;
+        r = Math.max(0, Math.min(255, r + noise));
+        g = Math.max(0, Math.min(255, g + noise));
+        b = Math.max(0, Math.min(255, b + noise));
+        a = Math.max(0, Math.min(255, a + noise));
+        
+        data[i * 4] = r;
+        data[i * 4 + 1] = g;
+        data[i * 4 + 2] = b;
+        data[i * 4 + 3] = a;
+      }
+      
+      const splatMap = new THREE.DataTexture(data, width, height, THREE.RGBAFormat, THREE.UnsignedByteType);
+      splatMap.needsUpdate = true;
+      return splatMap;
+    }
+
+    const splatMap = generateSplatMap(512, 512);
+    const terrainVertexShader = `
+      varying vec2 vUv;
+      varying vec3 vWorldPosition;
+      varying float vElevation;
+      
+      uniform float uDisplacementScale;
+      
+      void main() {
+        vUv = uv;
+        vec4 worldPos = modelMatrix * vec4(position, 1.0);
+        vWorldPosition = worldPos.xyz;
+        
+        // Displacement in vertex shader for better performance
+        float elev = position.y;
+        vElevation = elev;
+        
+        gl_Position = projectionMatrix * viewMatrix * worldPos;
+      }
+    `;
+
+    const terrainFragmentShader = `
+      varying vec2 vUv;
+      varying vec3 vWorldPosition;
+      varying float vElevation;
+      
+      uniform vec3 uColorLow;      // Sea level
+      uniform vec3 uColorCoast;    // Coastal
+      uniform vec3 uColorPlains;   // Plains
+      uniform vec3 uColorRiver;    // Riverlands
+      uniform vec3 uColorHills;    // Hills
+      uniform vec3 uColorMountain; // Mountains
+      uniform vec3 uColorPeak;     // High peaks / snow
+      uniform vec3 uColorSteppe;   // Steppes
+      uniform vec3 uColorTropical; // Tropical
+      uniform vec3 uColorDesert;   // Desert
+      uniform vec3 uFogColor;
+      uniform float uFogNear;
+      uniform float uFogFar;
+      uniform vec3 uCameraPos;
+      uniform sampler2D uSplatMap;
+      uniform sampler2D uTexGrass;
+      uniform sampler2D uTexGrassDark;
+      uniform sampler2D uTexDirt;
+      uniform sampler2D uTexRock;
+      uniform sampler2D uTexSnow;
+      uniform sampler2D uTexSand;
+      uniform sampler2D uTexForest;
+      uniform sampler2D uTexMud;
+      
+      // Noise functions
+      vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+      vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+      vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
+      
+      float snoise(vec2 v) {
+        const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 1.0);
+        vec2 i  = floor(v + dot(v, C.yy));
+        vec2 x0 = v - i + dot(i, C.xx);
+        vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+        vec4 x12 = x0.xyxy + C.xxzz;
+        x12.xy -= i1;
+        i = mod289(i);
+        vec3 p = permute(permute(i.x + vec3(0.0, i1.x, 1.0)) + i.y + vec3(0.0, i1.y, 1.0));
+        
+        vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+        m = m*m;
+        m = m*m;
+        vec3 x = 2.0 * fract(p * C.www) - 1.0;
+        vec3 h = abs(x) - 0.5;
+        vec3 ox = floor(x + 0.5);
+        vec3 a0 = x - ox;
+        m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
+        
+        vec3 g;
+        g.x  = a0.x  * x0.x  + h.x  * x0.y;
+        g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+        return 130.0 * dot(m, g);
+      }
+      
+      float fbm(vec2 p) {
+        float f = 0.0;
+        float a = 0.5;
+        for(int i=0; i<5; i++) {
+          f += a * snoise(p);
+          p *= 2.0;
+          a *= 0.5;
+        }
+        return f;
+      }
+      
+      void main() {
+        float elev = vElevation;
+        vec3 baseColor;
+        
+        // Biome selection based on elevation and moisture (world position)
+        float moisture = 0.5 + 0.3 * sin(vWorldPosition.x * 0.5) * cos(vWorldPosition.z * 0.5);
+        float temp = 1.0 - abs(vWorldPosition.z * 0.1) - vWorldPosition.y * 10.0;
+        
+        // Color blending based on elevation zones
+        if (elev < -0.3) {
+          // Ocean
+          baseColor = mix(uColorLow, uColorCoast, smoothstep(-0.8, -0.3, elev));
+        } else if (elev < 0.0) {
+          // River / wetland
+          float riverFactor = smoothstep(-0.3, 0.0, elev);
+          baseColor = mix(uColorRiver, uColorCoast, riverFactor);
+        } else if (elev < 0.15) {
+          // Plains / lowlands
+          float plainsFactor = smoothstep(0.0, 0.15, elev);
+          if (moisture > 0.6) {
+            baseColor = mix(uColorRiver, uColorPlains, plainsFactor);
+          } else if (temp > 0.7 && vWorldPosition.z > 3.0) {
+            baseColor = mix(uColorTropical, uColorPlains, plainsFactor);
+          } else if (temp < 0.3 && vWorldPosition.z < -3.0) {
+            baseColor = mix(uColorSteppe, uColorPlains, plainsFactor);
+          } else {
+            baseColor = uColorPlains;
+          }
+        } else if (elev < 0.4) {
+          // Hills
+          float hillFactor = smoothstep(0.15, 0.4, elev);
+          if (temp < 0.3) baseColor = mix(uColorSteppe, uColorHills, hillFactor);
+          else if (temp > 0.7) baseColor = mix(uColorTropical, uColorHills, hillFactor);
+          else baseColor = uColorHills;
+        } else if (elev < 0.8) {
+          // Mountains
+          float mtnFactor = smoothstep(0.4, 0.8, elev);
+          baseColor = mix(uColorHills, uColorMountain, mtnFactor);
+        } else {
+          // High peaks / snow
+          float peakFactor = smoothstep(0.8, 1.2, elev);
+          baseColor = mix(uColorMountain, uColorPeak, peakFactor);
+        }
+      
+      // Texture splatting from splat map
+      vec4 splat = texture2D(uSplatMap, vUv);
+      
+      // Sample all terrain textures
+      vec4 texGrass = texture2D(uTexGrass, vUv);
+      vec4 texGrassDark = texture2D(uTexGrassDark, vUv);
+      vec4 texDirt = texture2D(uTexDirt, vUv);
+      vec4 texRock = texture2D(uTexRock, vUv);
+      vec4 texSnow = texture2D(uTexSnow, vUv);
+      vec4 texSand = texture2D(uTexSand, vUv);
+      vec4 texForest = texture2D(uTexForest, vUv);
+      vec4 texMud = texture2D(uTexMud, vUv);
+      
+      // Blend based on splat map channels
+      // R: grass/grassDark, G: dirt/mud, B: rock/snow, A: sand/forest
+      vec3 textureColor = vec3(0.0);
+      textureColor += mix(texGrass.rgb, texGrassDark.rgb, 0.35) * splat.r;
+      textureColor += mix(texDirt.rgb, texMud.rgb, 0.3) * splat.g;
+      textureColor += mix(texRock.rgb, texSnow.rgb, 0.3) * splat.b;
+      textureColor += mix(texSand.rgb, texForest.rgb, 0.5) * splat.a;
+      
+      // Add detail noise
+      float detail = fbm(vUv * 24.0) * 0.015;
+      vec3 color = mix(baseColor, textureColor, 0.48) + detail;
+      color = mix(vec3(dot(color, vec3(0.299, 0.587, 0.114))), color, 1.18);
+      color = pow(max(color, vec3(0.0)), vec3(0.88));
+      
+      // Distance fog
+      float dist = distance(vWorldPosition, uCameraPos);
+      float fogFactor = smoothstep(uFogNear, uFogFar, dist);
+      
+      // Apply fog
+      vec3 finalColor = mix(color, uFogColor, fogFactor);
+      
+      // Very subtle elevation hint (flat map style)
+      finalColor *= 0.98 + vElevation * 0.05;
+      
+      gl_FragColor = vec4(finalColor, 1.0);
+    }
+  `;
+
+    // ============================================
+    // THREE.JS SETUP
+    // ============================================
+    const canvas = document.getElementById('canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    const INITIAL_CANVAS_COLOR = 0xf3ead2;
+    const INITIAL_FOG_COLOR = 0xe7dac2;
+    renderer.toneMapping = THREE.LinearToneMapping;
+    renderer.toneMappingExposure = 1.2;
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(INITIAL_CANVAS_COLOR);
+    renderer.setClearColor(INITIAL_CANVAS_COLOR);
+    scene.fog = new THREE.FogExp2(INITIAL_FOG_COLOR, 0.0024);
+
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.5, 1000);
+    camera.position.set(0, 150, 135);
+    camera.lookAt(0, 0, 0);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = 70;
+    controls.maxDistance = 700;
+    controls.minPolarAngle = 0.18;
+    controls.maxPolarAngle = Math.PI / 2 - 0.45;
+    controls.target.set(0, 0, 0);
+    controls.enablePan = true;
+    controls.zoomSpeed = 1.2;
+    controls.panSpeed = 0.8;
+    controls.rotateSpeed = 0.7;
+
+    const labelRenderer = new CSS2DRenderer();
+    labelRenderer.setSize(window.innerWidth, window.innerHeight);
+    labelRenderer.domElement.style.position = 'absolute';
+    labelRenderer.domElement.style.top = '0';
+    labelRenderer.domElement.style.pointerEvents = 'none';
+    document.body.appendChild(labelRenderer.domElement);
+
+    // ============================================
+    // ENVIRONMENT - Flat map style (no HDRI reflections)
+    // ============================================
+    // Disabled HDRI to eliminate shadow/reflection artifacts on map surfaces
+    // scene.environment = null; (default)
+
+    // Soft map lighting with enough direction for mountains to read.
+    const ambientLight = new THREE.AmbientLight(0xfff8f0, 1.25);
+    scene.add(ambientLight);
+
+    const hemiLight = new THREE.HemisphereLight(0xffeedd, 0xaabb99, 0.5);
+    hemiLight.position.set(0, 50, 0);
+    scene.add(hemiLight);
+
+    const sunLight = new THREE.DirectionalLight(0xfff5e6, 0.42);
+    sunLight.position.set(10, 80, 10);
+    scene.add(sunLight);
+
+    // Fill light from opposite side to avoid harsh shadow blocks.
+    const fillLight = new THREE.DirectionalLight(0xe8f0ff, 0.16);
+    fillLight.position.set(-10, 40, -10);
+    scene.add(fillLight);
+
+    // ============================================
+    // PROCEDURAL HEIGHTMAP GENERATION
+    // ============================================
+    const groundSize = 800;
+    const groundSegments = 200; // High resolution for displacement
+    const groundGeo = new THREE.PlaneGeometry(groundSize, groundSize, groundSegments, groundSegments);
+    
+    const posAttr = groundGeo.getAttribute('position');
+    const elevations = new Float32Array(posAttr.count);
+    
+    // Precompute geographic features for heightmap
+    const provincePositions = PROVINCES.map(p => ({ x: p.pos[0], z: p.pos[1], terrain: p.terrain, strategic: p.strategic }));
+    const riverSegments = [];
+    RIVERS.forEach(river => {
+      for (let i = 0; i < river.path.length - 1; i++) {
+        riverSegments.push({ p1: river.path[i], p2: river.path[i+1], width: river.width });
+      }
+    });
+    const mountainPeaks = [];
+    MOUNTAINS.forEach(mtn => mtn.peaks.forEach(peak => mountainPeaks.push({ x: peak[0], z: peak[1] })));
+    const passPositions = STRATEGIC_PASSES.map(p => ({ x: p.pos[0], z: p.pos[1] }));
+
+    for (let i = 0; i < posAttr.count; i++) {
+      const x = posAttr.getX(i);
+      const z = posAttr.getY(i);
+      const mx = x / MAP_SCALE;
+      const mz = z / MAP_SCALE;
+      
+      let minDist = Infinity;
+      let baseTerrain = 'plains';
+      let isStrategic = false;
+      provincePositions.forEach(prov => {
+        const d = Math.sqrt((mx - prov.x) ** 2 + (mz - prov.z) ** 2);
+        if (d < minDist) { minDist = d; baseTerrain = prov.terrain || 'plains'; isStrategic = prov.strategic; }
+      });
+      
+      let distToRiver = Infinity;
+      riverSegments.forEach(seg => {
+        const dx = seg.p2[0] - seg.p1[0];
+        const dz = seg.p2[1] - seg.p1[1];
+        const len2 = dx * dx + dz * dz;
+        if (len2 > 0) {
+          const t = Math.max(0, Math.min(1, ((mx - seg.p1[0]) * dx + (mz - seg.p1[1]) * dz) / len2));
+          const projX = seg.p1[0] + t * dx;
+          const projZ = seg.p1[1] + t * dz;
+          const d = Math.sqrt((mx - projX) ** 2 + (mz - projZ) ** 2);
+          distToRiver = Math.min(distToRiver, d);
+        }
+      });
+      
+      let distToMountain = Infinity;
+      mountainPeaks.forEach(peak => { distToMountain = Math.min(distToMountain, Math.sqrt((mx - peak.x) ** 2 + (mz - peak.z) ** 2)); });
+      
+      let distToPass = Infinity;
+      passPositions.forEach(pass => { distToPass = Math.min(distToPass, Math.sqrt((mx - pass.x) ** 2 + (mz - pass.z) ** 2)); });
+      
+      let distToCoast = Infinity;
+      for (let j = 0; j < COASTLINE.length; j += 2) {
+        if (j + 1 < COASTLINE.length) {
+          const cx = COASTLINE[j];
+          const cz = COASTLINE[j + 1];
+          const d = Math.sqrt((mx - cx) ** 2 + (mz - cz) ** 2);
+          distToCoast = Math.min(distToCoast, d);
+        }
+      }
+      
+      const isOcean = distToCoast > 1.2 && (mx > 4.5 || mz > 4.0 || mx < -3.0 || mz < -5.5);
+      const isPass = distToPass < 0.3;
+      
+      let elevation = 0;
+      
+      if (isOcean) {
+        elevation = -0.6;
+      } else if (distToRiver < 0.2) {
+        elevation = -0.15 + distToRiver * 0.25; // River channels
+      } else if (isPass) {
+        elevation = 0.1; // Passes are slightly elevated but flat
+      } else if (distToMountain < 0.9) {
+        const mtnFactor = Math.min(1, (0.9 - distToMountain) / 0.9);
+        elevation = 0.2 + mtnFactor * 1.8;
+        // Add mountain ridge detail
+        const ridge = Math.sin((mx + mz) * 8) * 0.1 * mtnFactor;
+        elevation += ridge;
+      } else if (distToCoast < 0.4) {
+        elevation = distToCoast * 0.15;
+      } else {
+        switch(baseTerrain) {
+          case 'capital': elevation = isStrategic ? 0.12 : 0.08; break;
+          case 'plains': elevation = 0.05; break;
+          case 'riverlands': elevation = 0.0; break;
+          case 'basin': elevation = 0.08; break;
+          case 'coastal': elevation = 0.03; break;
+          case 'tropical': elevation = 0.08; break;
+          case 'steppes': elevation = 0.12; break;
+          case 'mountains': elevation = 0.5; break;
+          case 'desert': elevation = 0.2; break;
+          default: elevation = 0.05;
+        }
+        if (isStrategic) elevation += 0.05;
+      }
+      
+      // Noise
+      const noise = (Math.sin(mx * 1.2) * Math.cos(mz * 1.2) + Math.sin(mx * 4) * Math.cos(mz * 4) * 0.3 + Math.sin(mx * 12) * Math.cos(mz * 12) * 0.1) * 0.025;
+      elevation += noise;
+      
+      elevations[i] = elevation * TERRAIN_HEIGHT_MULT;
+    }
+    
+    // Displace vertices
+    const posArray = posAttr.array;
+    for (let i = 0; i < posAttr.count; i++) {
+      posArray[i * 3 + 1] = elevations[i];
+    }
+    groundGeo.computeVertexNormals();
+    
+    // ============================================
+    // TERRAIN MATERIAL WITH CUSTOM SHADER
+    // ============================================
+    const terrainUniforms = {
+      uDisplacementScale: { value: 1.0 },
+      uColorLow:      { value: new THREE.Color(0x235f87) },  // Deep water
+      uColorCoast:    { value: new THREE.Color(0x78b8b0) },  // Shallow water
+      uColorPlains:   { value: new THREE.Color(0x95bd58) },  // Saturated Civ-like plains
+      uColorRiver:    { value: new THREE.Color(0x55a783) },  // Wet river lands
+      uColorHills:    { value: new THREE.Color(0xb58b45) },  // Dry hills
+      uColorMountain: { value: new THREE.Color(0x7f6656) },  // Mountains
+      uColorPeak:     { value: new THREE.Color(0xf3f1e0) },  // Snow peaks
+      uColorSteppe:   { value: new THREE.Color(0xcaa866) },  // Steppes
+      uColorTropical: { value: new THREE.Color(0x2f8f4e) },  // Tropical
+      uColorDesert:   { value: new THREE.Color(0xd7b16c) },  // Desert
+      uFogColor:      { value: new THREE.Color(INITIAL_FOG_COLOR) },
+      uFogNear:       { value: 170.0 },
+      uFogFar:        { value: 760.0 },
+      uCameraPos:     { value: camera.position },
+      // Texture splatting
+      uSplatMap:      { value: splatMap },
+      uTexGrass:      { value: terrainTextures.grass },
+      uTexGrassDark:  { value: terrainTextures.grassDark },
+      uTexDirt:       { value: terrainTextures.dirt },
+      uTexRock:       { value: terrainTextures.rock },
+      uTexSnow:       { value: terrainTextures.snow },
+      uTexSand:       { value: terrainTextures.sand },
+      uTexForest:     { value: terrainTextures.forest },
+      uTexMud:        { value: terrainTextures.mud },
+    };
+
+    const terrainMaterial = new THREE.ShaderMaterial({
+      vertexShader: terrainVertexShader,
+      fragmentShader: terrainFragmentShader,
+      uniforms: terrainUniforms,
+    });
+
+    const terrainMesh = new THREE.Mesh(groundGeo, terrainMaterial);
+    terrainMesh.rotation.x = -Math.PI/2;
+    scene.add(terrainMesh);
+
+    // Subtle underlay only; keep it low/quiet so it does not expose the map's base at oblique zoom levels.
+    const oceanGeo = new THREE.PlaneGeometry(groundSize, groundSize);
+    const oceanMat = new THREE.MeshBasicMaterial({ 
+      color: 0x0d1b2a, 
+      transparent: true, 
+      opacity: 0.08, 
+      depthWrite: false 
+    });
+    const ocean = new THREE.Mesh(oceanGeo, oceanMat);
+    ocean.rotation.x = -Math.PI/2;
+    ocean.position.y = -2.4;
+    ocean.renderOrder = -10;
+    ocean.visible = false;
+    scene.add(ocean);
+
+    // ============================================
+    // RIVERS - Enhanced map-style with natural channels and shore blending
+    // ============================================
+    const riverGroup = new THREE.Group();
+    scene.add(riverGroup);
+
+    function createRiverRibbon(path, width, color, options = {}) {
+      if (path.length < 2) return null;
+      const points = path.map(pt => new THREE.Vector3(pt[0] * MAP_SCALE, options.y ?? 0.12, pt[1] * MAP_SCALE));
+      const curve = new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0.5);
+      const segments = points.length * 8;
+      const curvePoints = curve.getPoints(segments);
+      const ribbonWidth = width * FEATURE_SCALE * 0.18;
+      const positions = [];
+      const uvs = [];
+      const indices = [];
+      for (let i = 0; i < curvePoints.length; i++) {
+        const p = curvePoints[i];
+        let tangent;
+        if (i < curvePoints.length - 1) tangent = curvePoints[i+1].clone().sub(p).normalize();
+        else tangent = p.clone().sub(curvePoints[i-1]).normalize();
+        const normal = new THREE.Vector3(-tangent.z, 0, tangent.x);
+        
+        // Variable width for natural river appearance (narrower at source, wider at mouth)
+        const progress = i / (curvePoints.length - 1);
+        const widthMult = 0.7 + progress * 0.6; // 70% at source, 130% at mouth
+        const w = ribbonWidth * widthMult * (options.widthMult ?? 1.0);
+        
+        positions.push(p.x + normal.x * w, p.y, p.z + normal.z * w);
+        positions.push(p.x - normal.x * w, p.y, p.z - normal.z * w);
+        uvs.push(i / curvePoints.length * 8, 0, i / curvePoints.length * 8, 1);
+        if (i < curvePoints.length - 1) {
+          const base = i * 2;
+          indices.push(base, base+1, base+2, base+1, base+3, base+2);
+        }
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+      geo.setIndex(indices);
+      geo.computeVertexNormals();
+      const map = options.textureId ? assetManager.getTexture(options.textureId) : null;
+      const mat = new THREE.MeshBasicMaterial({
+        color,
+        map,
+        transparent: true,
+        opacity: options.opacity ?? 0.72,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        depthTest: false
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.renderOrder = options.renderOrder ?? 2;
+      return mesh;
+    }
+
+    function createRiverShore(path, width, options = {}) {
+      // Creates a wet shore/sand bank transition
+      if (path.length < 2) return null;
+      const points = path.map(pt => new THREE.Vector3(pt[0] * MAP_SCALE, options.y ?? 0.11, pt[1] * MAP_SCALE));
+      const curve = new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0.5);
+      const segments = points.length * 8;
+      const curvePoints = curve.getPoints(segments);
+      const ribbonWidth = width * FEATURE_SCALE * 0.28; // Wider than water
+      const positions = [];
+      const indices = [];
+      for (let i = 0; i < curvePoints.length; i++) {
+        const p = curvePoints[i];
+        let tangent;
+        if (i < curvePoints.length - 1) tangent = curvePoints[i+1].clone().sub(p).normalize();
+        else tangent = p.clone().sub(curvePoints[i-1]).normalize();
+        const normal = new THREE.Vector3(-tangent.z, 0, tangent.x);
+        
+        const progress = i / (curvePoints.length - 1);
+        const widthMult = 0.8 + progress * 0.5;
+        const w = ribbonWidth * widthMult;
+        
+        positions.push(p.x + normal.x * w, p.y, p.z + normal.z * w);
+        positions.push(p.x - normal.x * w, p.y, p.z - normal.z * w);
+        if (i < curvePoints.length - 1) {
+          const base = i * 2;
+          indices.push(base, base+1, base+2, base+1, base+3, base+2);
+        }
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geo.setIndex(indices);
+      geo.computeVertexNormals();
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0xcbd7bd,
+        transparent: true,
+        opacity: 0.25,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        depthTest: false
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.renderOrder = 1;
+      return mesh;
+    }
+
+    RIVERS.forEach(river => {
+      // Main water ribbon
+      const ribbon = createRiverRibbon(river.path, river.width, river.color, {
+        y: 0.14,
+        opacity: 0.85,
+        textureId: 'waterBase',
+        renderOrder: 2,
+      });
+      if (ribbon) riverGroup.add(ribbon);
+
+      // Shore transition (wet sand/mud bank)
+      const shore = createRiverShore(river.path, river.width * 1.35, {
+        y: 0.115,
+      });
+      if (shore) riverGroup.add(shore);
+
+      // Subtle water noise overlay for flow sense
+      const noiseRibbon = createRiverRibbon(river.path, river.width * 0.85, 0x8ab4d8, {
+        y: 0.155,
+        opacity: 0.12,
+        textureId: 'waterNoise',
+        renderOrder: 3,
+      });
+      if (noiseRibbon) riverGroup.add(noiseRibbon);
+
+      // River label
+      const midPt = river.path[Math.floor(river.path.length / 2)];
+      const labelDiv = document.createElement('div');
+      labelDiv.style.cssText = 'color:#7a9ab0;font-size:10px;font-weight:500;font-style:italic;text-shadow:0 0 3px rgba(0,0,0,0.5);pointer-events:none;white-space:nowrap;';
+      labelDiv.textContent = river.name;
+      const label = new CSS2DObject(labelDiv);
+      label.position.set(midPt[0] * MAP_SCALE, 0.4, midPt[1] * MAP_SCALE);
+      scene.add(label);
+    });    // ============================================
+    // HISTORICAL ROADS - Enhanced map-style with texture and terrain following
+    // ============================================
+    const roadGroup = new THREE.Group();
+    scene.add(roadGroup);
+
+    function createRoadRibbon(path, width, y, color, opacity, options = {}) {
+      if (path.length < 2) return null;
+      const points = path.map(pt => new THREE.Vector3(pt[0] * MAP_SCALE, y, pt[1] * MAP_SCALE));
+      const curve = new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0.5);
+      const curvePoints = curve.getPoints(path.length * 16); // More segments for smooth curves
+      const halfWidth = width * FEATURE_SCALE * 0.5;
+      const positions = [];
+      const uvs = [];
+      const indices = [];
+
+      for (let i = 0; i < curvePoints.length; i++) {
+        const p = curvePoints[i];
+        let tangent;
+        if (i < curvePoints.length - 1) tangent = curvePoints[i + 1].clone().sub(p).normalize();
+        else tangent = p.clone().sub(curvePoints[i - 1]).normalize();
+        const normal = new THREE.Vector3(-tangent.z, 0, tangent.x);
+        
+        // Slight width variation for natural feel
+        const progress = i / (curvePoints.length - 1);
+        const w = halfWidth * (0.95 + Math.sin(progress * Math.PI * 4) * 0.05);
+        
+        positions.push(p.x + normal.x * w, p.y, p.z + normal.z * w);
+        positions.push(p.x - normal.x * w, p.y, p.z - normal.z * w);
+        uvs.push(i / curvePoints.length * 12, 0, i / curvePoints.length * 12, 1);
+        if (i < curvePoints.length - 1) {
+          const base = i * 2;
+          indices.push(base, base + 1, base + 2, base + 1, base + 3, base + 2);
+        }
+      }
+
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+      geo.setIndex(indices);
+      geo.computeVertexNormals();
+      
+      const map = options.textureId ? assetManager.getTexture(options.textureId) : null;
+      const mat = new THREE.MeshBasicMaterial({
+        color,
+        map,
+        transparent: true,
+        opacity,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        depthTest: false,
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.renderOrder = 2;
+      return mesh;
+    }
+
+    HISTORICAL_ROADS.forEach(road => {
+      if (road.path.length < 2) return;
+      const isMajor = road.type === 'major';
+      
+      // Road edge (darker border)
+      const edge = createRoadRibbon(road.path, isMajor ? 0.38 : 0.26, 0.22, 0x5a3d1c, isMajor ? 0.4 : 0.28);
+      // Road fill (lighter center)
+      const fill = createRoadRibbon(road.path, isMajor ? 0.24 : 0.14, 0.25, isMajor ? 0xd9b46f : 0xb8905f, isMajor ? 0.9 : 0.65, {
+        textureId: undefined,
+      });
+      // Center line for major roads (subtle)
+      const center = isMajor ? createRoadRibbon(road.path, 0.08, 0.28, 0xf5e6c8, 0.35) : null;
+      
+      if (edge) { edge.userData = { roadType: road.type, roadLayer: 'edge' }; roadGroup.add(edge); }
+      if (fill) { fill.userData = { roadType: road.type, roadLayer: 'fill' }; roadGroup.add(fill); }
+      if (center) { center.userData = { roadType: road.type, roadLayer: 'center' }; roadGroup.add(center); }
+      
+      // Road label for major roads only
+      if (isMajor) {
+        const midIdx = Math.floor(road.path.length / 2);
+        const midPt = road.path[midIdx];
+        const labelDiv = document.createElement('div');
+        labelDiv.style.cssText = 'color:#6f4d2c;font-size:9px;font-weight:700;font-style:italic;text-shadow:0 1px 2px rgba(255,255,255,0.9),0 0 3px rgba(0,0,0,0.25);pointer-events:none;white-space:nowrap;';
+        labelDiv.textContent = road.name;
+        const label = new CSS2DObject(labelDiv);
+        label.position.set(midPt[0] * MAP_SCALE, 0.5, midPt[1] * MAP_SCALE);
+        scene.add(label);
+      }
+    });    // ============================================
+    // MOUNTAINS - Civ-like terrain ranges with ridges, color banding, foothills
+    // ============================================
+    const mountainGroup = new THREE.Group();
+    scene.add(mountainGroup);
+
+    function deterministicNoise(seed) {
+      const value = Math.sin(seed * 12.9898) * 43758.5453;
+      return value - Math.floor(value);
+    }
+
+    // Color banding for mountain elevation zones
+    function getMountainColor(mtnColor, elevationRatio) {
+      const base = new THREE.Color(mtnColor);
+      if (elevationRatio < 0.25) {
+        // Foothills - warmer, earthier
+        return base.clone().multiplyScalar(0.85).lerp(new THREE.Color(0x8b7355), 0.3);
+      } else if (elevationRatio < 0.55) {
+        // Mid-slope - darker rock
+        return base.clone().multiplyScalar(0.72);
+      } else if (elevationRatio < 0.8) {
+        // Upper slope - ridge color
+        return base.clone().multiplyScalar(1.04);
+      } else {
+        // Snow cap
+        return new THREE.Color(0xf3efe2);
+      }
+    }
+
+    function createMountainPeakMesh(radius, height, mtnColor, seed) {
+      const group = new THREE.Group();
+      
+      // Multi-layer peak with color banding
+      const layers = 4;
+      for (let layer = 0; layer < layers; layer++) {
+        const layerRatio = layer / (layers - 1);
+        const layerHeight = height / layers;
+        const layerRadius = radius * (1 - layerRatio * 0.65);
+        const layerY = layer * layerHeight + layerHeight * 0.5;
+        
+        const geo = new THREE.ConeGeometry(layerRadius, layerHeight, 6);
+        const color = getMountainColor(mtnColor, layerRatio);
+        const mat = new THREE.MeshStandardMaterial({
+          color,
+          roughness: 0.88 - layerRatio * 0.15,
+          metalness: 0.02,
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.y = layerY;
+        mesh.rotation.y = seed * 0.77 + layer * 0.3;
+        mesh.scale.x = 1.0 + deterministicNoise(seed + layer + 1) * 0.35;
+        mesh.scale.z = 0.75 + deterministicNoise(seed + layer + 2) * 0.3;
+        mesh.castShadow = false;
+        mesh.receiveShadow = false;
+        group.add(mesh);
+      }
+      
+      // Snow cap (separate small cone on top)
+      const capGeo = new THREE.ConeGeometry(radius * 0.28, height * 0.18, 6);
+      const capMat = new THREE.MeshStandardMaterial({
+        color: 0xf3efe2,
+        roughness: 0.6,
+        metalness: 0.02,
+      });
+      const cap = new THREE.Mesh(capGeo, capMat);
+      cap.position.y = height * 0.91;
+      cap.rotation.y = seed * 0.77;
+      cap.scale.x = 1.0 + deterministicNoise(seed + 10) * 0.2;
+      cap.scale.z = 0.8 + deterministicNoise(seed + 11) * 0.15;
+      cap.castShadow = false;
+      cap.receiveShadow = false;
+      group.add(cap);
+
+      return group;
+    }
+
+    function createMountainRidge3D(peakA, peakB, mtnColor, mapScale) {
+      // Create a 3D ridge with volume (not just flat plane)
+      const dx = peakB[0] - peakA[0];
+      const dz = peakB[1] - peakA[1];
+      const length = Math.sqrt(dx * dx + dz * dz) * mapScale;
+      const midX = (peakA[0] + peakB[0]) / 2 * mapScale;
+      const midZ = (peakA[1] + peakB[1]) / 2 * mapScale;
+      const angle = Math.atan2(dz, dx);
+      
+      const ridgeGroup = new THREE.Group();
+      
+      // Ridge spine - elongated box with tapered ends
+      const ridgeWidth = 1.8;
+      const ridgeHeight = 1.2;
+      const spineGeo = new THREE.BoxGeometry(length, ridgeHeight, ridgeWidth);
+      const spineMat = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(mtnColor).multiplyScalar(0.88),
+        roughness: 0.9,
+        metalness: 0.02,
+      });
+      const spine = new THREE.Mesh(spineGeo, spineMat);
+      spine.position.y = ridgeHeight * 0.5 + 0.1;
+      spine.castShadow = false;
+      spine.receiveShadow = false;
+      ridgeGroup.add(spine);
+      
+      // Ridge cap (slightly lighter)
+      const capGeo = new THREE.BoxGeometry(length * 0.94, ridgeHeight * 0.35, ridgeWidth * 0.88);
+      const capMat = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(mtnColor).multiplyScalar(1.02),
+        roughness: 0.85,
+        metalness: 0.02,
+      });
+      const cap = new THREE.Mesh(capGeo, capMat);
+      cap.position.y = ridgeHeight + 0.05;
+      cap.castShadow = false;
+      cap.receiveShadow = false;
+      ridgeGroup.add(cap);
+      
+      // Foothill tapers at both ends
+      for (const end of [-1, 1]) {
+        const taperGeo = new THREE.ConeGeometry(ridgeWidth * 0.65, ridgeHeight * 1.2, 6);
+        const taperMat = new THREE.MeshStandardMaterial({
+          color: new THREE.Color(mtnColor).multiplyScalar(0.8),
+          roughness: 0.9,
+          metalness: 0.02,
+        });
+        const taper = new THREE.Mesh(taperGeo, taperMat);
+        taper.position.set(
+          end * length * 0.52,
+          ridgeHeight * 0.6,
+          0
+        );
+        taper.castShadow = false;
+        taper.receiveShadow = false;
+        ridgeGroup.add(taper);
+      }
+      
+      ridgeGroup.position.set(midX, 0, midZ);
+      ridgeGroup.rotation.y = -angle - Math.PI / 2;
+      return ridgeGroup;
+    }
+
+    function createFoothillCluster(center, tangent, mtnColor, mapScale, count = 5) {
+      const group = new THREE.Group();
+      const normal = new THREE.Vector2(-tangent.y, tangent.x).normalize();
+      
+      for (let i = 0; i < count; i++) {
+        const seed = center[0] * 1000 + center[1] * 100 + i * 7;
+        const offsetAlong = (deterministicNoise(seed + 1) - 0.5) * 8.0;
+        const offsetSide = (deterministicNoise(seed + 2) - 0.5) * 6.0;
+        const radius = (1.8 + deterministicNoise(seed + 3) * 1.2);
+        const height = (3.5 + deterministicNoise(seed + 4) * 2.5);
+        
+        // Foothills are lower, broader, less snow
+        const peakGroup = new THREE.Group();
+        const layers = 3;
+        for (let layer = 0; layer < layers; layer++) {
+          const layerRatio = layer / (layers - 1);
+          const layerHeight = height / layers;
+          const layerRadius = radius * (1 - layerRatio * 0.5);
+          const layerY = layer * layerHeight + layerHeight * 0.5;
+          
+          const geo = new THREE.ConeGeometry(layerRadius, layerHeight, 5);
+          const color = new THREE.Color(mtnColor).multiplyScalar(0.75 + layerRatio * 0.15);
+          const mat = new THREE.MeshStandardMaterial({
+            color,
+            roughness: 0.9,
+            metalness: 0.02,
+          });
+          const mesh = new THREE.Mesh(geo, mat);
+          mesh.position.y = layerY;
+          mesh.rotation.y = seed * 0.5 + layer;
+          mesh.scale.x = 1.0 + deterministicNoise(seed + layer + 10) * 0.4;
+          mesh.scale.z = 0.8 + deterministicNoise(seed + layer + 11) * 0.3;
+          mesh.castShadow = false;
+          mesh.receiveShadow = false;
+          peakGroup.add(mesh);
+        }
+        
+        peakGroup.position.set(
+          center[0] * mapScale + tangent.x * offsetAlong + normal.x * offsetSide,
+          0.1,
+          center[1] * mapScale + tangent.y * offsetAlong + normal.y * offsetSide
+        );
+        group.add(peakGroup);
+      }
+      
+      return group;
+    }
+
+    function addMountainRange(mtn) {
+      const rangeLength = mtn.peaks.reduce((sum, peak, idx) => {
+        if (idx === 0) return sum;
+        const prev = mtn.peaks[idx - 1];
+        return sum + Math.sqrt((peak[0] - prev[0]) ** 2 + (peak[1] - prev[1]) ** 2);
+      }, 0);
+      const sizeBoost = rangeLength > 4 ? 1.15 : 0.95;
+
+      mtn.peaks.forEach((peak, idx) => {
+        const next = mtn.peaks[Math.min(idx + 1, mtn.peaks.length - 1)];
+        const prev = mtn.peaks[Math.max(idx - 1, 0)];
+        const tangent = new THREE.Vector2(next[0] - prev[0], next[1] - prev[1]);
+        if (tangent.lengthSq() === 0) tangent.set(1, 0);
+        tangent.normalize();
+        
+        // Main peak cluster
+        const peakMesh = createMountainPeakMesh(
+          (0.24 + deterministicNoise(idx * 100 + 1) * 0.12) * sizeBoost,
+          (0.6 + deterministicNoise(idx * 100 + 2) * 0.44) * sizeBoost,
+          mtn.color,
+          idx * 100
+        );
+        peakMesh.position.set(peak[0] * MAP_SCALE, 0.16, peak[1] * MAP_SCALE);
+        mountainGroup.add(peakMesh);
+        
+        // Ridge to next peak
+        if (idx < mtn.peaks.length - 1) {
+          const ridge = createMountainRidge3D(peak, mtn.peaks[idx + 1], mtn.color, MAP_SCALE);
+          mountainGroup.add(ridge);
+        }
+        
+        // Foothill clusters along the range
+        if (idx < mtn.peaks.length - 1) {
+          const segmentNext = mtn.peaks[idx + 1];
+          const dx = segmentNext[0] - peak[0];
+          const dz = segmentNext[1] - peak[1];
+          const segmentLength = Math.sqrt(dx * dx + dz * dz);
+          const steps = Math.max(2, Math.floor(segmentLength * 1.8));
+          
+          // Foothills on both sides of the ridge
+          for (let s = 1; s <= steps; s++) {
+            const t = s / (steps + 1);
+            const point = [peak[0] + dx * t, peak[1] + dz * t];
+            const segmentTangent = new THREE.Vector2(dx, dz).normalize();
+            
+            // Skip near main peaks
+            const distToPeak = Math.min(
+              Math.sqrt((point[0] - peak[0])**2 + (point[1] - peak[1])**2),
+              Math.sqrt((point[0] - segmentNext[0])**2 + (point[1] - segmentNext[1])**2)
+            );
+            if (distToPeak < 0.8) continue;
+            
+            // Add foothill clusters on alternating sides
+            if (s % 2 === 0) {
+              const foothills = createFoothillCluster(point, segmentTangent, mtn.color, MAP_SCALE, 3);
+              mountainGroup.add(foothills);
+            }
+          }
+        }
+      });
+    }
+
+    function createMountainAssets() {
+      MOUNTAINS.forEach(mtn => {
+        addMountainRange(mtn);
+
+        const midPeak = mtn.peaks[Math.floor(mtn.peaks.length / 2)];
+        const labelDiv = document.createElement('div');
+        labelDiv.style.cssText = 'color:#8a7a6a;font-size:9px;font-weight:500;text-shadow:0 0 3px #000;pointer-events:none;white-space:nowrap;';
+        labelDiv.textContent = mtn.name;
+        const label = new CSS2DObject(labelDiv);
+        label.position.set(midPeak[0] * MAP_SCALE, 2.0, midPeak[1] * MAP_SCALE);
+        scene.add(label);
+      });
+    }
+
+    createMountainAssets();
+
+    // ============================================
+    // STRATEGIC PASSES
+    // ============================================
+    const passGroup = new THREE.Group();
+    scene.add(passGroup);
+
+    function createPassTower(color, roofColor) {
+      const tower = new THREE.Group();
+
+      const baseGeo = new THREE.CylinderGeometry(0.18 * FEATURE_SCALE, 0.22 * FEATURE_SCALE, 0.16 * FEATURE_SCALE, 8);
+      const baseMat = new THREE.MeshStandardMaterial({ color: 0x4f4338, roughness: 0.85 });
+      const base = new THREE.Mesh(baseGeo, baseMat);
+      base.position.y = 0.08 * FEATURE_SCALE;
+      tower.add(base);
+
+      const bodyGeo = new THREE.CylinderGeometry(0.14 * FEATURE_SCALE, 0.16 * FEATURE_SCALE, 0.42 * FEATURE_SCALE, 8);
+      const bodyMat = new THREE.MeshStandardMaterial({ color, roughness: 0.82, metalness: 0.05 });
+      const body = new THREE.Mesh(bodyGeo, bodyMat);
+      body.position.y = 0.36 * FEATURE_SCALE;
+      tower.add(body);
+
+      const roofGeo = new THREE.ConeGeometry(0.26 * FEATURE_SCALE, 0.24 * FEATURE_SCALE, 4);
+      const roofMat = new THREE.MeshStandardMaterial({ color: roofColor, roughness: 0.68, metalness: 0.15 });
+      const roof = new THREE.Mesh(roofGeo, roofMat);
+      roof.position.y = 0.68 * FEATURE_SCALE;
+      roof.rotation.y = Math.PI / 4;
+      tower.add(roof);
+
+      return tower;
+    }
+
+    function createPassGate(pass) {
+      const gate = new THREE.Group();
+      const wallColor = 0x6f604f;
+      const roofColor = 0xc89833;
+      const spacing = 0.48 * FEATURE_SCALE;
+
+      [-1, 1].forEach(side => {
+        const tower = createPassTower(wallColor, roofColor);
+        tower.position.x = side * spacing;
+        gate.add(tower);
+      });
+
+      const lintelGeo = new THREE.CylinderGeometry(0.08 * FEATURE_SCALE, 0.08 * FEATURE_SCALE, spacing * 1.65, 8);
+      const lintelMat = new THREE.MeshStandardMaterial({ color: wallColor, roughness: 0.85 });
+      const lintel = new THREE.Mesh(lintelGeo, lintelMat);
+      lintel.position.y = 0.46 * FEATURE_SCALE;
+      lintel.rotation.z = Math.PI / 2;
+      gate.add(lintel);
+
+      const roofGeo = new THREE.ConeGeometry(0.34 * FEATURE_SCALE, 0.18 * FEATURE_SCALE, 4);
+      const roofMat = new THREE.MeshStandardMaterial({ color: roofColor, roughness: 0.7, metalness: 0.15 });
+      const roof = new THREE.Mesh(roofGeo, roofMat);
+      roof.position.y = 0.6 * FEATURE_SCALE;
+      roof.rotation.y = Math.PI / 4;
+      gate.add(roof);
+
+      gate.position.set(pass.pos[0] * MAP_SCALE, 0, pass.pos[1] * MAP_SCALE);
+      gate.scale.setScalar(0.55);
+      return gate;
+    }
+
+    STRATEGIC_PASSES.forEach(pass => {
+      const passGeo = new THREE.RingGeometry(0.4 * FEATURE_SCALE, 0.6 * FEATURE_SCALE, 8);
+      const passMat = new THREE.MeshBasicMaterial({ 
+        color: 0xd4a843, 
+        transparent: true, 
+        opacity: 0.38, 
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        depthTest: true,
+      });
+      const passMesh = new THREE.Mesh(passGeo, passMat);
+      passMesh.rotation.x = -Math.PI/2;
+      passMesh.position.set(pass.pos[0] * MAP_SCALE, 0.3, pass.pos[1] * MAP_SCALE);
+      passMesh.userData = { isPass: true, name: pass.name, desc: pass.desc };
+      passGroup.add(passMesh);
+
+      passGroup.add(createPassGate(pass));
+
+      // Pass label
+      const labelDiv = document.createElement('div');
+      labelDiv.style.cssText = 'color:#d4a843;font-size:10px;font-weight:600;text-shadow:0 0 3px #000;pointer-events:none;white-space:nowrap;';
+      labelDiv.textContent = pass.name;
+      const label = new CSS2DObject(labelDiv);
+      label.position.set(pass.pos[0] * MAP_SCALE, 1.8, pass.pos[1] * MAP_SCALE);
+      scene.add(label);
+    });
+
+    // ============================================
+    // CITADELS / CITIES (Thành trì) - Chinese Architecture Style
+    // ============================================
+    // Enhanced Chinese-style architecture: gates, walls, courtyards, palace tiers
+    function createCitadel(cit) {
+      const [x, z] = cit.pos;
+      const isCapital = cit.type === 'capital';
+      const group = new THREE.Group();
+      group.position.set(x * MAP_SCALE, 0, z * MAP_SCALE);
+      
+      const wallColor = isCapital ? 0xd4a843 : 0xa89878;
+      const roofColor = isCapital ? 0xc89833 : 0x8a7a5a;
+      const wallHeight = isCapital ? 1.65 : 1.05;
+      const wallThickness = 0.32;
+      const wallRadius = isCapital ? 3.5 : 2.5;
+      const courtyardRadius = wallRadius * 0.55;
+
+      // --- Helper: Chinese upturned eave roof ---
+      function createEaveRoof(radius, height, color, segments = 8) {
+        const group = new THREE.Group();
+        const roofGeo = new THREE.ConeGeometry(radius, height, segments);
+        const roofMat = new THREE.MeshStandardMaterial({
+          color, roughness: 0.6, metalness: 0.25
+        });
+        const roof = new THREE.Mesh(roofGeo, roofMat);
+        roof.castShadow = false;
+        roof.receiveShadow = false;
+        group.add(roof);
+        
+        // Upturned corners (dougong-inspired)
+        for (let c = 0; c < segments; c++) {
+          const angle = (c / segments) * Math.PI * 2;
+          const cornerGeo = new THREE.BoxGeometry(0.18, 0.08, radius * 0.45);
+          const cornerMat = new THREE.MeshStandardMaterial({ color, roughness: 0.6 });
+          const corner = new THREE.Mesh(cornerGeo, cornerMat);
+          corner.position.set(
+            Math.cos(angle) * radius * 0.85,
+            height * 0.15,
+            Math.sin(angle) * radius * 0.85
+          );
+          corner.rotation.y = -angle;
+          corner.castShadow = false;
+          corner.receiveShadow = false;
+          group.add(corner);
+        }
+        return group;
+      }
+
+      // --- Helper: Gate tower with Chinese architecture ---
+      function createGateTower(isCapital) {
+        const tower = new THREE.Group();
+        const towerScale = isCapital ? 1.0 : 0.85;
+        const baseColor = 0x5a4a3a;
+        const bodyColor = 0x7a6a5a;
+        
+        // Stone podium
+        const podiumGeo = new THREE.CylinderGeometry(1.1 * towerScale, 1.3 * towerScale, 0.8 * towerScale, 8);
+        const podiumMat = new THREE.MeshStandardMaterial({ color: baseColor, roughness: 0.9 });
+        const podium = new THREE.Mesh(podiumGeo, podiumMat);
+        podium.position.y = 0.4 * towerScale;
+        podium.castShadow = false;
+        podium.receiveShadow = false;
+        tower.add(podium);
+        
+        // Tower body (slightly tapered)
+        const bodyGeo = new THREE.CylinderGeometry(0.85 * towerScale, 1.0 * towerScale, isCapital ? 3.0 : 2.4, 8);
+        const bodyMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.8, metalness: 0.08 });
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.position.y = (isCapital ? 2.2 : 1.8) * towerScale;
+        body.castShadow = false;
+        body.receiveShadow = false;
+        tower.add(body);
+        
+        // Observation deck / balcony
+        const deckGeo = new THREE.CylinderGeometry(1.15 * towerScale, 1.15 * towerScale, 0.3 * towerScale, 8);
+        const deckMat = new THREE.MeshStandardMaterial({ color: wallColor, roughness: 0.82, metalness: 0.08 });
+        const deck = new THREE.Mesh(deckGeo, deckMat);
+        deck.position.y = (isCapital ? 3.7 : 3.0) * towerScale;
+        deck.castShadow = false;
+        deck.receiveShadow = false;
+        tower.add(deck);
+        
+        // Chinese eave roof
+        const roofGroup = createEaveRoof(1.35 * towerScale, 1.2 * towerScale, roofColor);
+        roofGroup.position.y = (isCapital ? 4.3 : 3.6) * towerScale;
+        tower.add(roofGroup);
+        
+        // Chiwen ornaments on roof ridge
+        const ornamentGeo = new THREE.ConeGeometry(0.15 * towerScale, 0.8 * towerScale, 4);
+        const ornamentMat = new THREE.MeshStandardMaterial({ color: 0xf0d840, metalness: 0.5, roughness: 0.3 });
+        const ornament = new THREE.Mesh(ornamentGeo, ornamentMat);
+        ornament.position.y = (isCapital ? 4.9 : 4.2) * towerScale;
+        ornament.castShadow = false;
+        ornament.receiveShadow = false;
+        tower.add(ornament);
+        
+        return tower;
+      }
+
+      // --- 1. Outer Wall with proper crenellations ---
+      const wallSegments = isCapital ? 16 : 12;
+      for (let i = 0; i < wallSegments; i++) {
+        const angle = (i / wallSegments) * Math.PI * 2;
+        const nextAngle = ((i + 1) / wallSegments) * Math.PI * 2;
+        const x1 = Math.cos(angle) * wallRadius;
+        const z1 = Math.sin(angle) * wallRadius;
+        const x2 = Math.cos(nextAngle) * wallRadius;
+        const z2 = Math.sin(nextAngle) * wallRadius;
+        
+        const wallLength = Math.sqrt((x2 - x1) ** 2 + (z2 - z1) ** 2);
+        
+        // Wall base
+        const wallGeo = new THREE.BoxGeometry(wallLength, wallHeight, wallThickness);
+        const wallMat = new THREE.MeshStandardMaterial({ 
+          color: isCapital ? 0xb8945c : 0x9b8d72, roughness: 0.9, metalness: 0.04 
+        });
+        const wall = new THREE.Mesh(wallGeo, wallMat);
+        wall.position.set((x1 + x2) / 2, wallHeight / 2, (z1 + z2) / 2);
+        wall.rotation.y = Math.atan2(z1 - z2, x1 - x2);
+        wall.castShadow = false;
+        wall.receiveShadow = false;
+        group.add(wall);
+        
+        // Crenellations (battlements) - merlons and embrasures
+        const crenCount = Math.max(4, Math.floor(wallLength / 0.55));
+        for (let c = 0; c < crenCount; c++) {
+          const t = (c + 0.5) / crenCount;
+          const cx = x1 + (x2 - x1) * t;
+          const cz = z1 + (z2 - z1) * t;
+          
+          // Merlon (solid part)
+          const merlonGeo = new THREE.BoxGeometry(0.28, 0.32, wallThickness + 0.1);
+          const merlonMat = new THREE.MeshStandardMaterial({ color: 0x7a6a5a, roughness: 0.9 });
+          const merlon = new THREE.Mesh(merlonGeo, merlonMat);
+          merlon.position.set(cx, wallHeight + 0.16, cz);
+          merlon.rotation.y = Math.atan2(z1 - z2, x1 - x2);
+          merlon.castShadow = false;
+          merlon.receiveShadow = false;
+          group.add(merlon);
+        }
+        
+        // Wall walkway (inner side)
+        const walkGeo = new THREE.BoxGeometry(wallLength * 0.95, 0.12, wallThickness * 0.8);
+        const walkMat = new THREE.MeshStandardMaterial({ color: 0x6a5a4a, roughness: 0.95 });
+        const walk = new THREE.Mesh(walkGeo, walkMat);
+        walk.position.set((x1 + x2) / 2, wallHeight - 0.3, (z1 + z2) / 2);
+        walk.rotation.y = Math.atan2(z1 - z2, x1 - x2);
+        walk.castShadow = false;
+        walk.receiveShadow = false;
+        group.add(walk);
+      }
+
+      // --- 2. Gates (4 cardinal directions) with gate towers ---
+      const gatePositions = [
+        { angle: 0, name: 'South' },
+        { angle: Math.PI / 2, name: 'West' },
+        { angle: Math.PI, name: 'North' },
+        { angle: -Math.PI / 2, name: 'East' }
+      ];
+      
+      gatePositions.forEach((gate, gi) => {
+        const gx = Math.cos(gate.angle) * (wallRadius + 0.25);
+        const gz = Math.sin(gate.angle) * (wallRadius + 0.25);
+        
+        // Gate opening in wall (remove section)
+        // Create gate tower pair
+        const gateGroup = new THREE.Group();
+        
+        // Two towers flanking the gate
+        [-1, 1].forEach(side => {
+          const tower = createGateTower(isCapital);
+          const towerOffset = side * 2.2;
+          tower.position.set(
+            Math.cos(gate.angle) * (wallRadius + 0.15) - Math.sin(gate.angle) * 2.2 * side,
+            0,
+            Math.sin(gate.angle) * (wallRadius + 0.15) + Math.cos(gate.angle) * 2.2 * side
+          );
+          tower.rotation.y = gate.angle;
+          gateGroup.add(tower);
+        });
+        
+        // Gate lintel connecting towers
+        const lintelGeo = new THREE.BoxGeometry(4.2, 0.35, 0.5);
+        const lintelMat = new THREE.MeshStandardMaterial({ color: 0x6f604f, roughness: 0.85 });
+        const lintel = new THREE.Mesh(lintelGeo, lintelMat);
+        lintel.position.y = isCapital ? 2.0 : 1.6;
+        lintel.castShadow = false;
+        lintel.receiveShadow = false;
+        gateGroup.add(lintel);
+        
+        // Gate roof over passage
+        const gateRoofGroup = createEaveRoof(1.8, 0.7, roofColor, 6);
+        gateRoofGroup.position.y = isCapital ? 2.4 : 2.0;
+        gateGroup.add(gateRoofGroup);
+        
+        gateGroup.position.set(
+          Math.cos(gate.angle) * (wallRadius + 0.15),
+          0,
+          Math.sin(gate.angle) * (wallRadius + 0.15)
+        );
+        gateGroup.rotation.y = gate.angle;
+        group.add(gateGroup);
+      });
+
+      // --- 3. Inner Courtyard Buildings ---
+      // Main Palace (central)
+      const palaceHeight = isCapital ? 14.0 : 9.0;
+      const palaceBaseRadius = isCapital ? 3.2 : 2.2;
+      
+      // Palace platform
+      const platformGeo = new THREE.CylinderGeometry(palaceBaseRadius * 1.1, palaceBaseRadius * 1.1, 0.9, 12);
+      const platformMat = new THREE.MeshStandardMaterial({ color: 0x5a4a3a, roughness: 0.9 });
+      const platform = new THREE.Mesh(platformGeo, platformMat);
+      platform.position.y = 0.45;
+      platform.castShadow = false;
+      platform.receiveShadow = false;
+      group.add(platform);
+      
+      // Multi-tier palace with upturned eaves
+      const tierCount = isCapital ? 5 : 3;
+      for (let t = 0; t < tierCount; t++) {
+        const tierRatio = t / (tierCount - 1);
+        const tierRadius = palaceBaseRadius * (1.0 - tierRatio * 0.28);
+        const tierHeight = palaceHeight / tierCount * 0.7;
+        const tierY = 0.9 + t * (palaceHeight / tierCount);
+        
+        // Building body
+        const bodyGeo = new THREE.CylinderGeometry(
+          tierRadius, tierRadius * 1.08, tierHeight, 10
+        );
+        const bodyMat = new THREE.MeshStandardMaterial({ 
+          color: isCapital ? 0xd4c8a8 : 0xc8b898, 
+          roughness: 0.8, metalness: 0.1 
+        });
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.position.y = tierY + tierHeight / 2;
+        body.castShadow = false;
+        body.receiveShadow = false;
+        group.add(body);
+        
+        // Upturned eave roof (Chinese style)
+        const roofGroup = createEaveRoof(tierRadius * 1.35, tierHeight * 0.55, roofColor);
+        roofGroup.position.y = tierY + tierHeight + tierHeight * 0.2;
+        group.add(roofGroup);
+        
+        // Ridge ornaments on top tier
+        if (t === tierCount - 1) {
+          const ornamentGeo = new THREE.ConeGeometry(0.22, 1.1, 4);
+          const ornamentMat = new THREE.MeshStandardMaterial({ color: 0xf0d840, metalness: 0.5, roughness: 0.3 });
+          const ornament = new THREE.Mesh(ornamentGeo, ornamentMat);
+          ornament.position.y = tierY + tierHeight + tierHeight * 0.55;
+          ornament.castShadow = false;
+          ornament.receiveShadow = false;
+          group.add(ornament);
+        }
+      }
+      
+      // --- 4. Four Corner Towers (larger, more detailed) ---
+      for (let i = 0; i < 4; i++) {
+        const angle = (i / 4) * Math.PI * 2 + Math.PI / 4;
+        const tx = Math.cos(angle) * (wallRadius + 1.1);
+        const tz = Math.sin(angle) * (wallRadius + 1.1);
+        
+        const towerGroup = new THREE.Group();
+        towerGroup.position.set(tx, 0, tz);
+        
+        // Tower base (stone)
+        const baseGeo = new THREE.CylinderGeometry(1.1, 1.35, 1.2, 8);
+        const baseMat = new THREE.MeshStandardMaterial({ color: 0x5a4a3a, roughness: 0.9 });
+        const base = new THREE.Mesh(baseGeo, baseMat);
+        base.position.y = 0.6;
+        base.castShadow = false;
+        base.receiveShadow = false;
+        towerGroup.add(base);
+        
+        // Tower body
+        const bodyGeo = new THREE.CylinderGeometry(0.95, 1.1, isCapital ? 3.0 : 2.2, 8);
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x7a6a5a, roughness: 0.8, metalness: 0.08 });
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.position.y = isCapital ? 2.6 : 1.9;
+        body.castShadow = false;
+        body.receiveShadow = false;
+        towerGroup.add(body);
+        
+        // Tower roof with upturned eaves
+        const roofGroup = createEaveRoof(1.55, 1.5, roofColor, 6);
+        roofGroup.position.y = isCapital ? 4.2 : 3.2;
+        towerGroup.add(roofGroup);
+        
+        // Corner ornament
+        const ornamentGeo = new THREE.ConeGeometry(0.12, 0.7, 4);
+        const ornamentMat = new THREE.MeshStandardMaterial({ color: 0xf0d840, metalness: 0.5, roughness: 0.3 });
+        const ornament = new THREE.Mesh(ornamentGeo, ornamentMat);
+        ornament.position.y = isCapital ? 5.0 : 4.0;
+        ornament.castShadow = false;
+        ornament.receiveShadow = false;
+        towerGroup.add(ornament);
+        
+        group.add(towerGroup);
+      }
+      
+      // --- 5. Side Courtyard Buildings (barracks, storehouses, offices) ---
+      const buildingCount = isCapital ? 6 : 3;
+      for (let i = 0; i < buildingCount; i++) {
+        const angle = (i / buildingCount) * Math.PI * 2;
+        const bx = Math.cos(angle) * courtyardRadius;
+        const bz = Math.sin(angle) * courtyardRadius;
+        
+        const bldGroup = new THREE.Group();
+        bldGroup.position.set(bx, 0, bz);
+        bldGroup.rotation.y = angle + Math.PI / 2;
+        
+        // Rectangular building with Chinese roof
+        const bldWidth = isCapital ? 2.2 : 1.6;
+        const bldDepth = isCapital ? 1.3 : 1.0;
+        const bldHeight = isCapital ? 2.0 : 1.5;
+        
+        const bodyGeo = new THREE.BoxGeometry(bldWidth, bldHeight, bldDepth);
+        const bodyMat = new THREE.MeshStandardMaterial({ 
+          color: isCapital ? 0xd4c8a8 : 0xc8b898, 
+          roughness: 0.85, metalness: 0.08 
+        });
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.position.y = bldHeight / 2;
+        body.castShadow = false;
+        body.receiveShadow = false;
+        bldGroup.add(body);
+        
+        // Gabled roof with upturned ends
+        const roofGeo = new THREE.BoxGeometry(bldWidth * 1.25, bldHeight * 0.45, bldDepth * 1.35);
+        const roofMat = new THREE.MeshStandardMaterial({ color: roofColor, roughness: 0.6, metalness: 0.2 });
+        const roof = new THREE.Mesh(roofGeo, roofMat);
+        roof.position.y = bldHeight + bldHeight * 0.22;
+        roof.castShadow = false;
+        roof.receiveShadow = false;
+        bldGroup.add(roof);
+        
+        // Roof ridge ornaments
+        const ridgeGeo = new THREE.BoxGeometry(bldWidth * 0.1, 0.2, bldDepth * 0.9);
+        const ridgeMat = new THREE.MeshStandardMaterial({ color: 0xf0d840, metalness: 0.5, roughness: 0.3 });
+        const ridge = new THREE.Mesh(ridgeGeo, ridgeMat);
+        ridge.position.y = bldHeight + bldHeight * 0.45;
+        ridge.castShadow = false;
+        ridge.receiveShadow = false;
+        bldGroup.add(ridge);
+        
+        group.add(bldGroup);
+      }
+      
+      // --- 6. Flag on main palace ---
+      if (cit.owner) {
+        const faction = FACTIONS.find(f => f.id === cit.owner);
+        const flagGeo = new THREE.PlaneGeometry(1.5, 1.0);
+        const flagMat = new THREE.MeshBasicMaterial({ 
+          color: faction ? faction.color : 0x888888, 
+          transparent: true, opacity: 1.0, side: THREE.DoubleSide 
+        });
+        const flag = new THREE.Mesh(flagGeo, flagMat);
+        flag.position.set(0, palaceHeight + 2.0, 0);
+        flag.userData = { isFlag: true, baseColor: new THREE.Color(faction ? faction.color : 0x888888) };
+        group.add(flag);
+      }
+      
+      group.scale.setScalar(isCapital ? 0.86 : 0.78);
+      return group;
+    }
+
+    function createCitadelAssetGroup(cit) {
+      // V1 keeps the local tower/gate/palace layout because no matching CC0 Chinese citadel GLB is bundled yet.
+      return createCitadel(cit);
+    }    // Build all citadels
+    const citadelMeshes = {};
+    CITADELS.forEach(cit => {
+      const citadelGroup = createCitadelAssetGroup(cit);
+      citadelGroup.position.set(cit.pos[0] * MAP_SCALE, 0, cit.pos[1] * MAP_SCALE);
+      scene.add(citadelGroup);
+      
+      citadelMeshes[cit.name] = { group: citadelGroup, cit };
+      
+      // Label
+      const isCapital = cit.type === 'capital';
+      const labelDiv = document.createElement('div');
+      labelDiv.style.cssText = `color:${isCapital ? '#e8c843' : '#c8b898'};font-size:${isCapital ? '14px' : '11px'};font-weight:${isCapital ? '800' : '700'};text-shadow:0 0 8px #000, 0 0 4px #000;pointer-events:none;white-space:nowrap;`;
+      labelDiv.textContent = cit.name;
+      const label = new CSS2DObject(labelDiv);
+      label.position.set(cit.pos[0] * MAP_SCALE, isCapital ? 18.0 : 12.0, cit.pos[1] * MAP_SCALE);
+      scene.add(label);
+    });
+
+    // ============================================
+    // ASSET VEGETATION (Trees/Bushes)
+    // ============================================
+    const vegetationGroup = new THREE.Group();
+    scene.add(vegetationGroup);
+
+    // Tree types with reduced scales (smaller than citadels) and biome clustering
+    const treeTypes = [
+      { name: 'pine', assetIds: ['treePine', 'treePineDark'], color: 0x2d5a2d, biome: ['mountains', 'steppes'], count: 120, scale: 0.10 },
+      { name: 'oak', assetIds: ['treeBroadleaf', 'treeBlock'], color: 0x3a7a3a, biome: ['plains', 'riverlands'], count: 100, scale: 0.09 },
+      { name: 'tropical', assetIds: ['treeFat', 'treeBlock'], color: 0x2a6a2a, biome: ['tropical', 'coastal'], count: 70, scale: 0.11 },
+      { name: 'bamboo', assetIds: ['bamboo'], color: 0x4a8a3a, biome: ['tropical', 'riverlands'], count: 50, scale: 0.08 },
+      { name: 'brush', assetIds: ['brush', 'grassLarge'], color: 0x3d7a42, biome: ['plains', 'riverlands', 'coastal', 'tropical'], count: 80, scale: 0.07 },
+    ];
+
+    // Biome color bands for forest clustering (used for visual coherence)
+    const biomeColors = {
+      mountains: 0x2d5a2d,
+      steppes: 0x3a5a3a,
+      plains: 0x3a7a3a,
+      riverlands: 0x2a6a2a,
+      tropical: 0x2a6a2a,
+      coastal: 0x3d7a42,
+      capital: 0x3a6a3a,
+      basin: 0x3a7a3a,
+    };
+
+    function createFallbackTree(type) {
+      const group = new THREE.Group();
+
+      if (type.name === 'bamboo') {
+        for (let i = 0; i < 5; i++) {
+          const stalk = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.03, 0.05, 4.0, 4),
+            new THREE.MeshStandardMaterial({ color: 0x4a8a3a, roughness: 0.75 })
+          );
+          stalk.position.set((Math.random() - 0.5) * 0.3, 2.0, (Math.random() - 0.5) * 0.3);
+          group.add(stalk);
+        }
+      } else if (type.name === 'oak' || type.name === 'tropical') {
+        const trunk = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.18, 0.34, 1.1, 6),
+          new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.9 })
+        );
+        trunk.position.y = 0.55;
+        group.add(trunk);
+
+        const foliage = new THREE.Mesh(
+          new THREE.SphereGeometry(type.name === 'tropical' ? 1.55 : 1.05, 8, 6),
+          new THREE.MeshStandardMaterial({ color: type.color, roughness: 0.85 })
+        );
+        foliage.position.y = type.name === 'tropical' ? 2.25 : 1.6;
+        foliage.scale.set(1.25, 0.78, 1.25);
+        group.add(foliage);
+      } else if (type.name === 'brush') {
+        const bush = new THREE.Mesh(
+          new THREE.SphereGeometry(0.75, 7, 5),
+          new THREE.MeshStandardMaterial({ color: type.color, roughness: 0.88 })
+        );
+        bush.position.y = 0.55;
+        bush.scale.set(1.25, 0.5, 1.25);
+        group.add(bush);
+      } else {
+        const trunk = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.13, 0.24, 0.9, 6),
+          new THREE.MeshStandardMaterial({ color: 0x4a3a2a, roughness: 0.9 })
+        );
+        trunk.position.y = 0.45;
+        group.add(trunk);
+        for (let i = 0; i < 3; i++) {
+          const foliage = new THREE.Mesh(
+            new THREE.ConeGeometry(0.65 - i * 0.14, 0.95, 6),
+            new THREE.MeshStandardMaterial({ color: type.color, roughness: 0.84 })
+          );
+          foliage.position.y = 1.0 + i * 0.58;
+          group.add(foliage);
+        }
+      }
+
+      group.traverse(child => {
+        if (!child.isMesh) return;
+        child.castShadow = false;
+        child.receiveShadow = false;
+      });
+      return group;
+    }
+
+    function getTerrainHeightAt(x, z) {
+      const mx = x / MAP_SCALE;
+      const mz = z / MAP_SCALE;
+
+      let minDist = Infinity;
+      let baseTerrain = 'plains';
+      for (const prov of PROVINCES) {
+        const d = Math.sqrt((mx - prov.pos[0]) ** 2 + (mz - prov.pos[1]) ** 2);
+        if (d < minDist) { minDist = d; baseTerrain = prov.terrain || 'plains'; }
+      }
+
+      let elevation = 0;
+      switch(baseTerrain) {
+        case 'plains': elevation = 0.05; break;
+        case 'capital': elevation = 0.1; break;
+        case 'riverlands': elevation = 0.0; break;
+        case 'coastal': elevation = 0.03; break;
+        case 'tropical': elevation = 0.08; break;
+        case 'mountains': elevation = 0.5; break;
+        case 'steppes': elevation = 0.12; break;
+        case 'basin': elevation = 0.08; break;
+        case 'desert': elevation = 0.2; break;
+        default: elevation = 0.05;
+      }
+
+      const noise = (Math.sin(mx * 1.2) * Math.cos(mz * 1.2) + Math.sin(mx * 4) * Math.cos(mz * 4) * 0.3) * 0.025;
+      return elevation * TERRAIN_HEIGHT_MULT + noise;
+    }
+
+    function findVegetationPosition(type) {
+      for (let attempts = 0; attempts < 24; attempts++) {
+        const x = (Math.random() - 0.5) * groundSize * 0.82;
+        const z = (Math.random() - 0.5) * groundSize * 0.82;
+        const mx = x / MAP_SCALE;
+        const mz = z / MAP_SCALE;
+
+        let matchesBiome = false;
+        for (const prov of PROVINCES) {
+          const d = Math.sqrt((mx - prov.pos[0]) ** 2 + (mz - prov.pos[1]) ** 2);
+          if (d < 2.35 && type.biome.includes(prov.terrain)) {
+            matchesBiome = true;
+            break;
+          }
+        }
+        if (!matchesBiome) continue;
+
+        return { x, z, y: getTerrainHeightAt(x, z) };
+      }
+      return null;
+    }
+
+    function createVegetationAsset(type, index) {
+      const assetId = type.assetIds[index % type.assetIds.length];
+      const model = assetManager.createModelInstance(assetId, {
+        scale: type.scale * (0.82 + Math.random() * 0.36),
+        rotationY: Math.random() * Math.PI * 2,
+        tint: type.color,
+      });
+      return model || createFallbackTree(type);
+    }
+
+    function createForestAssets() {
+      // Group provinces by biome for clustered forest bands
+      const biomeProvinces = {};
+      PROVINCES.forEach(prov => {
+        const biome = prov.terrain;
+        if (!biomeProvinces[biome]) biomeProvinces[biome] = [];
+        biomeProvinces[biome].push(prov);
+      });
+
+      treeTypes.forEach(type => {
+        // For each biome this tree type grows in, create clustered forests
+        type.biome.forEach(biome => {
+          const provinces = biomeProvinces[biome] || [];
+          if (provinces.length === 0) return;
+          
+          // Distribute tree count across provinces of this biome
+          const treesPerProvince = Math.max(1, Math.floor(type.count / provinces.length));
+          
+          provinces.forEach(prov => {
+            // Create a forest cluster around each province center
+            const clusterCenter = [prov.pos[0] * MAP_SCALE, prov.pos[1] * MAP_SCALE];
+            const clusterRadius = 2.5 * MAP_SCALE; // Forest band radius
+            const clusterCount = treesPerProvince;
+            
+            for (let i = 0; i < clusterCount; i++) {
+              // Position within cluster with natural variation
+              const angle = Math.random() * Math.PI * 2;
+              const distance = Math.random() * clusterRadius * 0.85;
+              const x = clusterCenter[0] + Math.cos(angle) * distance;
+              const z = clusterCenter[1] + Math.sin(angle) * distance;
+              const y = getTerrainHeightAt(x, z);
+              
+              // Skip if too close to citadel or road
+              let tooClose = false;
+              CITADELS.forEach(cit => {
+                const dx = x - cit.pos[0] * MAP_SCALE;
+                const dz = z - cit.pos[1] * MAP_SCALE;
+                if (dx * dx + dz * dz < (5 * MAP_SCALE) ** 2) tooClose = true;
+              });
+              if (tooClose) return;
+              
+              const tree = createVegetationAsset(type, i);
+              tree.position.set(x, y + 0.1, z);
+              tree.rotation.y = Math.random() * Math.PI * 2;
+              
+              // Add slight scale variation for natural look
+              const scaleVar = 0.85 + Math.random() * 0.3;
+              tree.scale.multiplyScalar(scaleVar);
+              
+              vegetationGroup.add(tree);
+            }
+          });
+        });
+      });
+    }
+
+    createForestAssets();
+    // ============================================
+    const terrainColors = {
+      capital: 0x7fab4e, plains: 0x83b94d, riverlands: 0x5fa987, basin: 0x91b95d,
+      coastal: 0x74a98e, tropical: 0x3f9854, steppes: 0xc0a76d, mountains: 0x8d7b6b,
+    };
+
+    const provinceMeshes = {};
+    const provinceOutlines = {};
+    const provinceLabels = {};
+    const provinceRadius = 0.48 * FEATURE_SCALE;
+
+    PROVINCES.forEach(prov => {
+      const [x, z] = prov.pos;
+      const hexGeo = new THREE.CircleGeometry(provinceRadius, 6);
+      const hexMat = new THREE.MeshBasicMaterial({ 
+        color: terrainColors[prov.terrain] || terrainColors.plains, 
+        transparent: true, 
+        opacity: 0.045,
+        depthWrite: false,
+        depthTest: true,
+        side: THREE.DoubleSide,
+      });
+      const hex = new THREE.Mesh(hexGeo, hexMat);
+      hex.rotation.x = -Math.PI/2;
+      hex.position.set(x * MAP_SCALE, 0.11, z * MAP_SCALE);
+      hex.renderOrder = 1;
+      hex.userData = { provinceId: prov.id, isProvince: true };
+      scene.add(hex);
+      provinceMeshes[prov.id] = hex;
+
+      // Outline for ownership
+      const outlineGeo = new THREE.RingGeometry(provinceRadius * 1.04, provinceRadius * 1.105, 6);
+      const outlineMat = new THREE.MeshBasicMaterial({
+        color: 0xd4a843,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        depthTest: false,
+      });
+      const outline = new THREE.Mesh(outlineGeo, outlineMat);
+      outline.rotation.x = -Math.PI/2;
+      outline.position.set(x * MAP_SCALE, 0.19, z * MAP_SCALE);
+      outline.renderOrder = 3;
+      scene.add(outline);
+      provinceOutlines[prov.id] = outline;
+
+      // Label - more subtle
+      const labelDiv = document.createElement('div');
+      labelDiv.style.cssText = 'color:#5f583d;font-size:9px;font-weight:600;text-shadow:0 1px 2px rgba(255,255,255,0.85),0 0 3px rgba(0,0,0,0.25);pointer-events:none;white-space:nowrap;';
+      labelDiv.textContent = prov.name;
+      const label = new CSS2DObject(labelDiv);
+      label.position.set(x * MAP_SCALE, 0.6, z * MAP_SCALE);
+      scene.add(label);
+      provinceLabels[prov.id] = label;
+    });
+
+    // Connection lines - more subtle
+    const lineGroup = new THREE.Group();
+    scene.add(lineGroup);
+    const lineMat = new THREE.LineBasicMaterial({ color: 0x5a6a5a, transparent: true, opacity: 0.0 });
+    PROVINCES.forEach(prov => {
+      const [x1, z1] = prov.pos;
+      prov.neighbors.forEach(nid => {
+        const neighbor = PROVINCES.find(p => p.id === nid);
+        if (!neighbor) return;
+        const [x2, z2] = neighbor.pos;
+        if (x1 < x2 || (x1 === x2 && z1 < z2)) {
+          const geo = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(x1*MAP_SCALE, 0.25, z1*MAP_SCALE), 
+            new THREE.Vector3(x2*MAP_SCALE, 0.25, z2*MAP_SCALE)
+          ]);
+          lineGroup.add(new THREE.Line(geo, lineMat.clone()));
+        }
+      });
+    });
+
+    // Coastline
+    const coastGeo = new THREE.BufferGeometry();
+    const coastPoints = COASTLINE.map((v, i) => i % 2 === 0 ? new THREE.Vector3(v * MAP_SCALE, 0.15, COASTLINE[i+1] * MAP_SCALE) : null).filter(Boolean);
+    coastGeo.setFromPoints(coastPoints);
+    const coastMat = new THREE.LineBasicMaterial({ color: 0x3a6a8a, transparent: true, opacity: 0.06 });
+    const coastLine = new THREE.Line(coastGeo, coastMat);
+    scene.add(coastLine);
+
+    // ============================================
+    // FACTION ENTITIES (Armies)
+    // ============================================
+    const factionEntities = {};
+    const armyGroups = {};
+
+    FACTIONS.forEach((f) => {
+      const starts = Array.isArray(f.start) ? f.start : [f.start];
+      const group = new THREE.Group();
+      scene.add(group);
+      armyGroups[f.id] = group;
+      factionEntities[f.id] = { ...f, troops: f.troops, grain: f.grain, loyalty: f.loyalty, prestige: f.prestige, provinces: [...starts], knownFactions: new Set([f.id]), alive: true, color: new THREE.Color(f.color), action: 'IDLE', quote: '—', targetProvince: null };
+      const factionLabels = {};
+      
+      starts.forEach((provId) => {
+        const prov = PROVINCES.find(p => p.id === provId);
+        if (!prov) return;
+        const [x, z] = prov.pos;
+        // Larger, more prominent armies for game-like visibility
+        const army = createArmyUnit(f.color, Math.min(20, f.troops / 8000 + 4));
+        army.position.set(x * MAP_SCALE + (Math.random()-0.5)*4, 0, z * MAP_SCALE + (Math.random()-0.5)*4);
+        army.userData = { factionId: f.id, provinceId: provId, armyId: `${f.id}_${provId}` };
+        group.add(army);
+        
+        const labelDiv = document.createElement('div');
+        labelDiv.style.cssText = `color:#${f.color.toString(16).padStart(6,'0')};font-size:13px;font-weight:700;text-shadow:0 0 6px #000, 0 0 3px #000;pointer-events:none;white-space:nowrap;`;
+        labelDiv.textContent = f.name;
+        const label = new CSS2DObject(labelDiv);
+        label.position.set(x * MAP_SCALE, 4.0, z * MAP_SCALE);
+        group.add(label);
+        if (!factionLabels[f.id]) factionLabels[f.id] = [];
+        factionLabels[f.id].push(label);
+      });
+      starts.forEach(provId => updateProvinceOwner(provId, f.id));
+    });
+
+    function createArmyUnit(color, size) {
+      const group = new THREE.Group();
+      const base = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.3, 1.5, 0.12, 16),
+        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.18, depthWrite: false })
+      );
+      base.position.y = 0.06;
+      group.add(base);
+      // Taller pole with flag
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 4.0, 4), new THREE.MeshStandardMaterial({ color: 0x3d3328 }));
+      pole.position.y = 2.2;
+      group.add(pole);
+      // Larger, more visible flag with emissive glow
+      const flag = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 1.8), new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 1.0, side: THREE.DoubleSide }));
+      flag.position.set(1.5, 3.5, 0);
+      flag.userData = { isFlag: true, baseColor: new THREE.Color(color) };
+      group.add(flag);
+      // More soldiers, larger, spread out more
+      for (let i = 0; i < Math.min(size, 16); i++) {
+        const soldierGeo = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+        const soldierMat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.5 });
+        const soldier = new THREE.Mesh(soldierGeo, soldierMat);
+        const angle = (i / Math.max(size, 1)) * Math.PI * 2;
+        const radius = 2.5 + Math.random() * 1.5;
+        soldier.position.set(Math.cos(angle) * radius, 0.5 + i * 0.25, Math.sin(angle) * radius);
+        group.add(soldier);
+      }
+      group.userData.flag = flag;
+      return group;
+    }
+
+    function updateProvinceOwner(provId, factionId) {
+      const outline = provinceOutlines[provId];
+      if (outline) { const fac = FACTIONS.find(f => f.id === factionId); if (fac) { outline.material.color.setHex(fac.color); outline.material.opacity = 0.72; } }
+    }
+    function clearProvinceOwner(provId) { const outline = provinceOutlines[provId]; if (outline) outline.material.opacity = 0; }
+
+    // ============================================
+    // DIPLOMACY LINES
+    // ============================================
+    const diplomacyGroup = new THREE.Group();
+    scene.add(diplomacyGroup);
+    const diplomacyLines = {};
+
+    function updateDiplomacyLines() {
+      // Clear old
+      Object.values(diplomacyLines).forEach(line => { if (line.parent) line.parent.remove(line); });
+      diplomacyLines.clear ? diplomacyLines.clear() : Object.keys(diplomacyLines).forEach(k => delete diplomacyLines[k]);
+      
+      // This will be populated from simulation data
+    }
+
+    // ============================================
+    // PARTICLES / EFFECTS
+    // ============================================
+    const particleSystems = [];
+
+    function spawnBattleParticles(position, color1, color2) {
+      const count = 120;
+      const geo = new THREE.BufferGeometry();
+      const positions = new Float32Array(count * 3);
+      const velocities = new Float32Array(count * 3);
+      const colors = new Float32Array(count * 3);
+      const sizes = new Float32Array(count);
+      const life = new Float32Array(count);
+      for (let i = 0; i < count; i++) {
+        positions[i*3] = position.x + (Math.random()-0.5)*4;
+        positions[i*3+1] = position.y + Math.random()*3;
+        positions[i*3+2] = position.z + (Math.random()-0.5)*4;
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 3 + Math.random() * 5;
+        velocities[i*3] = Math.cos(angle) * speed;
+        velocities[i*3+1] = Math.random()*3 + 2;
+        velocities[i*3+2] = Math.sin(angle) * speed;
+        const c = new THREE.Color().lerpColors(new THREE.Color(color1), new THREE.Color(color2), Math.random());
+        colors[i*3] = c.r; colors[i*3+1] = c.g; colors[i*3+2] = c.b;
+        sizes[i] = 0.15 + Math.random() * 0.25;
+        life[i] = 1.0;
+      }
+      geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geo.setAttribute('velocity', new THREE.BufferAttribute(velocities, 3));
+      geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+      geo.setAttribute('life', new THREE.BufferAttribute(life, 1));
+      const mat = new THREE.PointsMaterial({ size: 0.3, vertexColors: true, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending });
+      const system = new THREE.Points(geo, mat);
+      system.userData = { age: 0, maxAge: 2.5 };
+      scene.add(system);
+      particleSystems.push(system);
+    }
+
+    function spawnMovementTrail(from, to, color) {
+      const count = 30;
+      const geo = new THREE.BufferGeometry();
+      const positions = new Float32Array(count * 3);
+      const alphas = new Float32Array(count);
+      for (let i = 0; i < count; i++) {
+        const t = i / (count - 1);
+        positions[i*3] = THREE.MathUtils.lerp(from.x, to.x, t) + (Math.random()-0.5)*0.5;
+        positions[i*3+1] = 0.5 + Math.sin(t * Math.PI) * 1.0;
+        positions[i*3+2] = THREE.MathUtils.lerp(from.z, to.z, t) + (Math.random()-0.5)*0.5;
+        alphas[i] = 1 - t;
+      }
+      geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geo.setAttribute('alpha', new THREE.BufferAttribute(alphas, 1));
+      const mat = new THREE.PointsMaterial({ size: 0.2, color, transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending });
+      const system = new THREE.Points(geo, mat);
+      system.userData = { age: 0, maxAge: 1.5, type: 'trail' };
+      scene.add(system);
+      particleSystems.push(system);
+    }
+
+    // ============================================
+    // SIMULATION STATE
+    // ============================================
+    let simTime = 0, simSpeed = 1.0, paused = false, selectedFaction = null, tick = 0;
+    const TICK_DURATION = 3000;
+    const events = [];
+    const MAX_EVENTS = 100;
+    let ws = null;
+
+    function connectWS() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+      ws.onopen = () => console.log('WS connected');
+      ws.onmessage = (e) => handleServerMessage(JSON.parse(e.data));
+      ws.onclose = () => setTimeout(connectWS, 3000);
+      ws.onerror = (e) => console.error('WS error', e);
+    }
+
+    function handleServerMessage(msg) {
+      switch (msg.type) {
+        case 'STATE': applyServerState(msg.data); break;
+        case 'EVENTS': msg.events.forEach(e => { addEvent(e); if (e.type === 'BATTLE') showBattleEffect(e); else if (e.type === 'MOVEMENT') animateArmyMovement(e); }); break;
+        case 'JOINED': console.log('Joined:', msg.sessionId); break;
+      }
+    }
+
+    function applyServerState(data) {
+      tick = data.tick; simTime = data.tick; updateTimeDisplay();
+      Object.entries(data.factions).forEach(([id, f]) => {
+        const e = factionEntities[id];
+        if (!e) return;
+        e.troops = f.troops; e.grain = f.grain; e.loyalty = f.loyalty; e.prestige = f.prestige;
+        e.provinces = f.provinces || []; e.alive = f.alive; e.action = f.action || 'IDLE'; e.quote = f.quote || '—'; e.targetProvince = f.targetProvince || null;
+      });
+      renderFactionList(); updateProvinceVisuals();
+    }
+
+    function updateProvinceVisuals() {
+      Object.keys(provinceOutlines).forEach(clearProvinceOwner);
+      Object.values(factionEntities).forEach(e => { if (e.alive) e.provinces.forEach(pid => updateProvinceOwner(pid, e.id)); });
+    }
+
+    function showBattleEffect(data) {
+      const prov = PROVINCES.find(p => p.id === data.province);
+      if (!prov) return;
+      const pos = new THREE.Vector3(prov.pos[0]*MAP_SCALE, 2, prov.pos[1]*MAP_SCALE);
+      const attacker = FACTIONS.find(f => f.id === data.attacker);
+      const defender = FACTIONS.find(f => f.id === data.defender);
+      spawnBattleParticles(pos, attacker ? attacker.color : 0xef4444, defender ? defender.color : 0xef4444);
+      const outline = provinceOutlines[data.province];
+      if (outline) { outline.material.opacity = 0.72; outline.material.color.set(0xef4444); setTimeout(() => { const owner = PROVINCES.find(p => p.id === data.province)?.owner; if (owner) updateProvinceOwner(data.province, owner); else clearProvinceOwner(data.province); }, 500); }
+    }
+
+    function animateArmyMovement(data) {
+      const fromProv = PROVINCES.find(p => p.id === data.from);
+      const toProv = PROVINCES.find(p => p.id === data.to);
+      if (!fromProv || !toProv) return;
+      const fromPos = new THREE.Vector3(fromProv.pos[0]*MAP_SCALE, 0, fromProv.pos[1]*MAP_SCALE);
+      const toPos = new THREE.Vector3(toProv.pos[0]*MAP_SCALE, 0, toProv.pos[1]*MAP_SCALE);
+      const faction = FACTIONS.find(f => f.id === data.faction);
+      spawnMovementTrail(fromPos, toPos, faction?.color || 0xd4a843);
+      const animId = `${data.faction}_${data.from}_${data.to}_${Date.now()}`;
+      armyAnimations.set(animId, { factionId: data.faction, from: data.from, to: data.to, progress: 0 });
+    }
+
+    function addEvent(event) {
+      events.unshift({...event, time: Date.now()});
+      if (events.length > MAX_EVENTS) events.pop();
+      renderEventLog();
+    }
+
+    // ============================================
+    // UI RENDERING
+    // ============================================
+    function updateTimeDisplay() {
+      const year = 200 + Math.floor(tick / 52);
+      const season = SEASONS[Math.floor((tick % 52) / 13)];
+      document.getElementById('yearDisplay').textContent = year;
+      document.getElementById('seasonDisplay').textContent = season;
+      document.getElementById('tickDisplay').textContent = tick;
+      document.getElementById('speedDisplay').textContent = simSpeed.toFixed(1) + 'x';
+    }
+
+    function renderEventLog() {
+      document.getElementById('eventLog').innerHTML = events.map(e => {
+        const t = new Date(e.time);
+        const timeStr = `${t.getHours().toString().padStart(2,'0')}:${t.getMinutes().toString().padStart(2,'0')}:${t.getSeconds().toString().padStart(2,'0')}`;
+        const typeClass = e.type === 'BATTLE' ? 'combat' : e.type === 'DIPLOMACY' ? 'diplomacy' : e.type === 'SUBTERFUGE' ? 'subterfuge' : 'internal';
+        const fname = (id) => FACTIONS.find(f => f.id === id)?.name || id;
+        const pname = (id) => PROVINCES.find(p => p.id === id)?.name || id;
+        let text = '';
+        switch(e.type) {
+          case 'BATTLE': text = `⚔ ${fname(e.attacker)} tấn công ${fname(e.defender)} tại ${pname(e.province)} — ${e.outcome}`; break;
+          case 'DIPLOMACY': text = `🕊 ${fname(e.faction)} ${e.subtype} ${fname(e.target)}`; break;
+          case 'SUBTERFUGE': text = `🎭 ${fname(e.faction)} ${e.subtype} ${fname(e.target)}`; break;
+          case 'INTERNAL': text = `🏛 ${fname(e.faction)} ${e.subtype}`; break;
+          case 'ELIMINATED': text = `☠ ${fname(e.faction)} đã diệt vong!`; break;
+          case 'VICTORY': text = `🏆 ${fname(e.faction)} thống nhất thiên hạ!`; break;
+          default: text = JSON.stringify(e);
+        }
+        return `<div class="eventEntry"><span class="eventTime">[${timeStr}]</span><span class="eventText ${typeClass}">${text}</span></div>`;
+      }).join('');
+    }
+
+    function renderFactionList() {
+      const container = document.getElementById('factionList');
+      const maxTroops = Math.max(...Object.values(factionEntities).map(e => e.troops), 1);
+      const maxGrain = Math.max(...Object.values(factionEntities).map(e => e.grain), 1);
+      const maxPrestige = Math.max(...Object.values(factionEntities).map(e => e.prestige), 1);
+      container.innerHTML = FACTIONS.map(f => {
+        const e = factionEntities[f.id];
+        if (!e) return '';
+        const isSelected = selectedFaction === f.id;
+        const isAlive = e.alive;
+        return `<div class="factionRow ${isAlive ? '' : 'eliminated'} ${isSelected ? 'selected' : ''}" data-faction="${f.id}" style="opacity:${isAlive ? 1 : 0.4}"><div class="factionColor" style="background:#${f.color.toString(16).padStart(6,'0')}"></div><div class="factionName">${f.name} ${isAlive ? '' : '(Diệt)'}</div></div>`;
+      }).join('');
+      container.querySelectorAll('.factionRow').forEach(row => row.addEventListener('click', () => selectFaction(row.dataset.faction)));
+    }
+
+    function selectFaction(id) {
+      selectedFaction = id;
+      const e = factionEntities[id]; const f = FACTIONS.find(f => f.id === id);
+      document.getElementById('entityInfo').classList.add('visible');
+      document.getElementById('selectedName').textContent = f?.name || id;
+      document.getElementById('selectedType').textContent = f?.type === 'time_displaced' ? '🌀 Hoàng đế xuyên không' : '⚔ Quân phiệt lịch sử';
+      const maxTroops = Math.max(...Object.values(factionEntities).map(x => x.troops), 1);
+      const maxGrain = Math.max(...Object.values(factionEntities).map(x => x.grain), 1);
+      const maxPrestige = Math.max(...Object.values(factionEntities).map(x => x.prestige), 1);
+      document.getElementById('barTroops').style.width = `${(e.troops/maxTroops)*100}%`;
+      document.getElementById('barGrain').style.width = `${(e.grain/maxGrain)*100}%`;
+      document.getElementById('barLoyalty').style.width = `${e.loyalty}%`;
+      document.getElementById('barPrestige').style.width = `${(e.prestige/maxPrestige)*100}%`;
+      document.getElementById('selectedQuote').textContent = `"${e.quote}"`;
+      document.getElementById('selectedAction').textContent = `Hành động: ${e.action} ${e.targetProvince ? `→ ${PROVINCES.find(p=>p.id===e.targetProvince)?.name}` : ''}`;
+      renderFactionList();
+    }
+
+    function renderLegend() {
+      document.getElementById('legend').innerHTML = [
+        {color:0x3b82f6, label:'Lý Thế Dân (Đường)'}, {color:0xfbbf24, label:'Tần Thủy Hoàng (Tần)'},
+        {color:0xdc2626, label:'Chu Nguyên Chương (Minh)'}, {color:0xa855f7, label:'Lưu Triệt (Hán Vũ)'},
+        {color:0x16a34a, label:'Tào Tháo (Ngụy)'}, {color:0x22c55e, label:'Lưu Bị (Thục)'},
+        {color:0xf97316, label:'Tôn Quyền (Ngô)'}, {color:0x888888, label:'Trung lập'},
+        {color:0xd4a843, label:'Đô thành / Quan ải'}, {color:0x5a8ab0, label:'Sông'},
+        {color:0x8a7050, label:'Đường chính'}, {color:0x7a6a5a, label:'Đường phụ'},
+        {color:0x6b5b4a, label:'Dãy núi'}, {color:0x5a4a3a, label:'Núi / đồi'},
+      ].map(l => `<div class="legendItem"><div class="legendColor" style="background:#${l.color.toString(16).padStart(6,'0')}"></div><span style="font-size:0.65rem;color:var(--text-dim)">${l.label}</span></div>`).join('');
+    }
+
+    // ============================================
+    // CONTROLS
+    // ============================================
+    document.getElementById('speedSlider').addEventListener('input', (e) => { simSpeed = parseFloat(e.target.value); });
+    document.getElementById('pauseBtn').addEventListener('click', () => { paused = !paused; document.getElementById('pauseBtn').textContent = paused ? '▶ Tiếp tục' : '⏸ Tạm dừng'; });
+    document.getElementById('resetBtn').addEventListener('click', () => { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'RESET', seed: Math.floor(Math.random()*1000000) })); });
+
+    // Zoom controls
+    let zoomLevel = 1.0;
+    const updateZoomDisplay = () => { document.getElementById('zoomLevel').textContent = Math.round(zoomLevel * 100) + '%'; };
+    const zoomCamera = (distanceFactor) => {
+      const offset = camera.position.clone().sub(controls.target);
+      const distance = THREE.MathUtils.clamp(
+        offset.length() * distanceFactor,
+        controls.minDistance,
+        controls.maxDistance
+      );
+      camera.position.copy(controls.target).add(offset.setLength(distance));
+      controls.update();
+    };
+    document.getElementById('zoomInBtn').addEventListener('click', () => {
+      zoomLevel = Math.min(3.0, zoomLevel * 1.2);
+      zoomCamera(1 / 1.2);
+      updateZoomDisplay();
+    });
+    document.getElementById('zoomOutBtn').addEventListener('click', () => {
+      zoomLevel = Math.max(0.3, zoomLevel / 1.2);
+      zoomCamera(1.2);
+      updateZoomDisplay();
+    });
+
+    // Smooth mouse wheel zoom (handled by OrbitControls automatically)
+
+    // Theme toggle
+    const themeBtn = document.getElementById('themeBtn');
+    let isLight = true;
+    document.documentElement.setAttribute('data-theme', 'light');
+    const darkColors = { bg: 0x071524, canvas: 0x071524, ground: 0x172337, ocean: 0x123456, province: 0x223d2c, lines: 0x6b7a64, fog: 0x071524 };
+    const lightColors = { bg: 0xefe4c8, canvas: 0xf3ead2, ground: 0xefe4c8, ocean: 0x7fa8b0, province: 0x86b951, lines: 0xc6a46b, fog: 0xe7dac2 };
+    themeBtn.addEventListener('click', () => {
+      isLight = !isLight;
+      document.documentElement.setAttribute('data-theme', isLight ? 'light' : '');
+      themeBtn.textContent = isLight ? '🌙' : '☀️';
+      const c = isLight ? lightColors : darkColors;
+      scene.background = new THREE.Color(c.canvas);
+      renderer.setClearColor(c.canvas);
+      scene.fog = new THREE.FogExp2(c.fog, isLight ? 0.0024 : 0.0021);
+      ocean.material.color.setHex(c.ocean);
+      Object.values(provinceMeshes).forEach((mesh, i) => { const prov = PROVINCES[i]; const tc = terrainColors[prov?.terrain] || terrainColors.plains; mesh.material.color.set(isLight ? new THREE.Color(tc).multiplyScalar(1.05) : new THREE.Color(tc).multiplyScalar(0.68)); });
+      lineGroup.children.forEach(line => {
+        line.material.color.setHex(c.lines);
+        line.material.opacity = isLight ? 0.0 : 0.06;
+      });
+      coastLine.material.color.setHex(isLight ? 0x3a6a8a : 0x3a6a8a);
+      coastLine.material.opacity = isLight ? 0.06 : 0.14;
+      riverGroup.children.forEach(river => { if (river.material) river.material.opacity = isLight ? 0.68 : 0.55; });
+      roadGroup.children.forEach(road => {
+        if (!road.material) return;
+        const isMajorRoad = road.userData?.roadType === 'major';
+        const isFillLayer = road.userData?.roadLayer === 'fill';
+        road.material.opacity = isLight
+          ? (isFillLayer ? (isMajorRoad ? 0.88 : 0.58) : (isMajorRoad ? 0.34 : 0.22))
+          : (isFillLayer ? (isMajorRoad ? 0.62 : 0.36) : (isMajorRoad ? 0.26 : 0.16));
+      });
+      mountainGroup.children.forEach(mtn => {
+        if (!mtn.material) return;
+        if (!mtn.material.userData.baseColor) mtn.material.userData.baseColor = mtn.material.color.clone();
+        mtn.material.color.copy(mtn.material.userData.baseColor).multiplyScalar(isLight ? 1.08 : 0.78);
+      });
+      // Update terrain fog uniforms
+      terrainUniforms.uFogColor.value.setHex(c.fog);
+      terrainUniforms.uFogNear.value = isLight ? 170.0 : 130.0;
+      terrainUniforms.uFogFar.value = isLight ? 760.0 : 620.0;
+      terrainMesh.material.needsUpdate = true;
+    });
+
+    // Raycast for clicking
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    canvas.addEventListener('click', (e) => {
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1; mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      
+      // Armies
+      const armyObjects = []; Object.values(armyGroups).forEach(g => g.traverse(o => { if (o.isMesh) armyObjects.push(o); }));
+      const hits = raycaster.intersectObjects(armyObjects, true);
+      if (hits.length > 0) { let obj = hits[0].object; while (obj.parent && !obj.userData.factionId) obj = obj.parent; if (obj.userData.factionId) { selectFaction(obj.userData.factionId); return; } }
+      
+      // Citadels
+      const citadelObjects = []; Object.values(citadelMeshes).forEach(m => m.group.traverse(o => { if (o.isMesh) citadelObjects.push(o); }));
+      const citHits = raycaster.intersectObjects(citadelObjects, true);
+      if (citHits.length > 0) {
+        let obj = citHits[0].object;
+        while (obj.parent && !obj.userData.citadel) obj = obj.parent;
+        if (obj.userData?.citadel) {
+          const cit = obj.userData.citadel;
+          const owner = cit.owner;
+          if (owner && factionEntities[owner]?.alive) selectFaction(owner);
+        }
+      }
+      
+      // Provinces
+      const provHits = raycaster.intersectObjects(Object.values(provinceMeshes));
+      if (provHits.length > 0) { const provId = provHits[0].object.userData.provinceId; const owner = PROVINCES.find(p => p.id === provId)?.owner; if (owner && factionEntities[owner]?.alive) selectFaction(owner); }
+    });
+
+
+    // ============================================
+    // DISTANCE-BASED LABEL VISIBILITY SYSTEM
+    // ============================================
+    const labelVisibility = {
+      // Priority tiers: higher = always visible at greater distances
+      tiers: {
+        capital: { maxDist: 900, minOpacity: 0.9, fadeRange: 200 },      // Capitals always visible
+        city: { maxDist: 600, minOpacity: 0.7, fadeRange: 150 },         // Major cities
+        province: { maxDist: 350, minOpacity: 0.5, fadeRange: 100 },     // Province labels
+        mountain: { maxDist: 500, minOpacity: 0.6, fadeRange: 150 },     // Mountain ranges
+        river: { maxDist: 400, minOpacity: 0.5, fadeRange: 120 },        // Rivers
+        road: { maxDist: 300, minOpacity: 0.4, fadeRange: 100 },         // Roads
+        pass: { maxDist: 400, minOpacity: 0.7, fadeRange: 100 },         // Strategic passes
+        army: { maxDist: 350, minOpacity: 0.8, fadeRange: 100 },         // Army/faction labels
+        citadel: { maxDist: 500, minOpacity: 0.8, fadeRange: 150 },      // Citadel labels
+      },
+      
+      // Label registry: { element, position, tier, baseOpacity }
+      registry: [],
+      
+      register(label, position, tier, baseOpacity = 1.0) {
+        if (!this.tiers[tier]) tier = 'province';
+        this.registry.push({
+          element: label,
+          position: new THREE.Vector3(...position),
+          tier,
+          baseOpacity: baseOpacity || 1.0,
+          visible: true
+        });
+      },
+      
+      update(camera) {
+        const camPos = camera.position;
+        for (const item of this.registry) {
+          const dist = camPos.distanceTo(item.position);
+          const config = this.tiers[item.tier];
+          
+          if (dist > config.maxDist) {
+            // Beyond max distance - hide
+            if (item.visible) {
+              item.element.element.style.opacity = '0';
+              item.element.element.style.pointerEvents = 'none';
+              item.visible = false;
+            }
+          } else if (dist > config.maxDist - config.fadeRange) {
+            // In fade range - smooth fade
+            const t = (config.maxDist - dist) / config.fadeRange;
+            const opacity = Math.max(0, Math.min(1, item.baseOpacity * config.minOpacity * t));
+            item.element.element.style.opacity = opacity.toFixed(3);
+            item.element.element.style.pointerEvents = opacity > 0.1 ? 'auto' : 'none';
+            item.visible = opacity > 0.01;
+          } else {
+            // Within clear range - full visibility
+            if (!item.visible || parseFloat(item.element.element.style.opacity) < item.baseOpacity * config.minOpacity) {
+              item.element.element.style.opacity = (item.baseOpacity * config.minOpacity).toFixed(3);
+              item.element.element.style.pointerEvents = 'auto';
+              item.visible = true;
+            }
+          }
+        }
+      }
+    };
+
+    // Register all existing labels
+    // Province labels
+    Object.entries(provinceLabels).forEach(([id, label]) => {
+      const prov = PROVINCES.find(p => p.id === id);
+      if (prov) {
+        const tier = prov.terrain === 'capital' ? 'capital' : 'province';
+        labelVisibility.register(label, [prov.pos[0] * MAP_SCALE, 0.6, prov.pos[1] * MAP_SCALE], tier);
+      }
+    });
+
+    // Citadel labels
+    Object.values(citadelMeshes).forEach(m => {
+      const cit = m.cit;
+      const tier = cit.type === 'capital' ? 'capital' : 'city';
+      // Find the label by searching scene children
+      const labelObj = Array.from(scene.children).find(c => 
+        c.isCSS2DObject && c.position.x === cit.pos[0] * MAP_SCALE && 
+        c.position.z === cit.pos[1] * MAP_SCALE &&
+        c.element.textContent === cit.name
+      );
+      if (labelObj) {
+        labelVisibility.register(labelObj, [cit.pos[0] * MAP_SCALE, cit.type === 'capital' ? 18.0 : 12.0, cit.pos[1] * MAP_SCALE], tier);
+      }
+    });
+
+    // Mountain labels
+    scene.children.forEach(obj => {
+      if (obj.isCSS2DObject && obj.element.style.fontSize === '9px' && obj.element.style.fontWeight === '500') {
+        // Likely a mountain label
+        const mountainNames = MOUNTAINS.map(m => m.name);
+        if (mountainNames.some(n => obj.element.textContent.includes(n))) {
+          labelVisibility.register(obj, [obj.position.x, obj.position.y, obj.position.z], 'mountain');
+        }
+      }
+    });
+
+    // River labels
+    scene.children.forEach(obj => {
+      if (obj.isCSS2DObject && obj.element.style.fontStyle === 'italic' && obj.element.style.color.includes('7a9ab0')) {
+        labelVisibility.register(obj, [obj.position.x, obj.position.y, obj.position.z], 'river');
+      }
+    });
+
+    // Road labels
+    scene.children.forEach(obj => {
+      if (obj.isCSS2DObject && obj.element.style.fontStyle === 'italic' && obj.element.style.color.includes('6f4d2c')) {
+        labelVisibility.register(obj, [obj.position.x, obj.position.y, obj.position.z], 'road');
+      }
+    });
+
+    // Pass labels
+    scene.children.forEach(obj => {
+      if (obj.isCSS2DObject && obj.element.style.color.includes('d4a843') && obj.element.style.fontSize === '10px') {
+        labelVisibility.register(obj, [obj.position.x, obj.position.y, obj.position.z], 'pass');
+      }
+    });
+
+    // Army/Faction labels
+    Object.values(armyGroups).forEach(group => {
+      group.traverse(obj => {
+        if (obj.isCSS2DObject && obj.element.style.fontSize === '13px') {
+          labelVisibility.register(obj, [obj.position.x, obj.position.y, obj.position.z], 'army');
+        }
+      });
+    });
+
+    // ============================================
+    // ANIMATION LOOP
+    // ============================================
+    const clock = new THREE.Clock();
+    let lastTickTime = 0;
+    const armyAnimations = new Map();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      
+      // Update camera uniform for fog
+      terrainUniforms.uCameraPos.value.copy(camera.position);
+      
+      // Update label visibility based on camera distance
+      labelVisibility.update(camera);
+      
+      controls.update();
+
+      // Flag waving
+            Object.values(armyGroups).forEach(group => group.traverse(obj => { if (obj.userData.isFlag) { obj.rotation.z = Math.sin(Date.now() * 0.002 + obj.position.x) * 0.15; obj.position.x = 0.7 + Math.sin(Date.now() * 0.003) * 0.1; } }));
+            Object.values(citadelMeshes).forEach(m => m.group.traverse(obj => { if (obj.userData.isFlag) { obj.rotation.z = Math.sin(Date.now() * 0.002 + obj.position.x) * 0.1; } }));
+
+      // Particles
+      for (let i = particleSystems.length - 1; i >= 0; i--) {
+        const sys = particleSystems[i];
+        sys.userData.age += delta;
+        if (sys.userData.age >= sys.userData.maxAge) { scene.remove(sys); sys.geometry.dispose(); sys.material.dispose(); particleSystems.splice(i, 1); continue; }
+        if (sys.geometry.attributes.velocity) {
+          const pos = sys.geometry.attributes.position.array, vel = sys.geometry.attributes.velocity.array, life = sys.geometry.attributes.life.array;
+          for (let j = 0; j < pos.length / 3; j++) { pos[j*3] += vel[j*3] * delta; pos[j*3+1] += vel[j*3+1] * delta; pos[j*3+2] += vel[j*3+2] * delta; vel[j*3+1] -= 9.8 * delta; life[j] -= delta / sys.userData.maxAge; }
+          sys.geometry.attributes.position.needsUpdate = true; sys.geometry.attributes.life.needsUpdate = true;
+          sys.material.opacity = 0.9 * (1 - sys.userData.age / sys.userData.maxAge);
+        }
+        if (sys.userData.type === 'trail') sys.material.opacity = 0.7 * (1 - sys.userData.age / sys.userData.maxAge);
+      }
+
+      // Army movement animations
+      armyAnimations.forEach((anim, id) => {
+        anim.progress += delta * 0.5 * simSpeed;
+        if (anim.progress >= 1) {
+          const group = armyGroups[anim.factionId];
+          if (group) { const army = group.getObjectByProperty('userData.armyId', id); if (army) { const toProv = PROVINCES.find(p => p.id === anim.to); if (toProv) army.position.set(toProv.pos[0]*MAP_SCALE + (Math.random()-0.5)*3, 0, toProv.pos[1]*MAP_SCALE + (Math.random()-0.5)*3); } }
+          armyAnimations.delete(id);
+        } else {
+          const fromProv = PROVINCES.find(p => p.id === anim.from);
+          const toProv = PROVINCES.find(p => p.id === anim.to);
+          if (fromProv && toProv) {
+            const group = armyGroups[anim.factionId];
+            if (group) { const army = group.getObjectByProperty('userData.armyId', id); if (army) { const x = THREE.MathUtils.lerp(fromProv.pos[0]*MAP_SCALE, toProv.pos[0]*MAP_SCALE, anim.progress); const z = THREE.MathUtils.lerp(fromProv.pos[1]*MAP_SCALE, toProv.pos[1]*MAP_SCALE, anim.progress); const y = Math.sin(anim.progress * Math.PI) * 2.0; army.position.set(x + (Math.random()-0.5)*0.3, y, z + (Math.random()-0.5)*0.3); } }
+          }
+        }
+      });
+
+      if (!paused) {
+        const now = Date.now();
+        if (now - lastTickTime > TICK_DURATION / simSpeed) { lastTickTime = now; tick++; updateTimeDisplay(); if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'TICK' })); }
+      }
+
+      renderer.render(scene, camera);
+      labelRenderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); labelRenderer.setSize(window.innerWidth, window.innerHeight); });
+
+    renderLegend(); renderFactionList(); connectWS(); animate();
+  </script>
+</body>
+</html>
