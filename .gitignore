@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Local env & IDE
+.env
+.env.*
+.DS_Store
+.idea/
+.vscode/
+
+# Agent & Session States
+.omc/
+.omx/
+shadow-qa-output/
+/tmp/
