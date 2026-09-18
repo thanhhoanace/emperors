@@ -1,0 +1,56 @@
+name: Phase 1 QA and Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'slice-qa.mjs'
+      - '.github/workflows/phase1-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node scripts/server.js > /tmp/emperors-server.log 2>&1 & echo $! > /tmp/server.pid
+      - run: npx wait-on http://127.0.0.1:3000/
+      - run: node slice-qa.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phase1-qa
+          path: |
+            slice-qa.png
+            /tmp/emperors-server.log
+
+  deploy:
+    needs: qa
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: '.'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
