@@ -2,8 +2,8 @@ import puppeteer from 'puppeteer';
 
 const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:3000/';
 const browser = await puppeteer.launch({
-  headless: 'new',
-  args: ['--no-sandbox','--disable-setuid-sandbox','--enable-webgl','--ignore-gpu-blocklist','--use-gl=angle']
+  headless: false,
+  args: ['--no-sandbox','--disable-setuid-sandbox','--enable-webgl','--ignore-gpu-blocklist','--use-gl=angle','--use-angle=swiftshader-webgl']
 });
 let failed = null;
 try {
