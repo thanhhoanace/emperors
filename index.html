@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <title>TAM QUỐC LOẠN NHẬP — Phase 1</title>
 <link rel="icon" href="data:,">
+<meta property="og:image" content="https://d2ol7oe51mr4n9.cloudfront.net/user_3JU0VAMBJ6R09Fi1AU1y9R0E9LE/2736abaa-62f4-4659-a357-60ca80d66ebb.png">
 <style>
 :root{--lac:#311814;--lac2:#1b100d;--bronze:#c09a55;--cream:#f2deb0;--muted:#ad915d}
 *{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#15110d;color:var(--cream);font-family:Georgia,"Times New Roman",serif}
@@ -92,5 +93,11 @@ window.__sliceReady=true;
 function animate(){requestAnimationFrame(animate);controls.update();if(speech.style.display==='block')placeSpeech();renderer.render(scene,camera)}animate();
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 </script>
+<button id="cinematicBtn" type="button" style="position:fixed;right:16px;bottom:78px;z-index:31;border:1px solid #a98043;background:linear-gradient(#47241b,#21130f);color:#f2deb0;border-radius:7px;padding:10px 14px;font:600 12px Georgia,serif;letter-spacing:.08em;cursor:pointer">12s CINEMATIC</button>
+<div id="cinematicOverlay" style="display:none;position:fixed;inset:0;z-index:80;background:#090706;align-items:center;justify-content:center">
+<video id="cinematicVideo" controls playsinline poster="https://d2ol7oe51mr4n9.cloudfront.net/user_3JU0VAMBJ6R09Fi1AU1y9R0E9LE/2736abaa-62f4-4659-a357-60ca80d66ebb.png" style="width:min(96vw,1280px);max-height:90vh;border:1px solid #a98043;background:#000"><source src="https://d2ol7oe51mr4n9.cloudfront.net/user_3JU0VAMBJ6R09Fi1AU1y9R0E9LE/80309863-f9fb-45fb-8641-8376d0973df4.mp4" type="video/mp4"></video>
+<button id="cinematicClose" type="button" style="position:absolute;right:18px;top:18px;border:1px solid #a98043;background:#311814;color:#f2deb0;border-radius:999px;width:38px;height:38px;cursor:pointer">×</button>
+</div>
+<script>(()=>{const b=document.getElementById('cinematicBtn'),o=document.getElementById('cinematicOverlay'),v=document.getElementById('cinematicVideo'),x=document.getElementById('cinematicClose');b?.addEventListener('click',()=>{o.style.display='flex';v.currentTime=0;v.play().catch(()=>{});});x?.addEventListener('click',()=>{v.pause();o.style.display='none';});})();</script>
 </body>
 </html>
