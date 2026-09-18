@@ -29,7 +29,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: node scripts/server.js > /tmp/emperors-server.log 2>&1 & echo $! > /tmp/server.pid
-      - run: npx wait-on http://127.0.0.1:3000/
+      - run: |
+          for i in {1..30}; do
+            curl -fsS http://127.0.0.1:3000/ >/dev/null && exit 0
+            sleep 1
+          done
+          exit 1
       - run: node slice-qa.mjs
       - uses: actions/upload-artifact@v4
         if: always()
