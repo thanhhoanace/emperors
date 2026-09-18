@@ -12,7 +12,7 @@ const pageErrors = [];
 page.on('pageerror', e => pageErrors.push(e.message));
 page.on('console', m => { if (m.type() === 'error') pageErrors.push(m.text()); });
 
-await page.goto(BASE_URL, { waitUntil: 'networkidle2', timeout: 120000 });
+await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
 await page.waitForFunction(() => window.__sliceReady === true, { timeout: 120000 });
 await new Promise(r => setTimeout(r, 2600));
 
