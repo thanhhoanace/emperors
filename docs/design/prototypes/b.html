@@ -1,0 +1,147 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000}canvas{display:block}</style></head>
+<body>
+<script src="/node_modules/three/build/three.min.js"></script>
+<script src="kit.js"></script>
+<script>
+// Option B — "Đại Lộ Về Cung Hán": seven palaces on one avenue, ranked by distance to the Han gate.
+const params = new URLSearchParams(location.search);
+const SHOT = params.get('shot') || 'main';
+const W = 1440, H = 900;
+const { renderer, scene, camera } = K.setup(W, H, { dpr: Number(params.get('dpr') || 1.5), fov: 28, exposure: 0.85 });
+scene.background = K.gradient('#efe7da', '#e3d7c3');
+scene.fog = new THREE.Fog(0xe9dfcf, 150, 330);
+K.seed(5);
+
+const RANK = ['cao_cao', 'qin_shihuang', 'sun_quan', 'liu_che', 'li_shimin', 'liu_bei', 'zhu_yuanzhang'];
+const STATS = { cao_cao: [104, 5, 94], qin_shihuang: [61, 2, 90], sun_quan: [86, 3, 88], liu_che: [49, 1, 86], li_shimin: [47, 1, 84], liu_bei: [58, 1, 80], zhu_yuanzhang: [52, 1, 78] };
+const LOTS = [[-55, -15], [-40, 15], [-25, -15], [-10, 15], [5, -15], [20, 15], [35, -15]];
+
+const ground = K.box(400, 1, 300, 0xcdbf9f, { rough: 1 });
+ground.position.y = -0.5;
+scene.add(ground);
+const avenue = K.box(200, 0.12, 12, 0xe8dcc5, { rough: 1 });
+avenue.position.set(-10, 0.06, 0);
+scene.add(avenue);
+for (let x = -100; x < 90; x += 4) { const s = K.box(3.6, 0.14, 1.2, 0xd6c9b0, { rough: 1 }); s.position.set(x, 0.07, 0); scene.add(s); }
+for (const z of [-6.8, 6.8]) { const curb = K.box(200, 0.3, 1.4, 0xc8b99f); curb.position.set(-10, 0.15, z); scene.add(curb); }
+for (let x = -110; x <= 110; x += 15) { const st = K.box(5, 0.1, 300, 0xdfd2b9, { rough: 1 }); st.position.set(x + 7.5, 0.05, 0); scene.add(st); }
+
+const world = new THREE.Group();
+scene.add(world);
+const crowd = new K.Crowd(scene, 4000);
+const forest = new K.Forest(scene, 2000);
+
+// The Han palace gate closing the avenue (west end).
+{
+  const g = new THREE.Group();
+  const base = K.box(26, 3, 12, 0xb3473a);
+  base.position.y = 1.5;
+  const arch = K.box(6, 2.4, 12.4, 0x5a2b24);
+  arch.position.y = 1.2;
+  const top = K.hall(20, 7, 3, 0xd2a43a, { wall: 0xb3473a });
+  top.position.y = 3;
+  const top2 = K.roof(12, 5, 2.2, 0xd2a43a);
+  top2.position.y = 9.4;
+  g.add(base, arch, top, top2);
+  g.position.set(-86, 0, 0);
+  g.rotation.y = Math.PI / 2;
+  world.add(g);
+}
+
+function lot(fid, rank, x, z) {
+  const F = K.FACTIONS[fid];
+  const [troops, provinces, prestige] = STATS[fid];
+  const side = z < 0 ? -1 : 1; // palace faces the avenue
+  const g = new THREE.Group();
+  g.position.set(x, 0, z);
+  world.add(g);
+  const plaza = K.box(13, 0.4, 13, 0xd9ccb2, { rough: 1 });
+  const lawn = K.box(4, 0.42, 4, 0x8fb65a, { rough: 1 }); lawn.position.set(-4, 0.21, 2.5 * side); g.add(lawn);
+  plaza.position.y = 0.2;
+  g.add(plaza);
+  const s = 0.8 + (prestige - 76) / 40;
+  const wallC = 0xefe5d1;
+  for (const [w, d, px, pz] of [[13, 0.5, 0, 6.3 * -side], [0.5, 13, -6.3, 0], [0.5, 13, 6.3, 0], [4.5, 0.5, -4.2, 6.3 * side], [4.5, 0.5, 4.2, 6.3 * side]]) { const m = K.box(w, 1.2, d, wallC); m.position.set(px, 1, pz); const cap = K.box(w + 0.2, 0.18, d + 0.2, 0x5f5a54); cap.position.set(px, 1.68, pz); g.add(m, cap); }
+  const gate = K.hall(3.4, 1.6, 1.8, F.roof, { wall: 0xa2412e });
+  gate.position.set(0, 0.4, 6.3 * side);
+  g.add(gate);
+  const main = K.hall(6 * s, 4 * s, 2.3 * s, F.roof);
+  main.position.set(-1.2, 0.4, -1.8 * side);
+  g.add(main);
+  const tiers = Math.round(2 + (prestige - 76) / 3.5);
+  const pg = K.pagoda(tiers, F.roof);
+  pg.position.set(3.6, 0.4, -2.6 * side);
+  pg.scale.setScalar(0.78);
+  g.add(pg);
+  // one small banner per province held, along the front wall
+  for (let i = 0; i < provinces; i++) { const fl = K.flag(fid, 3.2); fl.scale.setScalar(0.7); fl.position.set(-5.4 + i * 1.3, 1.6, 6.3 * side); g.add(fl); }
+  const big = K.flag(fid, 7);
+  big.position.set(-5, 0.4, -4.5 * side);
+  g.add(big);
+  // granary
+  for (let i = 0; i < 9; i++) { const b = K.box(0.8, 0.55, 0.6, 0xd8b56a); b.position.set(3.2 + (i % 3) * 0.9, 0.7 + Math.floor(i / 3) * 0.55, 2.4 * side); g.add(b); }
+  // queue of troops along the sidewalk, length ~ troops
+  const n = Math.round(troops * 0.42);
+  for (let i = 0; i < n; i++) {
+    const col = Math.floor(i / 2), row = i % 2;
+    const qx = x - 2.8 - col * 0.72 + (i > 26 ? 0 : 0);
+    const qz = side * (7.8 + row * 0.7);
+    crowd.add(qx + (col > 30 ? 0 : 0), 0.12, qz, { body: F.color, hat: 0x2c2a27, spear: true, yaw: Math.PI / 2 });
+  }
+  // pedestrians ~ loyalty
+  for (let i = 0; i < 10; i++) crowd.add(x + K.rr(-7, 7), 0.12, side * K.rr(8.5, 10.5) * (K.r() < 0.5 ? 1 : 1), { body: [0xe9e2d0, 0xc9b99a, 0x8fa7b8, 0xd9c7a0][i % 4], hat: 0x6b5a45, yaw: K.r() * 6.28, scale: 0.9 });
+  return { x, y: 0.4 + pg.userData.height * 0.78 + 1.2, z: z - 2.6 * side };
+}
+
+const anchors = {};
+RANK.forEach((fid, i) => { const [x, z] = LOTS[i]; anchors[fid] = lot(fid, i + 1, x, z); });
+
+// filler city blocks with houses and trees
+const houseRoof = [0x6f6a63, 0x7b6f60, 0x5f5a54];
+for (let bx = -115; bx <= 115; bx += 15) for (let bz = -80; bz <= 80; bz += 16) {
+  if (Math.abs(bz) < 26 && bx > -70 && bx < 50) continue;
+  if (Math.abs(bz) < 8) continue;
+  for (let k = 0; k < 3; k++) {
+    const hx = bx + K.rr(-4, 4), hz = bz + K.rr(-4, 4);
+    const h = K.hall(K.rr(2.4, 3.6), K.rr(2, 2.8), K.rr(1, 1.6), houseRoof[k % 3], { wall: 0xf1e8d6 });
+    h.position.set(hx, 0, hz);
+    h.rotation.y = K.r() < 0.5 ? 0 : Math.PI / 2;
+    world.add(h);
+  }
+  forest.add(bx + K.rr(-5, 5), 0, bz + K.rr(-5, 5), 'blob', K.rr(0.9, 1.3), 0x6fa653);
+}
+// lantern posts along the avenue
+for (let x = -78; x < 80; x += 8) for (const z of [-7.6, 7.6]) { const p = K.box(0.18, 2.4, 0.18, 0x4a3526); p.position.set(x, 1.2, z); const l = K.box(0.5, 0.6, 0.5, 0xd9483b, { emissive: 0x4a0f0a }); l.position.set(x, 2.5, z); world.add(p, l); }
+// trees between lots
+for (let i = 0; i < 90; i++) { const x = K.rr(-80, 60), z = (K.r() < 0.5 ? -1 : 1) * K.rr(23, 30); forest.add(x, 0, z, K.r() < 0.4 ? 'cone' : 'blob', K.rr(0.8, 1.2)); }
+
+// envoy: Liu Bei's messenger crossing toward Sun Quan's palace
+const envoyPath = [[20, 7.5], [10, 3], [-10, -2], [-25, -7.5]];
+for (let i = 0; i < 4; i++) { const t = 0.3 + i * 0.035; const x = 20 - t * 45, z = 7.5 - t * 15; crowd.add(x, 0.12, z, { body: i === 0 ? 0xf4efe4 : K.FACTIONS.liu_bei.color, hat: 0x2c2a27, yaw: -2.2 }); }
+{ const fl = K.flag('liu_bei', 3); fl.position.set(20 - 0.3 * 45, 0.12, 7.5 - 0.3 * 15); world.add(fl); anchors.envoy = { x: 20 - 0.36 * 45, y: 4, z: 7.5 - 0.36 * 15 }; }
+crowd.done();
+forest.done();
+
+let target, lensOpts;
+if (SHOT === 'main') {
+  target = new THREE.Vector3(12, 0, 8);
+  camera.position.set(target.x + 44, 40, target.z + 50);
+  lensOpts = { range: 26, maxBlur: 8, bandCenter: 0.5, bandWidth: 0.2, focusXZ: [16, 9], focusR: 15, gray: 0.9 };
+} else {
+  target = new THREE.Vector3(-14, 0, 0);
+  camera.position.set(target.x + 70, 78, target.z + 88);
+  lensOpts = { range: 70, maxBlur: 5, bandCenter: 0.52, bandWidth: 0.25 };
+}
+camera.lookAt(target);
+camera.updateMatrixWorld();
+K.lights(scene, { dir: [target.x - 60, 80, target.z + 35], target: [target.x, 0, target.z], shadowSize: SHOT === 'main' ? 55 : 110, sunI: 2.0, hemi: 0.6, sky: 0xfff1dc, ground: 0x7a6f5a });
+lensOpts.focus = camera.position.distanceTo(target);
+K.lens(renderer, scene, camera, lensOpts).render();
+const out = {};
+for (const [k, a] of Object.entries(anchors)) out[k] = K.project(camera, W, H, a.x, a.y, a.z);
+out.gate = K.project(camera, W, H, -86, 12, 0);
+window.__anchors = out;
+window.__done = true;
+</script>
+</body></html>

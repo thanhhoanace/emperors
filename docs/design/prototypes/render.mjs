@@ -1,0 +1,25 @@
+// Renders a design prototype shot to test-results/design/<page>-<shot>.jpg.
+// Needs `npm start` running. Usage:
+//   PUPPETEER_EXECUTABLE_PATH=/path/to/chrome xvfb-run -a node docs/design/prototypes/render.mjs real campaign [dpr]
+// Shots: real → campaign, far, board, boardclose, strategy, battle · a/b → main, overview · c → main, overview
+import puppeteer from 'puppeteer';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const [, , page = 'real', shot = 'campaign', dpr = '1.5'] = process.argv;
+const BASE = process.env.BASE_URL || 'http://127.0.0.1:3000/docs/design/prototypes/';
+const OUT = path.resolve('test-results/design');
+fs.mkdirSync(OUT, { recursive: true });
+const browser = await puppeteer.launch({ headless: false, protocolTimeout: 600000, args: ['--no-sandbox', '--enable-webgl', '--ignore-gpu-blocklist', '--use-gl=angle', '--use-angle=swiftshader-webgl', '--window-size=1500,1000'] });
+try {
+  const tab = await browser.newPage();
+  await tab.setViewport({ width: 1440, height: 900, deviceScaleFactor: Number(dpr) });
+  await tab.goto(`${BASE}${page}.html?shot=${shot}&dpr=${dpr}`);
+  await tab.waitForFunction(() => window.__done === true, { timeout: 400000, polling: 1000 });
+  const file = path.join(OUT, `${page}-${shot}.jpg`);
+  await (await tab.$('canvas')).screenshot({ path: file, type: 'jpeg', quality: 90 });
+  fs.writeFileSync(file.replace(/\.jpg$/, '.json'), JSON.stringify(await tab.evaluate(() => window.__anchors), null, 1));
+  console.log(file);
+} finally {
+  await browser.close();
+}

@@ -1,0 +1,137 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000}canvas{display:block}</style></head>
+<body>
+<script src="/node_modules/three/build/three.min.js"></script>
+<script src="kit.js"></script>
+<script>
+// Option C — "Đảo Anh Hùng": seven chibi rulers on one island, sized by the chosen lens.
+const params = new URLSearchParams(location.search);
+const SHOT = params.get('shot') || 'main';
+const W = 1440, H = 900;
+const { renderer, scene, camera } = K.setup(W, H, { dpr: Number(params.get('dpr') || 1.5), fov: 30, exposure: 0.9 });
+scene.background = K.gradient('#cfe6f1', '#eef4ee');
+scene.fog = new THREE.Fog(0xe3eff0, 170, 420);
+K.seed(3);
+
+const LENS = {
+  troops: { cao_cao: 104, sun_quan: 86, qin_shihuang: 61, liu_bei: 58, zhu_yuanzhang: 52, liu_che: 49, li_shimin: 47 },
+  loyalty: { liu_bei: 98, sun_quan: 91, zhu_yuanzhang: 88, li_shimin: 86, liu_che: 70, cao_cao: 61, qin_shihuang: 48 },
+};
+const lens = SHOT === 'main' ? 'troops' : 'loyalty';
+const order = Object.entries(LENS[lens]).sort((a, b) => b[1] - a[1]);
+const max = order[0][1];
+
+// sea + island
+const sea = new THREE.Mesh(new THREE.CircleGeometry(600, 64), new THREE.MeshStandardMaterial({ color: 0x6fbfd0, roughness: 0.3 }));
+sea.rotation.x = -Math.PI / 2;
+sea.receiveShadow = true;
+scene.add(sea);
+const cliff = K.mesh(new THREE.CylinderGeometry(46, 50, 7, 40, 2), 0xc9b48e);
+cliff.position.y = 0.5;
+scene.add(cliff);
+const islandTop = K.mesh(new THREE.CylinderGeometry(46.4, 46.4, 1, 40), 0x8cc05a);
+islandTop.position.y = 4.4;
+scene.add(islandTop);
+const beach = K.mesh(new THREE.CylinderGeometry(53, 56, 1.2, 40), 0xeedcad);
+beach.position.y = -0.3;
+scene.add(beach);
+const Y = 4.9;
+
+// mosaic map of the 14 provinces on the plaza floor
+const PROV = { si_li: [-24, -14], ji: [18, -38], qing: [68, -30], xu: [72, 2], yan: [40, -12], yu: [12, 6], jing: [-16, 28], yang: [64, 34], yi: [-72, 34], liang: [-62, -14], bing: [-18, -48], you: [48, -60], jiang: [22, 42], jiao: [16, 76] };
+const OWN = { yu: 'cao_cao', ji: 'cao_cao', qing: 'cao_cao', yan: 'cao_cao', you: 'cao_cao', liang: 'qin_shihuang', si_li: 'qin_shihuang', bing: 'li_shimin', xu: 'zhu_yuanzhang', yi: 'liu_che', jing: 'liu_bei', yang: 'sun_quan', jiang: 'sun_quan', jiao: 'sun_quan' };
+const plaza = K.mesh(new THREE.CylinderGeometry(21, 21, 0.3, 48), 0xd6c6a6);
+plaza.position.set(0, Y, 6);
+scene.add(plaza);
+for (const [pid, [x, z]] of Object.entries(PROV)) {
+  const t = K.mesh(new THREE.CylinderGeometry(2.6, 2.6, 0.5, 6), K.FACTIONS[OWN[pid]].color);
+  t.position.set(x * 0.2, Y + 0.2, 6 + z * 0.18);
+  scene.add(t);
+}
+
+// trees along the rim
+const forest = new K.Forest(scene, 400);
+for (let i = 0; i < 120; i++) { const a = K.r() * Math.PI * 2, r = K.rr(38, 45); const x = Math.cos(a) * r, z = Math.sin(a) * r; if (z > 18 && Math.abs(x) < 34) continue; forest.add(x, Y - 0.5, z, K.r() < 0.5 ? 'cone' : 'blob', K.rr(1.1, 1.6)); }
+forest.done();
+
+// ---------------------------------------------------------------- heroes
+function hero(fid) {
+  const F = K.FACTIONS[fid];
+  const g = new THREE.Group();
+  const robe = F.color, dark = 0x2b2622, skin = 0xf1c9a1, trim = 0xf3e7cf;
+  const legs = K.box(1.5, 1.1, 1.0, dark); legs.position.y = 0.55;
+  const body = K.mesh(new THREE.CylinderGeometry(1.0, 1.45, 2.3, 8), robe); body.position.y = 2.2;
+  const belt = K.box(2.1, 0.3, 1.9, trim); belt.position.y = 2.0; belt.scale.set(1, 1, 0.7);
+  const armL = K.box(0.55, 1.7, 0.55, robe); armL.position.set(-1.35, 2.3, 0); armL.rotation.z = 0.25;
+  const armR = K.box(0.55, 1.7, 0.55, robe); armR.position.set(1.35, 2.3, 0); armR.rotation.z = -0.25;
+  const head = K.box(2.3, 2.1, 2.1, skin, { rough: 0.7 }); head.position.y = 4.4;
+  const eyeL = K.box(0.26, 0.36, 0.1, 0x1d1a17); eyeL.position.set(-0.48, 4.45, 1.06);
+  const eyeR = eyeL.clone(); eyeR.position.x = 0.48;
+  const blushL = K.box(0.4, 0.16, 0.06, 0xe9a08a); blushL.position.set(-0.75, 4.05, 1.06);
+  const blushR = blushL.clone(); blushR.position.x = 0.75;
+  g.add(legs, body, belt, armL, armR, head, eyeL, eyeR, blushL, blushR);
+  const hat = new THREE.Group();
+  if (fid === 'qin_shihuang') { const board = K.box(2.9, 0.18, 1.8, dark); board.position.y = 5.75; hat.add(board); const cap = K.box(1.6, 0.6, 1.5, dark); cap.position.y = 5.5; hat.add(cap); for (let i = -3; i <= 3; i++) { const bead = K.box(0.08, 0.7, 0.08, 0xd6b04a, { rough: 0.4, metal: 0.4 }); bead.position.set(i * 0.4, 5.3, 0.95); hat.add(bead); } }
+  if (fid === 'li_shimin') { const cap = K.box(2.0, 0.9, 1.8, dark); cap.position.y = 5.8; const tailL = K.box(0.2, 0.2, 1.6, dark); tailL.position.set(-0.5, 5.7, -1.4); tailL.rotation.x = -0.4; const tailR = tailL.clone(); tailR.position.x = 0.5; hat.add(cap, tailL, tailR); const plate = K.box(2.3, 0.9, 1.6, 0xc9d4e2, { metal: 0.3, rough: 0.5 }); plate.position.y = 2.75; hat.add(plate); }
+  if (fid === 'zhu_yuanzhang') { const cap = K.box(1.9, 1.0, 1.7, dark); cap.position.y = 5.85; const wing = K.box(3.6, 0.5, 0.12, dark); wing.position.set(0, 5.9, -0.5); hat.add(cap, wing); }
+  if (fid === 'liu_che') { const crown = K.box(1.3, 1.6, 1.6, 0xd6b04a, { metal: 0.4, rough: 0.4 }); crown.position.set(0, 6.1, -0.1); crown.rotation.x = -0.25; hat.add(crown); }
+  if (fid === 'cao_cao') { const helm = K.box(2.5, 0.8, 2.3, 0x3a3d3a, { metal: 0.3, rough: 0.5 }); helm.position.y = 5.75; const plume = K.box(0.35, 1.3, 0.35, 0xb3262e); plume.position.set(0, 6.6, -0.3); const cape = K.box(2.6, 2.8, 0.2, 0x7a1f23); cape.position.set(0, 2.3, -1.1); const beard = K.box(0.9, 0.5, 0.2, dark); beard.position.set(0, 3.55, 1.06); hat.add(helm, plume, cape, beard); }
+  if (fid === 'liu_bei') { const knot = K.box(0.7, 0.8, 0.7, dark); knot.position.y = 5.8; const pin = K.box(1.6, 0.12, 0.12, 0xd6b04a); pin.position.y = 5.95; const beard = K.box(0.7, 1.1, 0.2, dark); beard.position.set(0, 3.3, 1.06); hat.add(knot, pin, beard); }
+  if (fid === 'sun_quan') { const helm = K.box(2.5, 0.8, 2.3, 0xb8741f, { metal: 0.3, rough: 0.5 }); helm.position.y = 5.75; const tassel = K.box(0.5, 0.9, 0.5, 0xc62f2f); tassel.position.set(0, 6.5, 0); const beard = K.box(1.1, 0.6, 0.2, 0x6a3f8f); beard.position.set(0, 3.5, 1.06); hat.add(helm, tassel, beard); }
+  g.add(hat);
+  return g;
+}
+
+const anchors = {};
+const n = order.length;
+order.forEach(([fid, v], i) => {
+  const a = Math.PI * (0.16 + (0.68 * i) / (n - 1));
+  const r = 27;
+  const x = -Math.cos(a) * r, z = -Math.sin(a) * r * 0.62 + 2;
+  const s = 0.75 + 1.05 * (v / max) ** 1.3;
+  const podium = K.mesh(new THREE.CylinderGeometry(3.2, 3.4, 0.9 + (n - i) * 0.25, 24), 0xf3ead8);
+  podium.position.set(x, Y + (0.9 + (n - i) * 0.25) / 2, z);
+  scene.add(podium);
+  const ring = K.mesh(new THREE.CylinderGeometry(3.45, 3.45, 0.3, 24), K.FACTIONS[fid].color);
+  ring.position.set(x, Y + 0.15, z);
+  scene.add(ring);
+  const h = hero(fid);
+  h.scale.setScalar(s);
+  h.position.set(x, Y + 0.9 + (n - i) * 0.25, z);
+  h.lookAt(0, h.position.y, 30);
+  if (SHOT === 'main' && fid === 'cao_cao') { h.rotation.z = 0; }
+  scene.add(h);
+  const fl = K.flag(fid, 4.5 * s);
+  fl.position.set(x + 2.8, Y, z - 1);
+  scene.add(fl);
+  anchors[fid] = { x, y: h.position.y + 6.8 * s, z, base: { x, y: Y, z }, rank: i + 1, value: v };
+});
+
+// action beat on the main shot: Cao Cao's army swarming toward Liu Bei across the plaza
+const crowd = new K.Crowd(scene, 400);
+if (SHOT === 'main') {
+  const A = anchors.cao_cao, B = anchors.liu_bei;
+  for (let i = 0; i < 44; i++) {
+    const t = 0.22 + (i % 11) * 0.055, lane = Math.floor(i / 11) - 1.5;
+    const x = A.x + (B.x - A.x) * t + lane * 0.9, z = A.z + (B.z - A.z) * t + 7 + lane * 0.5;
+    crowd.add(x, Y + 0.15, z, { body: K.FACTIONS.cao_cao.color, hat: 0x2c2a27, spear: true, yaw: Math.atan2(B.x - A.x, B.z - A.z), scale: 1.3 });
+  }
+  const clash = K.mesh(new THREE.TorusGeometry(4.2, 0.28, 8, 40), 0xe0412f, { emissive: 0x6a1208 });
+  clash.rotation.x = Math.PI / 2;
+  clash.position.set(B.x, Y + 0.4, B.z);
+  scene.add(clash);
+}
+crowd.done();
+
+const target = new THREE.Vector3(0, 8, -1);
+camera.position.set(0, 35, 76);
+camera.lookAt(target);
+camera.updateMatrixWorld();
+K.lights(scene, { dir: [-50, 90, 60], target: [0, 0, 0], shadowSize: 70, sunI: 2.0, hemi: 0.7, sky: 0xeaf4ff, ground: 0x8a8a6a });
+K.lens(renderer, scene, camera, { focus: camera.position.distanceTo(target), range: 55, maxBlur: 6, bandCenter: 0.46, bandWidth: 0.28 }).render();
+const out = {};
+for (const [k, a] of Object.entries(anchors)) out[k] = { ...K.project(camera, W, H, a.x, a.y, a.z), base: K.project(camera, W, H, a.base.x, a.base.y, a.base.z), rank: a.rank, value: a.value };
+window.__anchors = out;
+window.__done = true;
+</script>
+</body></html>

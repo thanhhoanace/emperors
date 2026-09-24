@@ -1,139 +1,49 @@
-# 👑 TAM QUỐC LOẠN NHẬP (Three Kingdoms Warlords Sim)
-> **Mô Phỏng Quân Chủ Xuyên Không 3D — Real-Time Multi-Agent Simulation**
+# Tam Quốc Loạn Nhập
 
-[![Three.js](https://img.shields.io/badge/Three.js-r128-black?style=for-the-badge&logo=three.js)](https://threejs.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-v18+-green?style=for-the-badge&logo=node.js)](https://nodejs.org/)
-[![Express](https://img.shields.io/badge/Express-v4-lightgrey?style=for-the-badge&logo=express)](https://expressjs.com/)
-[![License](https://img.shields.io/badge/License-CC0-orange?style=for-the-badge)](https://creativecommons.org/publicdomain/zero/1.0/)
+Bốn hoàng đế xuyên không về năm 200 tranh thiên hạ với Tào Tháo, Lưu Bị, Tôn Quyền. Mô phỏng theo lượt trong một thế giới 3D Three.js, làm ra để xem và quay clip: mỗi lượt kể rõ ai nghĩ gì, làm gì, và trọng tài phán ra sao.
 
-Dự án mô phỏng chiến thuật đa tác nhân (Multi-Agent Simulation) đưa **4 vị hoàng đế vĩ đại** trong lịch sử Trung Hoa xuyên không về thời kỳ Tam Quốc (~năm 200) để cạnh tranh quyền lực trực tiếp với **3 thế lực cát cứ bản địa** thông qua trí tuệ nhân tạo (LLM Agents).
+> **Trạng thái (2026-09-24):** engine luật chơi mới đã xong và có test. Giao diện và thế giới 3D đang chờ chủ dự án chọn phương án design ([canvas duyệt](https://claude.ai/artifact/958ZoQxAFcGPKTUNGVdWeV)). Trang đang phát hành vẫn là bản Phase 1 cũ. Chi tiết: [`docs/status.md`](docs/status.md).
 
-Dự án sở hữu bản đồ chiến thuật 3D trực quan sử dụng **Three.js** theo phong cách **Civilization VI**, kết hợp cùng cơ chế mô phỏng tự động và hệ thống hội thoại cá tính mang đậm dấu ấn lịch sử của từng nhân vật.
+## Bảy thế lực
 
----
+| Quân chủ | Thế lực | Màu | Lối chơi | Điểm yếu lịch sử |
+| --- | --- | --- | --- | --- |
+| Tần Thủy Hoàng | Nhà Tần | Đen–vàng | Pháp trị, xây thành, đánh mạnh | Dân tâm tự giảm |
+| Lý Thế Dân | Nhà Đường | Lam | Kỵ binh, dùng người tài | Bóng ma Huyền Vũ Môn |
+| Chu Nguyên Chương | Nhà Minh | Đỏ thẫm | Du kích, vệ sở, mưu kế | Thanh trừng công thần |
+| Lưu Triệt (Hán Vũ Đế) | Tây Hán | Tím | Viễn chinh, ngoại giao | Hao quốc khố, cuối đời mê tín |
+| Tào Tháo | Tào Ngụy | Xanh rêu | Đồn điền, cầu hiền, gian hùng | Dễ trúng phản gián |
+| Lưu Bị | Thục Hán | Xanh lá | Nhân nghĩa, thu phục lòng người | Báo thù cảm tính |
+| Tôn Quyền | Đông Ngô | Cam | Thủy quân, giữ Trường Giang | Yếu khi đánh lên phương Bắc |
 
-## 🏛️ Đấu Trường Xuyên Không
+Mỗi lượt mỗi phe chọn một trong năm việc: **Tấn công, Ngoại giao, Nội chính, Mưu kế, Củng cố**, kèm một câu thoại đúng giọng. Trọng tài tính kết quả theo năm chỉ số **Binh, Lương, Đất, Dân, Uy**. Luật chi tiết: [`docs/product/rules.md`](docs/product/rules.md).
 
-| Cát Cứ / Quân Chủ | Triều Đại / Thế Lực | Màu Sắc | Đặc Điểm Tính Cách & Lối Chơi | Điểm Yếu Lịch Sử |
-| :--- | :--- | :--- | :--- | :--- |
-| **Tần Thủy Hoàng** (Doanh Chính) | **Nhà Tần** (Đế quốc) | 🖤 Vàng-Đen | Pháp trị tập quyền cực đoan, xây dựng công trình lớn, củng cố phòng thủ. | Tàn bạo, dễ làm mất lòng dân (`Dân tâm` giảm nhanh). |
-| **Lý Thế Dân** (Đường Thái Tông) | **Nhà Đường** | 💙 Lam | Kỵ binh thiện chiến, trọng dụng hiền tài, ngoại giao xuất sắc. | Vướng mắc nội bộ gia tộc, tranh đoạt kế vị. |
-| **Chu Nguyên Chương** (Minh Thái Tổ) | **Nhà Minh** | ❤️ Đỏ Thẫm | Khởi thân bần nông, chiến tranh du kích, kỷ luật thép, tích lương phòng thủ. | Đa nghi, dễ phát động thanh trừng nội bộ. |
-| **Lưu Triệt** (Hán Vũ Đế) | **Nhà Hán** | 💜 Tím | Bành trướng quân sự viễn chinh, liên minh ngoại giao xa gần. | Tiêu hao quốc khố (`Lương thảo`), dễ sa đà mê tín cuối đời. |
-| **Tào Tháo** (Tào Ngụy) | **Tam Quốc** (Ngụy) | 💚 Xanh Rêu | Gian hùng quyền biến, thích chiêu mộ hiền tài, hành động chớp nhoáng. | Đa nghi, dễ trúng mưu kế phản gián. |
-| **Lưu Bị** (Thục Hán) | **Tam Quốc** (Thục) | 💚 Xanh Lá | Nhân nghĩa phục tâm, kiên nhẫn tích lũy địa bàn, phòng ngự vững chắc. | Lực lượng mỏng ban đầu, dễ bị cuốn vào phục thù cảm xúc. |
-| **Tôn Quyền** (Đông Ngô) | **Tam Quốc** (Ngô) | 🧡 Cam | Thủy quân vượt trội, cố thủ giang sơn sông nước, liên minh linh hoạt. | Thiếu tính đột phá tiến công phương Bắc, thiên về thủ thành. |
+## Chạy
 
----
+Cần Node 18 trở lên.
 
-## 🚀 Tính Năng Nổi Bật
-
-### 🗺️ Bản Đồ Chiến Lược 3D (Style Civ-like)
-* **Terrain Render:** Bản đồ 3D Three.js hiển thị sông ngòi, các tuyến đường bộ lịch sử, rừng cây (Kenney CC0 models) và các dãy núi trùng điệp dựng theo thuật toán từ dữ liệu `MOUNTAINS`.
-* **Thành Trì & Quan Ải:** Các cứ điểm chiến lược (Thành Đô, Lạc Dương, Thục Đạo...) được dựng hình khối kiến trúc cổ (courtyard, tower, wall, gate) chân thực.
-* **Tương Tác Camera:** Cho phép zoom in/out, xoay (orbit) và theo dõi trực quan các đơn vị di chuyển hoặc giao chiến.
-
-### 🧠 LLM Multi-Agent Simulation
-* **Quyết Định Tự Chủ:** Mỗi lượt, các quân chủ sẽ đưa ra quyết định hành động: **Tấn Công ⚔️**, **Ngoại Giao 🕊️**, **Nội Chính 🏛️**, **Mưu Kế 🎭**, hoặc **Củng Cố 🛡️**.
-* **Độc Thoại Lịch Sử (Speech Bubbles):** Các Agent phát ngôn bằng những câu thoại đậm chất thần thái riêng khi đến lượt hành động của mình.
-* **LLM Referee (Trọng Tài):** Đóng vai trò lịch sử phán quyết kết quả giao tranh dựa trên tương quan Binh lực, Lương thảo, Địa hình bản đồ và một chút yếu tố ngẫu nhiên để đảm bảo tính logic chân thực.
-
-### 📊 Hệ Thống Chỉ Số & Visual Live Log
-* **Thanh Chỉ Số Động:** Theo dõi trực tiếp 5 chỉ số cốt lõi: *Binh lực, Lương thảo, Lãnh thổ, Dân tâm, Uy tín*.
-* **Bảng Xếp Hạng Uy Tín:** Tự động cập nhật thứ hạng các thế lực sau mỗi lượt.
-* **Live Action Status:** Hiển thị bong bóng trạng thái nhấp nháy cho Agent ("Đang nghĩ...", "Đang tấn công...") cùng hiệu ứng nháy đỏ khi 2 thế lực lâm trận giao tranh.
-
----
-
-## 🛠️ Kiến Trúc Hệ Thống
-
-```mermaid
-graph TD
-    Client[Web Browser - Three.js Frontend] <--> |WebSocket & Static HTTP| Server[Node.js / Express Server]
-    Server --> |Simulation Loop| SimEngine[Simulation Engine]
-    SimEngine --> |Personality Traits & Historical Context| LLMAgents[LLM Agent Referee]
-    LLMAgents --> |JSON Actions / Quotes| SimEngine
-    SimEngine --> |Update Turn State| Client
+```bash
+PUPPETEER_SKIP_DOWNLOAD=1 npm ci
+npm start            # http://localhost:3000 (đừng mở file:// trực tiếp)
+npm test             # test engine và dữ liệu
+npm run sim -- 500   # chạy 500 ván tự động, xem thế lực nào hay thắng
 ```
 
-* **Frontend:** `index.html` duy nhất sử dụng Three.js (r128), Tailwind CSS (CDN), và Vanilla JavaScript.
-* **Backend:** Node.js + Express (`scripts/server.js` và `scripts/simulation.js`) đảm nhận việc chạy simulation loop, phục vụ static files và xử lý logic kết quả.
-* **Assets:** CC0 Assets quản lý qua `assets/manifest.json`.
+Server có `POST /api/turn` để chạy một lượt phía server (hiện dùng agent MOCK). Đây là chỗ sẽ cắm agent LLM sau này.
 
----
-
-## 📦 Hướng Dẫn Cài Đặt & Khởi Chạy
-
-### Yêu Cầu Hệ Thống
-* Node.js phiên bản 18 trở lên.
-* Trình duyệt hỗ trợ WebGL (Chrome, Safari, Firefox).
-
-### Các Bước Thực Hiện
-
-1. **Cài đặt dependencies:**
-   ```bash
-   cd emperors
-   npm install
-   ```
-
-2. **Chạy server phát triển (Development):**
-   ```bash
-   npm run dev
-   ```
-   *Server sẽ chạy tại địa chỉ: `http://localhost:3000`*
-
-3. **Chạy server môi trường Production (Chạy nền):**
-   ```bash
-   npm start
-   ```
-
----
-
-## 📂 Cấu Trúc Thư Mục
+## Cấu trúc
 
 ```text
-emperors/
-├── assets/                  # Quản lý assets đồ họa 3D (Models, Textures)
-│   ├── manifest.json        # Manifest khai báo toàn bộ asset sử dụng
-│   ├── SOURCE.md            # Ghi nhận bản quyền các CC0 model/texture
-│   ├── models/              # Mô hình 3D (nature, roads, citadels...)
-│   └── textures/            # Các texture địa hình mặt đất, nước sông
-├── personas/                # File cấu hình tính cách và hành vi của các quân chủ
-├── scripts/
-│   ├── server.js            # Khởi chạy Express Server & phục vụ WebSockets
-│   ├── simulation.js        # Engine tính toán tiến trình lượt đấu & trạng thái game
-│   └── shadow-qa.mjs        # Script tự động kiểm tra tích hợp tài nguyên
-├── index.html               # Frontend chính (Scene Three.js, Camera & Dashboard UI)
-├── package.json             # NPM project manifest
-├── DESIGN-DOCUMENT.md       # Tài liệu thiết kế chi tiết gameplay & visual
-├── HANDOFF.md               # Tài liệu bàn giao kỹ thuật & tiến độ
-└── README.md                # Tài liệu hướng dẫn sử dụng dự án
+index.html        entry (GitHub Pages)
+src/engine/       luật chơi, chạy cả trình duyệt lẫn Node
+data/             bản đồ, thế lực, số liệu cân bằng, giọng nhân vật
+server/           server local + /api/turn
+tests/            test engine, báo cáo cân bằng, QA trình duyệt
+docs/             brief, luật, hướng design, kiến trúc, trạng thái, quyết định
 ```
 
----
+Dùng AI agent (Claude Code, Codex) để làm dự án: đọc [`AGENTS.md`](AGENTS.md) trước.
 
-## 🔍 Xác Minh & Kiểm Thử Hệ Thống
+## Bản quyền
 
-Dự án cung cấp một số lệnh kiểm thử nhanh tính hợp lệ của tài nguyên và mã nguồn:
-
-* **Kiểm tra cú pháp JS trong index.html:**
-  ```bash
-  node --input-type=module - <<'NODE'
-  const fs = await import('node:fs/promises');
-  const html = await fs.readFile('index.html', 'utf8');
-  const scripts = [...html.matchAll(/<script type="module">([\s\S]*?)<\/script>/g)].map(m => m[1]);
-  await fs.writeFile('/tmp/emperors-index-check.mjs', scripts.join('\n'));
-  NODE
-  node --check /tmp/emperors-index-check.mjs
-  ```
-
-* **Xác minh các file tài nguyên đồ họa (assets) được khai báo:**
-  ```bash
-  node shadow-qa.mjs
-  ```
-
----
-
-## 📜 Giấy Phép & Bản Quyền Tài Nguyên
-* Toàn bộ mã nguồn dự án được phát triển nội bộ.
-* Các asset 3D (cây, đá, đường sá) được sử dụng từ các bộ tài nguyên miễn phí **CC0 (Kenney Nature Kit, Polygonal Mind)**. Vui lòng tham khảo chi tiết tại [assets/SOURCE.md](file:///Users/hoannt1/1-Projects/2.claw/emperors/assets/SOURCE.md).
+Mã nguồn phát triển nội bộ. Asset và giấy phép: [`assets/SOURCE.md`](assets/SOURCE.md). Ảnh Civilization và Total War trong `docs/design/references/` chỉ để tham khảo hướng nghệ thuật, không phát hành cùng game.

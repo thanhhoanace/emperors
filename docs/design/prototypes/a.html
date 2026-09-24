@@ -1,0 +1,253 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000}canvas{display:block}</style></head>
+<body>
+<script src="/node_modules/three/build/three.min.js"></script>
+<script src="kit.js"></script>
+<script>
+// Option A — "Sa bàn Thiên Hạ": the whole map as a floating diorama board.
+const params = new URLSearchParams(location.search);
+const SHOT = params.get('shot') || 'main';
+const W = 1440, H = 900;
+const { renderer, scene, camera } = K.setup(W, H, { dpr: Number(params.get('dpr') || 1.5), fov: 30, exposure: 0.82 });
+scene.background = K.gradient('#f4ecdc', '#e9dcc4');
+scene.fog = new THREE.Fog(0xece2cf, 260, 520);
+K.seed(11);
+
+const PROV = {
+  si_li: [-24, -14], ji: [18, -38], qing: [68, -30], xu: [72, 2], yan: [40, -12], yu: [12, 6], jing: [-16, 28],
+  yang: [64, 34], yi: [-72, 34], liang: [-62, -14], bing: [-18, -48], you: [48, -60], jiang: [22, 42], jiao: [16, 76],
+};
+const OWNER = { cao_cao: ['ji', 'qing', 'yan', 'yu', 'you'], qin_shihuang: ['liang', 'si_li'], li_shimin: ['bing'], zhu_yuanzhang: ['xu'], liu_che: ['yi'], liu_bei: ['jing'], sun_quan: ['yang', 'jiang', 'jiao'] };
+const SEAT = { cao_cao: 'yu', qin_shihuang: 'liang', li_shimin: 'bing', zhu_yuanzhang: 'xu', liu_che: 'yi', liu_bei: 'jing', sun_quan: 'yang' };
+const PRESTIGE = { cao_cao: 94, qin_shihuang: 90, li_shimin: 84, zhu_yuanzhang: 78, liu_che: 86, liu_bei: 80, sun_quan: 88 };
+const TROOPS = { cao_cao: 104, qin_shihuang: 61, li_shimin: 47, zhu_yuanzhang: 52, liu_che: 49, liu_bei: 58, sun_quan: 86 };
+const ownerOf = {};
+for (const [f, ps] of Object.entries(OWNER)) for (const p of ps) ownerOf[p] = f;
+const NEI = { si_li: ['ji', 'yu', 'jing', 'yi', 'liang', 'bing'], ji: ['qing', 'you', 'bing', 'yan'], qing: ['xu'], xu: ['yu', 'yan'], yan: ['yu'], yu: ['jing', 'yang'], jing: ['yang', 'yi', 'jiao', 'jiang'], yang: ['jiao', 'jiang'], yi: ['liang'], liang: ['bing'], bing: ['you'] };
+
+// ---------------------------------------------------------------- terrain
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function seg(px, pz, ax, az, bx, bz) { const dx = bx - ax, dz = bz - az; const t = clamp(((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz), 0, 1); return Math.hypot(px - ax - dx * t, pz - az - dz * t); }
+const nz = (x, z) => Math.sin(x * 0.13 + Math.cos(z * 0.07) * 2) * 0.5 + Math.sin(z * 0.11 + x * 0.05) * 0.5;
+const nz2 = (x, z) => Math.sin(x * 0.41 + z * 0.23) * Math.cos(z * 0.37 - x * 0.19);
+const RIDGES = [[-108, 6, -44, 9, 9, 6.5], [-2, -66, 3, -26, 7, 5.5], [-112, -80, -110, 80, 11, 15], [-50, 40, -32, 47, 5, 4.5], [-74, 62, 56, 66, 4.5, 5.5], [52, -22, 58, -18, 4, 4], [-88, 22, -48, 18, 4.5, 4.5], [30, -80, 80, -80, 5, 7]];
+const RIVERS = [
+  [[-112, -28], [-86, -34], [-62, -30], [-44, -26], [-24, -24], [0, -24], [22, -20], [44, -24], [70, -16], [100, -18]],
+  [[-112, 46], [-88, 48], [-70, 45], [-52, 44], [-34, 42], [-10, 40], [10, 37], [30, 33], [48, 28], [64, 25], [82, 24], [104, 26]],
+  [[-66, 14], [-44, 17], [-28, 21], [-12, 22.5], [-2, 30], [6, 36.5]],
+];
+const riverPts = RIVERS.map((pts, i) => new THREE.CatmullRomCurve3(pts.map(([x, z]) => new THREE.Vector3(x, 0, z))).getSpacedPoints(260).map((p) => [p.x, p.z, i === 2 ? 1.6 : 2.6]));
+function riverDist(x, z) { let best = 1e9, w = 2.6; for (const pts of riverPts) for (const [px, pz, rw] of pts) { const d = Math.hypot(x - px, z - pz) - rw; if (d < best) { best = d; w = rw; } } return best; }
+const coastX = (z) => 90 + 7 * Math.sin(z * 0.06) + (z > -44 && z < -16 ? 13 * Math.sin(((z + 44) / 28) * Math.PI) : 0);
+const land = (x, z) => Math.min(coastX(z) - x, 90 - z + 4 * Math.sin(x * 0.08));
+function Hraw(x, z) {
+  const l = land(x, z);
+  let h = 1.2 + 0.45 * nz(x, z) + 0.2 * nz2(x, z);
+  for (const [ax, az, bx, bz, hh, ww] of RIDGES) {
+    const d = seg(x, z, ax, az, bx, bz);
+    if (d > ww * 3) continue;
+    const along = ((x - ax) * (bx - ax) + (z - az) * (bz - az)) / Math.hypot(bx - ax, bz - az);
+    const peaks = 0.55 + 0.45 * Math.abs(Math.sin(along * 0.19 + nz2(x, z))) ;
+    const spread = ww * (0.8 + 0.5 * peaks);
+    h += hh * 0.8 * peaks * Math.exp(-((d / spread) ** 2)) * (0.8 + 0.3 * nz2(x * 1.9, z * 1.9));
+  }
+  if (l < 8) h = h * clamp(l / 8, 0, 1) + -1.8 * (1 - clamp(l / 8, 0, 1));
+  const rd = riverDist(x, z);
+  if (rd < 2.5) h = Math.min(h, -0.6 + clamp(rd + 0.6, 0, 3.1) * 0.55);
+  for (const [px, pz] of Object.values(PROV)) { const d = Math.hypot(x - px, z - pz); if (d < 9) { const k = clamp((d - 5.5) / 3.5, 0, 1); h = h * k + 1.35 * (1 - k); } }
+  return h;
+}
+const BW = 224, BD = 186;
+const geo = new THREE.PlaneGeometry(BW, BD, 280, 232);
+geo.rotateX(-Math.PI / 2);
+const pos = geo.attributes.position;
+const colors = new Float32Array(pos.count * 3);
+const cA = new THREE.Color(), cB = new THREE.Color();
+const provIds = Object.keys(PROV);
+function nearest(x, z) {
+  let d1 = 1e9, d2 = 1e9, p1 = null;
+  const wx = x + 3.5 * nz2(x * 0.5, z * 0.5), wz = z + 3.5 * nz2(z * 0.5 + 3, x * 0.5);
+  for (const id of provIds) { const [px, pz] = PROV[id]; const d = Math.hypot(wx - px, wz - pz); if (d < d1) { d2 = d1; d1 = d; p1 = id; } else if (d < d2) d2 = d; }
+  return { p1, edge: d2 - d1 };
+}
+for (let i = 0; i < pos.count; i++) {
+  const x = pos.getX(i), z = pos.getZ(i);
+  const h = Hraw(x, z);
+  pos.setY(i, h);
+  if (h < -0.15) cA.set(0x5fa7b5);
+  else if (h < 0.45) cA.set(0xe6d3a3);
+  else {
+    const north = clamp((-z - 10) / 60, 0, 1), south = clamp((z - 30) / 50, 0, 1);
+    cA.set(0x7fb347).lerp(cB.set(0xb9b75a), north * 0.55).lerp(cB.set(0x5ea94a), south * 0.5);
+    cA.offsetHSL(0, 0, nz2(x * 0.8, z * 0.8) * 0.025);
+    if (h > 3.2) cA.lerp(cB.set(0x7f9a50), clamp((h - 3.2) / 2, 0, 1));
+    if (h > 5.5) cA.lerp(cB.set(0x9c9180), clamp((h - 5.5) / 2.5, 0, 1));
+    if (h > 9.5) cA.lerp(cB.set(0xf6f3ec), clamp((h - 9.5) / 1.5, 0, 1));
+    const { p1, edge } = nearest(x, z);
+    const f = ownerOf[p1];
+    if (f && h < 4.5) {
+      const fc = new THREE.Color(K.FACTIONS[f].color);
+      cA.lerp(fc, 0.16);
+      if (edge < 1.1) cA.lerp(fc.clone().multiplyScalar(0.72), 0.75);
+    }
+  }
+  colors.set([cA.r, cA.g, cA.b], i * 3);
+}
+geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+geo.computeVertexNormals();
+const terrain = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true }));
+terrain.receiveShadow = true;
+scene.add(terrain);
+const water = new THREE.Mesh(new THREE.PlaneGeometry(BW, BD), new THREE.MeshStandardMaterial({ color: 0x3f9fbf, roughness: 0.2, metalness: 0.05, transparent: true, opacity: 0.78 }));
+water.rotation.x = -Math.PI / 2;
+water.position.y = 0.02;
+water.receiveShadow = true;
+scene.add(water);
+// board frame
+for (const [w, d, x, z] of [[BW + 4, 2, 0, BD / 2 + 1], [BW + 4, 2, 0, -BD / 2 - 1], [2, BD, BW / 2 + 1, 0], [2, BD, -BW / 2 - 1, 0]]) {
+  const side = K.box(w, 11, d, 0x7a5539, { rough: 0.7 });
+  side.position.set(x, -5.2, z);
+  const rim = K.box(w + 0.3, 0.5, d + 0.3, 0xe9dcc2);
+  rim.position.set(x, 0.55, z);
+  scene.add(side, rim);
+}
+const yOf = (x, z) => Math.max(0.05, Hraw(x, z));
+
+// ---------------------------------------------------------------- roads
+const roads = {};
+for (const [a, list] of Object.entries(NEI)) for (const b of list) {
+  const [ax, az] = PROV[a], [bx, bz] = PROV[b];
+  const mx = (ax + bx) / 2 + (bz - az) * 0.08, mz = (az + bz) / 2 - (bx - ax) * 0.08;
+  const r = K.ribbon([[ax, az], [mx, mz], [bx, bz]], 1.05, 0xead8ad, yOf, { lift: 0.14, segments: 90 });
+  scene.add(r);
+  roads[a + '>' + b] = r.userData.curve;
+}
+
+// ---------------------------------------------------------------- props
+const world = new THREE.Group();
+scene.add(world);
+const crowd = new K.Crowd(scene, 3000);
+const forest = new K.Forest(scene, 5000);
+const occupied = (x, z) => { for (const [px, pz] of Object.values(PROV)) if (Math.hypot(x - px, z - pz) < 10) return true; return false; };
+for (let i = 0; i < 9000 && forest.cone.count < 2600; i++) {
+  const x = K.rr(-106, 104), z = K.rr(-86, 88);
+  const h = Hraw(x, z);
+  if (h < 0.8 || h > 8.6 || occupied(x, z) || riverDist(x, z) < 1.5) continue;
+  const hill = clamp((h - 2.2) / 3, 0, 1), south = clamp((z - 45) / 40, 0, 1);
+  if (K.r() > 0.08 + hill * 0.75 + south * 0.5) continue;
+  const kind = h > 4.5 || K.r() < 0.35 ? 'cone' : 'blob';
+  forest.add(x, h - 0.1, z, kind, K.rr(0.55, 0.8), kind === 'cone' ? (south > 0.2 ? 0x3d8a4e : 0x3f7a4a) : 0x78ab56);
+}
+// rice paddies along rivers
+for (let i = 0; i < 900; i++) {
+  const x = K.rr(-100, 90), z = K.rr(-80, 80);
+  const h = Hraw(x, z), rd = riverDist(x, z);
+  if (h < 0.6 || h > 2.4 || rd > 8 || rd < 1.8 || occupied(x, z)) continue;
+  if (i % 3) continue;
+  const p = K.box(K.rr(1.4, 2.4), 0.1, K.rr(1.2, 2), [0x8fbf4a, 0xa8c255, 0x77b04a][i % 3], { rough: 1 });
+  p.position.set(x, h + 0.02, z);
+  p.rotation.y = K.rr(-0.3, 0.3);
+  p.castShadow = false;
+  world.add(p);
+}
+
+function wallRing(cx, cz, size, color = 0xe8dcc6, cap = 0x6f6a63) {
+  const g = new THREE.Group();
+  const t = 0.55, hgt = 1.1;
+  const parts = [[size, t, 0, -size / 2], [size, t, -size / 2, 0, true], [size, t, size / 2, 0, true]];
+  for (const [len, th, x, z, rot] of parts) { const w = K.box(rot ? th : len, hgt, rot ? len : th, color); w.position.set(x, hgt / 2, z); const c = K.box(rot ? th + 0.2 : len + 0.2, 0.18, rot ? len + 0.2 : th + 0.2, cap); c.position.set(x, hgt + 0.09, z); g.add(w, c); }
+  for (const s of [-1, 1]) { const w = K.box(size / 2 - 1.6, hgt, t, color); w.position.set(s * (size / 4 + 0.8), hgt / 2, size / 2); const c = K.box(size / 2 - 1.4, 0.18, t + 0.2, cap); c.position.set(s * (size / 4 + 0.8), hgt + 0.09, size / 2); g.add(w, c); }
+  for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const tw = K.box(1.3, 1.9, 1.3, color); tw.position.set((x * size) / 2, 0.95, (z * size) / 2); const r = K.roof(1.9, 1.9, 0.7, cap); r.position.set((x * size) / 2, 1.9, (z * size) / 2); g.add(tw, r); }
+  g.position.set(cx, 1.35, cz);
+  return g;
+}
+
+const anchors = {};
+for (const [pid, [x, z]] of Object.entries(PROV)) {
+  const f = ownerOf[pid];
+  const F = K.FACTIONS[f];
+  const isSeat = SEAT[f] === pid;
+  const g = new THREE.Group();
+  g.position.set(x, 1.35, z);
+  world.add(g);
+  const plaza = K.box(isSeat ? 13 : 9, 0.3, isSeat ? 13 : 9, 0xdccfb6, { rough: 1 });
+  plaza.position.y = 0.05;
+  g.add(plaza);
+  if (isSeat) {
+    world.add(wallRing(x, z, 12));
+    const gate = K.hall(3.2, 1.6, 1.6, F.roof, { wall: 0xa2412e });
+    gate.position.set(0, 0, 6);
+    g.add(gate);
+    const main = K.hall(4.6, 3.2, 1.8, F.roof);
+    main.position.set(-1.8, 0, -1.8);
+    g.add(main);
+    const side = K.hall(2.6, 2, 1.3, F.roof);
+    side.position.set(-3.2, 0, 2.2);
+    g.add(side);
+    const tiers = Math.round(2 + (PRESTIGE[f] - 76) / 4.5);
+    const pg = K.pagoda(tiers, F.roof);
+    pg.position.set(2.9, 0, -2.2);
+    pg.scale.setScalar(0.72);
+    g.add(pg);
+    const fl = K.flag(f, 5.5);
+    fl.position.set(4.2, 0, 4.5);
+    g.add(fl);
+    // granary sacks
+    for (let i = 0; i < 6; i++) { const s = K.box(0.7, 0.5, 0.5, 0xd8b56a); s.position.set(2.2 + (i % 3) * 0.8, 0.25 + Math.floor(i / 3) * 0.5, 3.1); g.add(s); }
+    // troops in front of the gate
+    const n = Math.round(Math.sqrt(TROOPS[f]) * 1.6);
+    const cols = Math.min(8, n), rows = Math.ceil(n / cols);
+    K.soldiers(crowd, f, x, 1.35, z + 10.5 + rows * 0.4, cols, rows, { gap: 0.85 });
+    anchors[f] = { x, y: 1.35 + pg.userData.height * 0.72 + 1.5, z: z - 2.2, seat: pid };
+  } else {
+    for (let i = 0; i < 4; i++) { const hs = K.hall(K.rr(1.6, 2.3), K.rr(1.4, 1.9), K.rr(0.9, 1.2), F.roof); hs.position.set(Math.cos(i * 1.7) * 2.3, 0, Math.sin(i * 1.7) * 2.3); hs.rotation.y = Math.floor(K.r() * 4) * Math.PI / 2; g.add(hs); }
+    const fl = K.flag(f, 4);
+    fl.position.set(3, 0, 3);
+    g.add(fl);
+    anchors['town:' + pid] = { x, y: 5, z };
+  }
+  // villagers
+  for (let i = 0; i < (isSeat ? 10 : 6); i++) { const a = K.r() * 6.28, r = K.rr(7.5, 11); const vx = x + Math.cos(a) * r, vz = z + Math.sin(a) * r; if (Hraw(vx, vz) < 0.4) continue; crowd.add(vx, yOf(vx, vz), vz, { body: [0xe9e2d0, 0xc9b99a, 0x8fa7b8, 0xd9c7a0][i % 4], hat: 0x6b5a45, yaw: K.r() * 6.28, scale: 0.9 }); }
+}
+
+// Cao Cao's army marching yu → jing along the road
+const march = roads['yu>jing'];
+for (let i = 0; i < 26; i++) {
+  const t = 0.38 + (i % 13) * 0.018;
+  const p = march.getPointAt(t), tan = march.getTangentAt(t);
+  const side = i < 13 ? -0.45 : 0.45;
+  const x = p.x - tan.z * side, z = p.z + tan.x * side;
+  crowd.add(x, yOf(x, z) + 0.1, z, { body: K.FACTIONS.cao_cao.color, hat: 0x2c2a27, spear: true, yaw: Math.atan2(tan.x, tan.z) });
+}
+{ const p = march.getPointAt(0.62); const fl = K.flag('cao_cao', 3.6); fl.position.set(p.x, yOf(p.x, p.z), p.z); world.add(fl); anchors.army = { x: p.x, y: yOf(p.x, p.z) + 4, z: p.z }; }
+crowd.done();
+forest.done();
+
+// clouds
+for (const [x, y, z, s] of [[-60, 30, -40, 1.4], [30, 34, -70, 1.2], [56, 28, 44, 1.3], [-40, 26, 60, 1.1], [0, 36, 0, 0.9]]) { const c = K.cloud(s); c.position.set(x, y, z); scene.add(c); }
+
+// ---------------------------------------------------------------- camera + focus
+let target, lensOpts;
+if (SHOT === 'main') {
+  target = new THREE.Vector3(-3, 0, 17);
+  camera.position.set(target.x + 26, 62, target.z + 84);
+  lensOpts = { range: 34, maxBlur: 7, bandCenter: 0.5, bandWidth: 0.2, focusXZ: [-2, 17], focusR: 26, gray: 0.88 };
+} else {
+  scene.fog = new THREE.Fog(0xece2cf, 480, 900);
+  target = new THREE.Vector3(2, -6, 14);
+  camera.position.set(target.x + 14, 262, target.z + 236);
+  lensOpts = { range: 120, maxBlur: 4, bandCenter: 0.52, bandWidth: 0.28 };
+}
+camera.lookAt(target);
+camera.updateMatrixWorld();
+const { sun } = K.lights(scene, { dir: [target.x - 80, 85, target.z + 30], target: [target.x, 0, target.z], shadowSize: SHOT === 'main' ? 70 : 130, sunI: 2.0, hemi: 0.6, sky: 0xfff1dc, ground: 0x6f7a55 });
+lensOpts.focus = camera.position.distanceTo(target);
+const lens = K.lens(renderer, scene, camera, lensOpts);
+lens.render();
+
+const out = {};
+for (const [k, a] of Object.entries(anchors)) out[k] = K.project(camera, W, H, a.x, a.y, a.z);
+window.__anchors = out;
+window.__done = true;
+</script>
+</body></html>

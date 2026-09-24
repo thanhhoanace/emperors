@@ -1,5 +1,7 @@
 # Asset Sources
 
+> Trạng thái (2026-09-24): các asset Kenney dưới đây thuộc bản đồ cũ (v1). Frontend mới chưa dùng; prototype design trong `docs/design/prototypes/` dựng hình bằng code và tải texture chi tiết từ thư mục ví dụ của repo three.js (MIT) lúc chạy. Asset nào đưa vào bản phát hành đều phải ghi ở đây kèm giấy phép.
+
 This project uses local CC0 assets only for the v1 map restyle.
 
 ## Kenney Nature Kit
@@ -8,7 +10,6 @@ This project uses local CC0 assets only for the v1 map restyle.
 - License: CC0 1.0 Universal
 - Local license copy: `assets/licenses/kenney_nature-kit-license.txt`
 - Used for trees, brush, bamboo, rock/cliff fallback candidates, and terrain dressing.
-- Note: current visible mountain ranges are procedural geometry in `index.html`, because isolated rock props did not read as continuous terrain ranges.
 
 ## Kenney City Kit Roads
 
@@ -26,4 +27,4 @@ These sources are candidates for the next visual pass. Evaluate the exact downlo
 - Quaternius Low Poly Nature: https://quaternius.com/
 
 Do not add assets extracted from Civilization or other commercial games.
-Commercial game screenshots or references in `images/` are art-direction references only, not asset sources.
+Commercial game screenshots in `docs/design/references/` are art-direction references only, not asset sources.
