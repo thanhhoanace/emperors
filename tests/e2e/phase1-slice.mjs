@@ -1,6 +1,15 @@
+// Browser QA for the current Phase 1 slice (index.html). Needs `npm start` running.
+// three.js is served from node_modules instead of the CDN so the run is offline-safe.
+// Local: PUPPETEER_EXECUTABLE_PATH=/path/to/chromium npm run qa
 import puppeteer from 'puppeteer';
+import fs from 'node:fs';
+import path from 'node:path';
+import { ROOT } from '../load.mjs';
 
 const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:3000/';
+const OUT = path.join(ROOT, 'test-results');
+fs.mkdirSync(OUT, { recursive: true });
+const CDN_THREE = /^https:\/\/cdn\.jsdelivr\.net\/npm\/three@[^/]+\/(.+)$/;
 const browser = await puppeteer.launch({
   headless: false,
   args: ['--no-sandbox','--disable-setuid-sandbox','--enable-webgl','--ignore-gpu-blocklist','--use-gl=angle','--use-angle=swiftshader-webgl']
@@ -9,6 +18,15 @@ let failed = null;
 try {
   const page = await browser.newPage();
   await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
+  await page.setRequestInterception(true);
+  page.on('request', (req) => {
+    const m = req.url().match(CDN_THREE);
+    const file = m && path.join(ROOT, 'node_modules/three', m[1]);
+    if (file && fs.existsSync(file)) return req.respond({ status: 200, contentType: 'application/javascript', body: fs.readFileSync(file) });
+    // Remote poster/video of the cinematic are decoration; stub them so QA does not depend on the network.
+    if (!req.url().startsWith(BASE_URL) && ['image', 'media'].includes(req.resourceType())) return req.respond({ status: 204, body: '' });
+    req.continue();
+  });
   const pageErrors = [];
   page.on('pageerror', e => { pageErrors.push(e.message); console.error('PAGE_ERROR', e.message); });
   page.on('console', m => { if (m.type() === 'error') { pageErrors.push(m.text()); console.error('CONSOLE_ERROR', m.text()); } });
@@ -47,7 +65,7 @@ try {
   if (after.turn !== 2) throw new Error(`Expected turn 2, got ${after.turn}`);
   if (pageErrors.length) throw new Error('Browser errors: ' + pageErrors.join(' | '));
 
-  await page.screenshot({ path: 'slice-qa.png', fullPage: false });
+  await page.screenshot({ path: path.join(OUT, 'phase1-slice.png'), fullPage: false });
   console.log(JSON.stringify({ ok:true, dist:Number(dist.toFixed(2)), before, after }, null, 2));
 } catch (e) {
   failed = e;

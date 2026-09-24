@@ -1,12 +1,25 @@
-name: Phase 1 QA and Pages
+name: Test and deploy Pages
 
 on:
   push:
     branches: [main]
     paths:
       - 'index.html'
-      - 'slice-qa.mjs'
-      - '.github/workflows/phase1-pages.yml'
+      - 'src/**'
+      - 'data/**'
+      - 'assets/**'
+      - 'server/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/pages.yml'
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'src/**'
+      - 'data/**'
+      - 'server/**'
+      - 'tests/**'
   workflow_dispatch:
 
 permissions:
@@ -15,7 +28,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -28,23 +41,29 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: node scripts/server.js > /tmp/emperors-server.log 2>&1 & echo $! > /tmp/server.pid
-      - run: |
+      - name: Engine tests
+        run: npm test
+      - name: Start server
+        run: node server/server.js > /tmp/emperors-server.log 2>&1 & echo $! > /tmp/server.pid
+      - name: Wait for server
+        run: |
           for i in {1..30}; do
             curl -fsS http://127.0.0.1:3000/ >/dev/null && exit 0
             sleep 1
           done
           exit 1
-      - run: xvfb-run -a node slice-qa.mjs
+      - name: Browser QA
+        run: xvfb-run -a npm run qa
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: phase1-qa
+          name: qa
           path: |
-            slice-qa.png
+            test-results/
             /tmp/emperors-server.log
 
   deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: qa
     runs-on: ubuntu-latest
     environment:
@@ -55,9 +74,13 @@ jobs:
       - uses: actions/configure-pages@v5
         with:
           enablement: true
+      - name: Assemble site (runtime files only)
+        run: |
+          mkdir _site
+          cp -r index.html src data assets _site/
       - uses: actions/upload-pages-artifact@v4
         with:
-          path: '.'
+          path: _site
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

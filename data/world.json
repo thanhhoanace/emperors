@@ -1,0 +1,711 @@
+{
+  "meta": {
+    "title": "Tam Quốc Loạn Nhập",
+    "startYear": 200,
+    "era": "Kiến An năm thứ 5 — cuối Đông Hán",
+    "seasons": [
+      "Xuân",
+      "Hạ",
+      "Thu",
+      "Đông"
+    ],
+    "description": "Nhà Hán mục nát, quần hùng cát cứ. Bốn vị hoàng đế từ các thời đại khác xuyên không về năm 200 để tranh thiên hạ với ba thế lực Tam Quốc."
+  },
+  "rules": {
+    "unifyProvinces": 9,
+    "maxTurns": 48,
+    "lateWarTurn": 24,
+    "coalitionAt": 6,
+    "economy": {
+      "incomePerFertilityPop": 10,
+      "incomeBasePerProvince": 6000,
+      "upkeepPerTroop": 0.3,
+      "recruitPerPop": 25,
+      "internalGrainShare": 0.8,
+      "internalRecruitMul": 1.2,
+      "troopsPerPop": 1200
+    },
+    "combat": {
+      "commitBase": 0.45,
+      "commitAggression": 0.2,
+      "randomSpread": 0.15,
+      "fortBonus": 0.12,
+      "fortMax": 3,
+      "seatBonus": 1.35,
+      "captureAbsorb": 0.3,
+      "surrender": 0.3,
+      "lateCommitBonus": 0.0
+    },
+    "loyalty": {
+      "revoltBelow": 30,
+      "famineLoss": 8
+    },
+    "pact": {
+      "turns": 6,
+      "max": 2
+    },
+    "emperorPrestigePerTurn": 1,
+    "neutralRevoltGarrison": 9000
+  },
+  "emperor": {
+    "province": "yu",
+    "name": "Hán Hiến Đế"
+  },
+  "provinces": [
+    {
+      "id": "si_li",
+      "name": "Tư Lệ",
+      "city": "Lạc Dương",
+      "terrain": "plains",
+      "fertility": 9,
+      "population": 80,
+      "defense": 1.15,
+      "river": true,
+      "north": true,
+      "strategic": true,
+      "geo": [
+        -24,
+        -14
+      ],
+      "neighbors": [
+        "ji",
+        "yu",
+        "jing",
+        "yi",
+        "liang",
+        "bing"
+      ]
+    },
+    {
+      "id": "ji",
+      "name": "Ký Châu",
+      "city": "Nghiệp Thành",
+      "terrain": "plains",
+      "fertility": 8,
+      "population": 120,
+      "defense": 1.0,
+      "river": true,
+      "north": true,
+      "strategic": true,
+      "geo": [
+        18,
+        -38
+      ],
+      "neighbors": [
+        "si_li",
+        "qing",
+        "you",
+        "bing",
+        "yan"
+      ]
+    },
+    {
+      "id": "qing",
+      "name": "Thanh Châu",
+      "city": "Lâm Truy",
+      "terrain": "coast",
+      "fertility": 7,
+      "population": 90,
+      "defense": 1.0,
+      "river": false,
+      "north": true,
+      "strategic": false,
+      "geo": [
+        68,
+        -30
+      ],
+      "neighbors": [
+        "ji",
+        "xu"
+      ]
+    },
+    {
+      "id": "xu",
+      "name": "Từ Châu",
+      "city": "Bành Thành",
+      "terrain": "plains",
+      "fertility": 8,
+      "population": 70,
+      "defense": 1.05,
+      "river": true,
+      "north": false,
+      "strategic": true,
+      "geo": [
+        72,
+        2
+      ],
+      "neighbors": [
+        "qing",
+        "yu",
+        "yan"
+      ]
+    },
+    {
+      "id": "yan",
+      "name": "Duyện Châu",
+      "city": "Xương Ấp",
+      "terrain": "plains",
+      "fertility": 7,
+      "population": 60,
+      "defense": 1.0,
+      "river": true,
+      "north": true,
+      "strategic": false,
+      "geo": [
+        40,
+        -12
+      ],
+      "neighbors": [
+        "xu",
+        "yu",
+        "ji"
+      ]
+    },
+    {
+      "id": "yu",
+      "name": "Dự Châu",
+      "city": "Hứa Xương",
+      "terrain": "plains",
+      "fertility": 9,
+      "population": 100,
+      "defense": 1.05,
+      "river": false,
+      "north": false,
+      "strategic": true,
+      "geo": [
+        12,
+        6
+      ],
+      "neighbors": [
+        "si_li",
+        "xu",
+        "yan",
+        "jing",
+        "yang"
+      ]
+    },
+    {
+      "id": "jing",
+      "name": "Kinh Châu",
+      "city": "Tương Dương",
+      "terrain": "river",
+      "fertility": 8,
+      "population": 110,
+      "defense": 1.2,
+      "river": true,
+      "north": false,
+      "strategic": true,
+      "geo": [
+        -16,
+        28
+      ],
+      "neighbors": [
+        "si_li",
+        "yu",
+        "yang",
+        "yi",
+        "jiao",
+        "jiang"
+      ]
+    },
+    {
+      "id": "yang",
+      "name": "Dương Châu",
+      "city": "Kiến Nghiệp",
+      "terrain": "river",
+      "fertility": 8,
+      "population": 90,
+      "defense": 1.25,
+      "river": true,
+      "north": false,
+      "strategic": true,
+      "geo": [
+        64,
+        34
+      ],
+      "neighbors": [
+        "yu",
+        "jing",
+        "jiao",
+        "jiang"
+      ]
+    },
+    {
+      "id": "yi",
+      "name": "Ích Châu",
+      "city": "Thành Đô",
+      "terrain": "mountains",
+      "fertility": 9,
+      "population": 80,
+      "defense": 1.45,
+      "river": true,
+      "north": false,
+      "strategic": true,
+      "geo": [
+        -72,
+        34
+      ],
+      "neighbors": [
+        "si_li",
+        "jing",
+        "liang"
+      ]
+    },
+    {
+      "id": "liang",
+      "name": "Lương Châu",
+      "city": "Trường An",
+      "terrain": "hills",
+      "fertility": 5,
+      "population": 50,
+      "defense": 1.2,
+      "river": true,
+      "north": true,
+      "strategic": false,
+      "geo": [
+        -62,
+        -14
+      ],
+      "neighbors": [
+        "yi",
+        "si_li",
+        "bing"
+      ]
+    },
+    {
+      "id": "bing",
+      "name": "Tịnh Châu",
+      "city": "Tấn Dương",
+      "terrain": "hills",
+      "fertility": 5,
+      "population": 40,
+      "defense": 1.2,
+      "river": false,
+      "north": true,
+      "strategic": false,
+      "geo": [
+        -18,
+        -48
+      ],
+      "neighbors": [
+        "ji",
+        "liang",
+        "si_li",
+        "you"
+      ]
+    },
+    {
+      "id": "you",
+      "name": "U Châu",
+      "city": "Kế Thành",
+      "terrain": "plains",
+      "fertility": 4,
+      "population": 30,
+      "defense": 1.05,
+      "river": false,
+      "north": true,
+      "strategic": false,
+      "geo": [
+        48,
+        -60
+      ],
+      "neighbors": [
+        "ji",
+        "bing"
+      ]
+    },
+    {
+      "id": "jiang",
+      "name": "Giang Hạ",
+      "city": "Hạ Khẩu",
+      "terrain": "river",
+      "fertility": 6,
+      "population": 40,
+      "defense": 1.2,
+      "river": true,
+      "north": false,
+      "strategic": false,
+      "geo": [
+        22,
+        42
+      ],
+      "neighbors": [
+        "jing",
+        "yang"
+      ]
+    },
+    {
+      "id": "jiao",
+      "name": "Giao Châu",
+      "city": "Phiên Ngung",
+      "terrain": "jungle",
+      "fertility": 6,
+      "population": 30,
+      "defense": 1.15,
+      "river": false,
+      "north": false,
+      "strategic": false,
+      "geo": [
+        16,
+        76
+      ],
+      "neighbors": [
+        "jing",
+        "yang"
+      ]
+    }
+  ],
+  "neutral": {
+    "name": "Trung lập",
+    "garrison": {
+      "si_li": 30000,
+      "you": 20000
+    }
+  },
+  "factions": [
+    {
+      "id": "qin_shihuang",
+      "type": "time_displaced",
+      "color": "#c9a227",
+      "secondary": "#26221c",
+      "start": {
+        "provinces": [
+          "liang"
+        ],
+        "seat": "liang",
+        "troops": 55000,
+        "grain": 80000,
+        "loyalty": 62,
+        "prestige": 90
+      },
+      "weights": {
+        "attack": 34,
+        "diplomacy": 6,
+        "internal": 22,
+        "stratagem": 12,
+        "fortify": 26
+      },
+      "traits": {
+        "aggression": 0.9,
+        "attack": 1.3,
+        "defense": 1.15,
+        "recruit": 1.1,
+        "knowledge": 1.7,
+        "loyaltyGain": 0.8,
+        "loyaltyDrift": -0.5,
+        "diplomacy": -0.1,
+        "openness": -0.1,
+        "stratagem": 0.0,
+        "stratagemVulnerability": 0.0,
+        "upkeep": 1.0,
+        "fortifyStep": 2,
+        "betrayal": 0.08
+      },
+      "events": [
+        {
+          "id": "elixir",
+          "chance": 0.05,
+          "minTurn": 4,
+          "effect": {
+            "grain": -0.1,
+            "prestige": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "li_shimin",
+      "type": "time_displaced",
+      "color": "#3b6fd8",
+      "secondary": "#dfe8f5",
+      "start": {
+        "provinces": [
+          "bing"
+        ],
+        "seat": "bing",
+        "troops": 50000,
+        "grain": 60000,
+        "loyalty": 76,
+        "prestige": 82
+      },
+      "weights": {
+        "attack": 34,
+        "diplomacy": 18,
+        "internal": 22,
+        "stratagem": 8,
+        "fortify": 18
+      },
+      "traits": {
+        "aggression": 0.8,
+        "attack": 1.15,
+        "defense": 1.0,
+        "recruit": 1.15,
+        "knowledge": 1.6,
+        "loyaltyGain": 1.1,
+        "loyaltyDrift": 0.5,
+        "diplomacy": 0.1,
+        "openness": 0.1,
+        "stratagem": 0.05,
+        "stratagemVulnerability": 0.0,
+        "upkeep": 1.0,
+        "cavalry": 1.25,
+        "betrayal": 0.0
+      },
+      "events": [
+        {
+          "id": "xuanwu",
+          "chance": 0.05,
+          "minTurn": 6,
+          "effect": {
+            "troops": -0.08,
+            "prestige": -3
+          }
+        }
+      ]
+    },
+    {
+      "id": "zhu_yuanzhang",
+      "type": "time_displaced",
+      "color": "#b3262e",
+      "secondary": "#3a0f12",
+      "start": {
+        "provinces": [
+          "xu"
+        ],
+        "seat": "xu",
+        "troops": 36000,
+        "grain": 60000,
+        "loyalty": 74,
+        "prestige": 70
+      },
+      "weights": {
+        "attack": 24,
+        "diplomacy": 6,
+        "internal": 26,
+        "stratagem": 26,
+        "fortify": 18
+      },
+      "traits": {
+        "aggression": 0.6,
+        "attack": 1.05,
+        "defense": 1.05,
+        "recruit": 1.2,
+        "knowledge": 1.25,
+        "loyaltyGain": 1.0,
+        "loyaltyDrift": 0.5,
+        "diplomacy": -0.05,
+        "openness": -0.05,
+        "stratagem": 0.1,
+        "stratagemVulnerability": 0.0,
+        "upkeep": 0.9,
+        "betrayal": 0.1
+      },
+      "events": [
+        {
+          "id": "purge",
+          "chance": 0.07,
+          "minTurn": 5,
+          "effect": {
+            "troops": -0.06,
+            "loyalty": 3,
+            "prestige": -2
+          }
+        }
+      ]
+    },
+    {
+      "id": "liu_che",
+      "type": "time_displaced",
+      "color": "#7c4dcc",
+      "secondary": "#e6dcf6",
+      "start": {
+        "provinces": [
+          "yi"
+        ],
+        "seat": "yi",
+        "troops": 40000,
+        "grain": 60000,
+        "loyalty": 66,
+        "prestige": 84
+      },
+      "weights": {
+        "attack": 36,
+        "diplomacy": 22,
+        "internal": 14,
+        "stratagem": 10,
+        "fortify": 18
+      },
+      "traits": {
+        "aggression": 1.0,
+        "attack": 1.12,
+        "defense": 1.0,
+        "recruit": 1.1,
+        "knowledge": 1.5,
+        "loyaltyGain": 0.9,
+        "loyaltyDrift": 0.0,
+        "diplomacy": 0.1,
+        "openness": 0.0,
+        "stratagem": 0.0,
+        "stratagemVulnerability": 0.0,
+        "upkeep": 1.3,
+        "betrayal": 0.0
+      },
+      "events": [
+        {
+          "id": "superstition",
+          "chance": 0.07,
+          "minTurn": 16,
+          "effect": {
+            "grain": -0.15,
+            "loyalty": -4
+          }
+        }
+      ]
+    },
+    {
+      "id": "cao_cao",
+      "type": "historical_warlord",
+      "color": "#5f7a36",
+      "secondary": "#232b17",
+      "start": {
+        "provinces": [
+          "yu",
+          "ji",
+          "qing",
+          "yan"
+        ],
+        "seat": "yu",
+        "troops": 110000,
+        "grain": 160000,
+        "loyalty": 72,
+        "prestige": 86
+      },
+      "weights": {
+        "attack": 36,
+        "diplomacy": 12,
+        "internal": 22,
+        "stratagem": 22,
+        "fortify": 8
+      },
+      "traits": {
+        "aggression": 0.9,
+        "attack": 1.05,
+        "defense": 1.15,
+        "recruit": 1.2,
+        "knowledge": 1.0,
+        "loyaltyGain": 1.0,
+        "loyaltyDrift": 0.5,
+        "diplomacy": 0.0,
+        "openness": -0.05,
+        "stratagem": 0.1,
+        "stratagemVulnerability": 0.1,
+        "upkeep": 1.0,
+        "betrayal": 0.1
+      },
+      "events": [
+        {
+          "id": "headache",
+          "chance": 0.04,
+          "minTurn": 8,
+          "effect": {
+            "prestige": -2,
+            "loyalty": -2
+          }
+        }
+      ]
+    },
+    {
+      "id": "liu_bei",
+      "type": "historical_warlord",
+      "color": "#2f9e56",
+      "secondary": "#dff3e5",
+      "start": {
+        "provinces": [
+          "jing"
+        ],
+        "seat": "jing",
+        "troops": 42000,
+        "grain": 70000,
+        "loyalty": 86,
+        "prestige": 72
+      },
+      "weights": {
+        "attack": 18,
+        "diplomacy": 26,
+        "internal": 32,
+        "stratagem": 8,
+        "fortify": 16
+      },
+      "traits": {
+        "aggression": 0.4,
+        "attack": 1.0,
+        "defense": 1.05,
+        "recruit": 1.1,
+        "knowledge": 1.0,
+        "loyaltyGain": 1.3,
+        "loyaltyDrift": 1.0,
+        "diplomacy": 0.2,
+        "openness": 0.2,
+        "stratagem": 0.0,
+        "stratagemVulnerability": 0.0,
+        "upkeep": 1.0,
+        "vengeance": true,
+        "betrayal": 0.0
+      },
+      "events": []
+    },
+    {
+      "id": "sun_quan",
+      "type": "historical_warlord",
+      "color": "#e07b24",
+      "secondary": "#4a2811",
+      "start": {
+        "provinces": [
+          "yang",
+          "jiang",
+          "jiao"
+        ],
+        "seat": "yang",
+        "troops": 70000,
+        "grain": 120000,
+        "loyalty": 78,
+        "prestige": 76
+      },
+      "weights": {
+        "attack": 22,
+        "diplomacy": 24,
+        "internal": 22,
+        "stratagem": 12,
+        "fortify": 16
+      },
+      "traits": {
+        "aggression": 0.5,
+        "attack": 1.0,
+        "defense": 1.05,
+        "recruit": 1.0,
+        "knowledge": 1.0,
+        "loyaltyGain": 1.0,
+        "loyaltyDrift": 0.5,
+        "diplomacy": 0.15,
+        "openness": 0.15,
+        "stratagem": 0.05,
+        "stratagemVulnerability": 0.0,
+        "upkeep": 1.0,
+        "riverDefense": 1.15,
+        "northPenalty": 0.85,
+        "betrayal": 0.0
+      },
+      "events": [
+        {
+          "id": "succession",
+          "chance": 0.04,
+          "minTurn": 12,
+          "effect": {
+            "loyalty": -4,
+            "prestige": -1
+          }
+        }
+      ]
+    }
+  ]
+}
