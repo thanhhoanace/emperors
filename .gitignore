@@ -1,16 +1,18 @@
 # Dependencies
 node_modules/
-package-lock.json
 
-# Local env & IDE
+# Local env, IDE, OS
 .env
 .env.*
 .DS_Store
 .idea/
 .vscode/
 
-# Agent & Session States
+# Test output
+test-results/
+
+# Per-machine agent state (never commit)
 .omc/
 .omx/
-shadow-qa-output/
-/tmp/
+.claude/settings.local.json
+.codex/
