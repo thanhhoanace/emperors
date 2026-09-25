@@ -1,0 +1,64 @@
+{
+  "status": "draft_not_wired",
+  "seeDocs": "docs/product/characters.md",
+  "succession": {
+    "emperors": {
+      "qin_shihuang": null,
+      "li_shimin": null,
+      "liu_che": null,
+      "zhu_yuanzhang": null
+    },
+    "threeKingdoms": {
+      "cao_cao": "cao_pi",
+      "liu_bei": "liu_shan",
+      "sun_quan": "sun_deng"
+    },
+    "onGen2Death": "split_like_emperor",
+    "split": {
+      "troopsKeptRatio": 0.5,
+      "order": ["adjacency", "damage"]
+    }
+  },
+  "governors": {
+    "yu": "cao_cao",
+    "ji": "cao_pi",
+    "jing": "cao_ren",
+    "guan": "zhang_he",
+    "si_li": "xiahou_dun",
+    "xu": "zhang_liao",
+    "qing": "zang_ba",
+    "yan": "li_dian",
+    "yi": "liu_bei",
+    "jing_nan": "guan_yu",
+    "han_zhong": "wei_yan",
+    "yang": "sun_quan",
+    "jiang": "lu_meng",
+    "longxi": "qin_shihuang",
+    "bing": "li_shimin",
+    "hexi": "liu_che",
+    "huai": "zhu_yuanzhang",
+    "you": "gongsun_kang",
+    "nanzhong": "yong_kai",
+    "jiao": "shi_xie"
+  },
+  "heirsOffMap": ["liu_shan", "sun_deng"],
+  "reserves": {
+    "cao_cao": ["xu_huang", "yue_jin", "sima_yi"],
+    "liu_bei": ["zhuge_liang", "zhang_fei", "zhao_yun", "huang_zhong"],
+    "sun_quan": ["lu_xun", "gan_ning", "zhu_ran", "ling_tong"]
+  },
+  "neutrals": {
+    "you": {
+      "face": "gongsun_kang",
+      "annexBonus": ["li_shimin", "cao_cao"]
+    },
+    "nanzhong": {
+      "face": "yong_kai",
+      "annexBonus": ["liu_bei", "liu_che"]
+    },
+    "jiao": {
+      "face": "shi_xie",
+      "annexBonus": ["sun_quan", "zhu_yuanzhang"]
+    }
+  }
+}
