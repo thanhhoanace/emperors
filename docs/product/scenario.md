@@ -2,12 +2,13 @@
 
 > **Vai trò:** SOT cho *chuyện thế giới và snapshot*. Luật số nằm ở `data/scenario/219.json` (bản nháp) rồi mới nhập `data/world.json` khi engine đọc được.
 > Nhân vật, 3 ô trung lập (mặt), thừa kế: `docs/product/characters.md`.
+> Tin · sương · danh tính: `docs/product/intel.md`.
 > Visual / DEM / thành: `docs/product/proposal-all-china.md` và `docs/design/`.
 > Chủ dự án chốt hướng này ngày 2026-09-25. ADR: `docs/decisions/0007-scenario-219-periphery.md`.
 
 ## Premise một câu
 
-Ba nước Tào–Thục–Ngô đã thành hình và đang giằng Kinh / Hán Trung. Bốn hoàng đế xuyên không xuất hiện ở **rìa và khe**, không ngồi trên ruột ba nước. Đầu game Tam Quốc áp đảo. Giữa game đế bứt nhờ địa thế + cải cách đời sau. Bàn cờ đọc như Chiến Quốc Thất Hùng.
+Ba nước Tào–Thục–Ngô đã thành hình và đang giằng Kinh / Hán Trung. Bốn hoàng đế xuyên không xuất hiện ở **rìa và khe**, không ngồi trên ruột ba nước. Đầu game Tam Quốc áp đảo. Giữa game đế bứt nhờ địa thế + cải cách đời sau + **tin lệch sử mà 3 nước không có**. Bàn cờ đọc như Chiến Quốc Thất Hùng.
 
 ## Không làm
 
@@ -17,6 +18,7 @@ Ba nước Tào–Thục–Ngô đã thành hình và đang giằng Kinh / Hán 
 - Không spawn 4 Tào mini 50–110k quân.
 - Không cây Civ đầy đủ (era, district, settler spam).
 - Không đời 2 cho 4 đế. Không đời 3 cho Tam Quốc.
+- Không để 4 đế nhận nhau xuyên không ở lượt 1. Không để Tam Quốc đọc tên đời sau từ cửa `guest_arrival`.
 
 ## Mốc
 
@@ -54,7 +56,7 @@ Lõi 3 nước giữ nguyên khối. Rìa là đất đế và trung lập. Map 
               Ung Khải
 ```
 
-Bảng châu (ủy phủ, chủ): giữ như trước. Tướng đứng từng ô: `characters.md`.
+Bảng châu (uỷ phủ, chủ): giữ như trước. Tướng đứng từng ô: `characters.md`.
 
 `liang` năm 200 **bỏ**.
 
@@ -93,9 +95,16 @@ Chi tiết mặt và ai chiêu rẻ: `characters.md` mục 1.
 ## Event cổng
 
 Giữ bảng cũ. Thêm mặt tướng: `characters.md` mục 4 (`actor` / `defender` / `succession` / `realm_fall`).
+Cửa là shot + cờ. Không phải tin để cả 7 phe đọc giống nhau — xem `intel.md`.
 
-## Sương mù · nhịp · cân bằng · Claude
+## Sương mù · danh tính
 
-Không đổi so với bản khóa trước. Tướng đi đường: `march.md` + `actor`.
+Chi tiết: `docs/product/intel.md`.
+
+- Người xem / Claude: cả bàn.
+- Tam Quốc: châu mình + láng giềng; cửa = đồn; không biết đế là ai.
+- Đế: đai nhớ + sách sử về 3 nước; cửa = intel; **không** nhận đế khác là xuyên không trừ khi tự xưng.
+- Không sƠn đen 20 ô kiểu Civ.
 
 Thống nhất: 12 / 20 châu, hoặc còn 1 phe.
+Tướng đi đường: `march.md` + `actorChar`.
