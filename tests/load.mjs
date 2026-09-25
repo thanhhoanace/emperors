@@ -6,7 +6,9 @@ import { fileURLToPath } from 'node:url';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
-export const Engine = require(path.join(ROOT, 'src/engine/engine.js'));
+export const Engine = require(path.join(ROOT, 'src/engine/attach-219.js'))(
+  require(path.join(ROOT, 'src/engine/engine.js'))
+);
 
 function readJson(rel) {
   return JSON.parse(fs.readFileSync(path.join(ROOT, rel), 'utf8'));
