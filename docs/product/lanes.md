@@ -4,7 +4,7 @@ Hai luồng song song trên nhánh `claude/gracious-pasteur-6s8fmk`. Không sử
 
 ## Claude — hình và thế giới 3D
 
-Được sửa: `src/world/**` (runtime hình: thế giới, trình diễn event, HUD), `game.html`, `tests/runtime.test.mjs`, `tests/e2e/runtime-slice.mjs`, `docs/design/**`, `docs/design/prototypes/**`, `assets/map/**`, `tools/bake-map.mjs`, `data/cities.json`, `data/world.json` chỉ cột `lonlat` của châu *đang vẽ*, `assets/SOURCE.md`, ADR 0004–0006, `docs/product/proposal-all-china.md` phần hình.
+Được sửa: `src/world/**` (runtime hình: thế giới, trình diễn event, HUD), `game.html`, `tests/runtime.test.mjs`, `tests/game-controller.test.mjs`, `tests/e2e/runtime-slice.mjs`, `tests/e2e/game-loop.mjs`, `docs/design/**`, `docs/design/prototypes/**`, `assets/map/**`, `tools/bake-map.mjs`, `data/cities.json`, `data/world.json` chỉ cột `lonlat` của châu *đang vẽ*, `assets/SOURCE.md`, ADR 0004–0006, `docs/product/proposal-all-china.md` phần hình.
 
 Việc: thành Đông Hán, DEM, LOD, canvas duyệt, map toàn quốc (phạm vi / tỉ lệ A-B-C), nướng mặt nạ, 6 thành mới năm 219, Lạc–Trường An không còn phế tích 190, tướng đi đường theo `march.md`.
 

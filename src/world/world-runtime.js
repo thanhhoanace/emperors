@@ -170,7 +170,7 @@
     if (moatGeo) { const moat = new THREE.Mesh(moatGeo, waterNear.rivers.material); moat.renderOrder = 3; scene.add(moat); }
     let standards = null; // one great standard over each city, in its owner's colour
     const buildStandards = () => {
-      if (standards) scene.remove(standards);
+      if (standards) { scene.remove(standards); standards.traverse((o) => { if (o.isMesh) o.geometry.dispose(); }); } // rebuilt every turn: free the old one
       standards = bannerGroup(Object.values(cities).map((ci) => ({ fid: owners[ci.pid], x: ci.palace[0], y: ci.palace[1] - 0.3, z: ci.palace[2], h: 1.3, s: 0.75 })));
       scene.add(standards);
     };
@@ -385,7 +385,7 @@
     rt.owners = () => Object.assign({}, owners);
     rt.setOwners = (next) => {
       owners = Object.assign({}, next); applyOwners(); buildStandards();
-      for (const ci of Object.values(cities)) if (ci.full && ci.full.owner !== owners[ci.pid]) { scene.remove(ci.full.group); ci.full = null; }
+      for (const ci of Object.values(cities)) if (ci.full && ci.full.owner !== owners[ci.pid]) { scene.remove(ci.full.group); freeMeshes(ci.full.group); ci.full = null; }
       if (current) rt.setView(current);
     };
 
@@ -397,7 +397,10 @@
     for (const m of Object.values(FIG)) Terrain.receiveBaked(m, terr, 0.8);
     const capeMat = {}; const cape = (fid) => (capeMat[fid] = capeMat[fid] || Terrain.receiveBaked(new THREE.MeshStandardMaterial({ color: FCOL[fid] || 0x888888, roughness: 0.8 }), terr, 0.8));
     // a mounted general, drawn larger than life like every campaign map (≈ the height of a city gate), with a great standard
-    const general = (fid) => {
+    // built once per faction; every marker is a clone sharing its geometry (no GPU buffers per event)
+    const generalTpl = {};
+    const general = (fid) => (generalTpl[fid] = generalTpl[fid] || buildGeneral(fid)).clone();
+    const buildGeneral = (fid) => {
       const g = new THREE.Group(), add = (geo, mat, x, y, z, ry = 0, rz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(0, ry, rz); m.castShadow = true; g.add(m); return m; };
       add(new THREE.CapsuleGeometry(0.11, 0.34, 4, 8), FIG.horse, 0, 0.34, 0, 0, Math.PI / 2);
       for (const [x, z] of [[-0.14, -0.07], [-0.14, 0.07], [0.14, -0.07], [0.14, 0.07]]) add(new THREE.CylinderGeometry(0.025, 0.02, 0.26, 5), FIG.horse, x, 0.13, z);
@@ -431,11 +434,17 @@
       return g;
     };
     // a standard planted over a city (a result shown, not an owner changed)
-    rt.addStandard = (fid) => { const g = bannerGroup([{ fid, x: 0, y: 0, z: 0, h: 1.7, s: 1.0 }]); g.visible = false; markers.add(g); return g; };
+    rt.addStandard = (fid) => { const g = bannerGroup([{ fid, x: 0, y: 0, z: 0, h: 1.7, s: 1.0 }]); g.traverse((o) => { if (o.isMesh) o.userData.ownGeo = true; }); g.visible = false; markers.add(g); return g; };
     // battle dust at a point
-    rt.addDust = () => { const g = Flora.clouds([[0, 0.6, 0, 3.2, 0.55], [0.8, 0.9, 0.4, 2.4, 0.45], [-0.7, 0.8, -0.3, 2.8, 0.5]], { color: 0x9a8a70 }); g.visible = false; markers.add(g); return g; };
-    rt.removeMarker = (m) => { if (m && m.parent) m.parent.remove(m); };
-    rt.clearMarkers = () => { while (markers.children.length) markers.remove(markers.children[0]); };
+    let dustTpl = null; // one set of sprites and one texture, cloned per battle
+    rt.addDust = () => { dustTpl = dustTpl || Flora.clouds([[0, 0.6, 0, 3.2, 0.55], [0.8, 0.9, 0.4, 2.4, 0.45], [-0.7, 0.8, -0.3, 2.8, 0.5]], { color: 0x9a8a70 }); const g = dustTpl.clone(); g.visible = false; markers.add(g); return g; };
+    // removing a marker frees what it alone owns (its soldiers' instance buffers, a planted standard's geometry)
+    rt.removeMarker = (m) => {
+      if (!m) return;
+      if (m.parent) m.parent.remove(m);
+      m.traverse((o) => { if (o.isInstancedMesh) o.dispose(); else if (o.isMesh && o.userData.ownGeo) o.geometry.dispose(); });
+    };
+    rt.clearMarkers = () => { while (markers.children.length) rt.removeMarker(markers.children[0]); };
 
     // ---------------------------------------------------------------- measure
     rt.measure = () => { renderer.info.autoReset = false; renderer.info.reset(); const f0 = performance.now(); lens.render(); renderer.getContext().finish(); const s = K.stats(renderer, scene, { frameMs: performance.now() - f0 }); renderer.info.autoReset = true; return s; };

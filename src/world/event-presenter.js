@@ -225,6 +225,8 @@
 
     // ---------------------------------------------------------------- real-time playback
     P.speed = 1;
+    let skipping = false; // P.skip(): finish the shot on screen now and log the rest of the queue without shots
+    P.skip = () => { skipping = true; };
     P.play = (ev, op = {}) => new Promise((resolve) => {
       const pl = P.plan(ev); let t = 0, last = null;
       if (op.speed) P.speed = op.speed;
@@ -232,6 +234,7 @@
       for (const s of pl.cams) for (const v of [s.a, s.b]) rt.prepare(typeof v === 'function' ? v(0.5) : v);
       const step = (now) => {
         if (last != null) t += Math.min(0.25, (now - last) / 1000) * P.speed; // a slow frame slows the shot down, never skips it
+        if (skipping) t = pl.duration;
         last = now;
         try { P.show(pl, t); rt.render(); if (op.onFrame) op.onFrame(t, pl); }
         catch (e) { console.error('shot failed', ev.kind, e); t = pl.duration; } // one broken shot must not stall the turn
@@ -239,7 +242,17 @@
       };
       requestAnimationFrame(step);
     });
-    P.playAll = async (events, op = {}) => { for (const ev of events) { if (op.onEvent) op.onEvent(ev); await P.play(ev, op); } P.end(); rt.render(); };
+    // the queue of one turn, strictly in order, each event once; onSkip gets the events left when the viewer skips
+    P.playAll = async (events, op = {}) => {
+      skipping = false;
+      for (const ev of events) {
+        if (skipping) { if (op.onSkip) op.onSkip(ev); continue; }
+        if (op.onEvent) op.onEvent(ev);
+        await P.play(ev, op);
+      }
+      skipping = false;
+      P.end(); rt.render();
+    };
     return P;
   };
 

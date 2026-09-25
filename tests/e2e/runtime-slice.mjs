@@ -32,7 +32,7 @@ try {
   page.on('console', (m) => { if (m.type() === 'error') { report.errors.push(m.text()); console.error('CONSOLE_ERROR', m.text()); } });
 
   const t0 = Date.now();
-  await page.goto(BASE_URL + 'game.html?qa=1&w=1440&h=900&dpr=1', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.goto(BASE_URL + 'game.html?demo=1&qa=1&w=1440&h=900&dpr=1', { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.waitForFunction(() => (window.__game && window.__game.ready) || !!window.__error, { timeout: 600000, polling: 1000 });
   const err = await page.evaluate(() => window.__error);
   if (err) throw new Error('game failed: ' + err);
@@ -120,7 +120,7 @@ try {
 
   // real time: one engine turn from the server (POST /api/turn), autoplayed at 8× (a slow software-GL frame advances at most 0.25 s × speed); owners then follow the returned state
   const nErr = report.errors.length;
-  await page.goto(BASE_URL + 'game.html?live=1&speed=8&w=1440&h=900&dpr=1', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.goto(BASE_URL + 'game.html?demo=1&live=1&speed=8&w=1440&h=900&dpr=1', { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.waitForFunction(() => (window.__game && window.__game.ready) || !!window.__error, { timeout: 600000, polling: 1000 });
   const kinds = await page.evaluate(() => window.__game.events.map((e) => e.v + ':' + e.kind));
   check(kinds.length > 0 && kinds.every((k) => k.startsWith('1:')), 'live: RuntimeEvent v1 from /api/turn', kinds);

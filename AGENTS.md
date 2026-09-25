@@ -45,13 +45,13 @@ Tài liệu không chép con số từ `data/`.
 
 ```text
 index.html               entry GitHub Pages (Phase 1 cũ)
-game.html                thế giới 219 diễn RuntimeEvent v1 (?live=1: một lượt từ server)
+game.html                trò chơi: chọn đế, mỗi mùa một lệnh, engine thật trong trình duyệt (?demo=1: trình diễn RuntimeEvent)
 src/engine/engine.js     luật thuần, tất định theo seed
-src/world/               runtime hình: world-runtime.js, event-presenter.js, hud.js, names.js + thư viện terrain/hancity/flora/kit
+src/world/               runtime hình: world-runtime.js, event-presenter.js, hud.js, game-controller.js, player-ui.js + thư viện terrain/hancity/flora/kit
 data/                    world.json + cities.json + personas/ + scenario/
 tools/bake-map.mjs       nướng địa hình → assets/map/
 server/server.js         static + POST /api/turn
-tests/                   engine.test.mjs, events.test.mjs, sim.mjs, map.test.mjs, runtime.test.mjs, e2e/ (Puppeteer)
+tests/                   engine.test.mjs, events.test.mjs, sim.mjs, map.test.mjs, runtime.test.mjs, game-controller.test.mjs, e2e/ (Puppeteer)
 docs/                    product/, design/, research/, architecture.md, status.md
 ```
 
@@ -62,7 +62,7 @@ PUPPETEER_SKIP_DOWNLOAD=1 npm ci
 npm test
 npm run sim -- 500
 npm start
-xvfb-run -a npm run qa   # QA trình duyệt (cần server): Phase 1 + runtime-slice → test-results/runtime-*.png
+xvfb-run -a npm run qa   # QA trình duyệt (cần server): Phase 1 + runtime-slice + game-loop → test-results/
 ```
 
 ## Quy tắc
