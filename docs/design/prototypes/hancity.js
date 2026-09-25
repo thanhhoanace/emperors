@@ -326,7 +326,10 @@
     // que before the main gate: the southern gate nearest the axis
     const main = gates.filter((g) => g.side === 's').sort((a, b) => Math.abs(a.x) - Math.abs(b.x))[0] || gates[0];
     const moatOn = (side) => def.moat && def.moat.sides.includes(side);
-    if (main && def.que && def.que !== 'none') { const d = moatOn(main.side) ? P.base * 0.75 + Math.max(0.1, def.moat.width * s) + 0.4 : P.base * 1.05 + 0.12; bag.merge(quePair(def.que, main.w * 1.25, H), RT(Math.atan2(main.nx, main.nz), main.x + main.nx * d, P.y0, main.z + main.nz * d)); }
+    // que placed explicitly (Chang'an: at Weiyang palace's east and north gates, not at a city gate)
+    const FACE = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] };
+    for (const q of def.queAt || []) { const [qx, qz] = L(q.at), [nx, nz] = FACE[q.face] || FACE.s; bag.merge(quePair(def.que || 'official', H * 2.2, H), RT(Math.atan2(nx, nz), qx, P.y0, qz)); }
+    if (main && def.que && def.que !== 'none' && !def.queAt) { const d = moatOn(main.side) ? P.base * 0.75 + Math.max(0.1, def.moat.width * s) + 0.4 : P.base * 1.05 + 0.12; bag.merge(quePair(def.que, main.w * 1.25, H), RT(Math.atan2(main.nx, main.nz), main.x + main.nx * d, P.y0, main.z + main.nz * d)); }
 
     for (const g of gates) if (moatOn(g.side) && polys.length && inPoly(g.x - g.nx * 0.2, g.z - g.nz * 0.2, outline)) {
       const w = Math.max(0.1, def.moat.width * s), L = P.base * 0.75 + w + 0.3;

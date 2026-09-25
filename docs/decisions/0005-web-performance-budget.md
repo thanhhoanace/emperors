@@ -82,12 +82,12 @@ Kỹ thuật bắt buộc (đã áp dụng trong `docs/design/prototypes/map.htm
 | Cảnh | Lệnh vẽ | Tam giác/khung | Bộ đệm GPU |
 | --- | --- | --- | --- |
 | Toàn cảnh | 215 | 1,2 triệu | 32 MB |
-| Chiến lược | 218 | 1,2 triệu | 32 MB |
-| Vùng (Trung Nguyên) | 105 | 1,4 triệu | 38 MB |
-| Chiến dịch (có bóng) | 210 | 2,1 triệu | 40 MB |
-| Cận thành Tương Dương | 170 | 1,5 triệu | 37 MB |
-| Cận thành Trường An | 153 | 2,8 triệu | 38 MB |
-| Cận thành Hạ Khẩu | 107 | 1,4 triệu | 36 MB |
+| Chiến lược | 217 | 1,2 triệu | 32 MB |
+| Vùng (Trung Nguyên) | 99 | 1,4 triệu | 38 MB |
+| Chiến dịch (có bóng) | 211 | 2,2 triệu | 40 MB |
+| Cận thành Tương Dương | 172 | 1,6 triệu | 37 MB |
+| Cận thành Trường An | 158 | 2,7 triệu | 38 MB |
+| Cận thành Hạ Khẩu | 101 | 1,4 triệu | 36 MB |
 
 - **Tải về: khoảng 2,4 MB gzip.**
   - Độ cao 2,05 MB: lưới mịn 1,77 MB và lưới thô 0,28 MB. Đã nén delta 2 chiều; bản thô là 4,8 MB.

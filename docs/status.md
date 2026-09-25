@@ -15,14 +15,19 @@
   - Trường An thuộc Tư Lệ;
   - Hạ Khẩu là của Hoàng Tổ;
   - Nghiệp Thành là của Viên Thiệu.
-- **Mạng đã mở (25/9).** dat.city, x.com, twdb.io, Wikipedia truy cập được; totalwar.fandom.com vẫn chặn bot (403). Đang tra: mã dat.city, bản đồ TW3K, khảo cổ 14 thành, vùng biên năm 200.
-- **Hướng mới của chủ dự án (25/9), chờ phương án được duyệt:**
-  - Mở rộng bản đồ ra toàn Trung Quốc ngày nay, không chỉ Trung Nguyên.
-  - Hoàng đế xuyên không biết địa lý rộng hơn nên có lợi thế địa thế. Quân phiệt cũ mạnh ở chỗ đông quân, tập trung ở Trung Nguyên.
-  - Mỗi hoàng đế cần một lợi thế riêng.
-  - Đây là đổi luật cốt lõi: lên phương án trước, chờ duyệt rồi mới code.
+- **Chủ dự án duyệt phương án vòng 6** (`docs/product/proposal-all-china.md`; trang "Vòng 6" trên canvas):
+  - bản đồ toàn Trung Quốc;
+  - bốn hoàng đế xuất phát ở vùng biên, mỗi người ba lợi thế riêng có căn cứ lịch sử;
+  - luật và engine mới.
+  Đây là đổi luật cốt lõi: chưa code gì. Năm câu hỏi cần anh trả lời nằm ở mục 11 của phương án.
 
 ## Đã xong
+
+- 2026-09-25 (sau khi mở mạng):
+  - Đọc toàn bộ mã dat.city; tra bản đồ TW3K; tra vùng biên năm 200 (`docs/research/`). Sửa ADR 0005 chỗ đoán sai về dat.city.
+  - Đối chiếu lại 14 thành với Wikipedia, Commons và bài khảo cổ. Đã sửa `data/world.json` (toạ độ Hứa Xương lệch 8 km, Trường An, Kiến Nghiệp, Xương Ấp, Nghiệp Thành), `data/cities.json` và `docs/design/history.md`.
+  - Bake và render lại toàn bộ.
+  - Soạn phương án vòng 6.
 
 - 2026-09-25 (vòng 5):
   - Phản hồi vòng 4: bản đồ chưa chuẩn và nhỏ hơn thực tế; thành chưa đúng lịch sử.

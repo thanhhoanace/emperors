@@ -91,6 +91,7 @@ Trong container không có GPU: đặt `PUPPETEER_EXECUTABLE_PATH` tới Chromiu
 - Đẩy sông ra khỏi thành theo bán kính làm sông cuộn tròn quanh thành. Phải dời ngang theo pháp tuyến của dòng, dạng bướu cosin dọc theo dòng.
 - Sông trong đất liền là dải nước ở mực nước riêng của nó, không dùng mặt biển. Ở góc máy xa, lưới đất thô hơn lòng sông nên phải nâng dải nước lên trên mặt đất, nếu không sông nhỏ sẽ đứt đoạn.
 - Biên châu: lấy chênh lệch chi phí chia cho gradient của chính nó thì nét mượt dưới ô lưới. Dùng biến đổi khoảng cách từ mép nhãn thì bị răng cưa.
+- Toạ độ thành phải là tâm di chỉ thời Hán. Đừng lấy tâm thành phố ngày nay hay một công trình trong thành: Hứa Xương từng lệch 8 km, Trường An lấy nhầm cung Vị Ương.
 - DEM có nhiễu nên gzip thường chỉ bớt khoảng 20%. Lượng tử hoá, lấy delta 2 chiều và tách byte trước khi gzip thì bớt được 58%.
 
 ## Workflow có sẵn
