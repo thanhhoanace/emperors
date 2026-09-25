@@ -81,7 +81,22 @@ Hiện trạng (2026-09-25): `prototypes/map.html` + `terrain.js` + `flora.js` d
 - rìa thảo nguyên phía bắc còn trống;
 - chân dung nhân vật.
 
-## Vòng 5 — địa hình thật và thành Đông Hán (chờ duyệt)
+## Vòng 6–7 — bản đồ toàn quốc (đã chốt) và thế giới thu 219
+
+**Vòng 6, chủ dự án chốt 2026-09-25** (`decisions/0006`, mục "Bổ sung vòng 6"):
+- phạm vi: Trung Quốc ngày nay, kèm nhãn cửa Hán (Giao Chỉ, Lạc Lãng, Đại Uyển), không thêm châu có chủ;
+- tỉ lệ C (đúng tỉ lệ, chi tiết giảm dần ra vùng biên), phép chiếu Albers;
+- kịch bản 219 giữ nguyên.
+
+**Vòng 7, thế giới thu 219** trên bản đồ vòng 5 (bake Albers toàn quốc là bước sau):
+- 20 thủ phủ; thảo nguyên, sa mạc, Tây Tạng, Đài Loan là đất hoang không chủ, bạc màu trong chế độ chiến lược.
+- Sáu thành mới theo di chỉ: Thiên Thủy (thành Ký), Cô Tang, Chung Ly, Nam Trịnh, Giang Lăng, Điền Trì (`history.md`).
+- Lạc Dương, Trường An: cổng và tường đã vá, dân ở lại một phần quanh cổng, chợ, phủ; cung Hán vẫn là nền cháy, vì khảo cổ và sử cho thấy vậy.
+- Nghiệp có Tam Đài trên tường tây; Quan Vũ đem thuyền vây Tương Dương, Phàn Thành.
+- Địa mạo mới: sa mạc sỏi Hà Tây với ốc đảo Cô Tang, cát Đằng Cách Lý, hồ Điền Trì, bồn địa cao có ruộng.
+- Thành nhỏ (dưới 1,2 km) có tường, cổng, tháp thấp theo, để không thành cụm tháp.
+
+## Vòng 5 — địa hình thật và thành Đông Hán (nền cho vòng 6–7)
 
 Phản hồi về vòng 4:
 - Bản đồ chưa chuẩn và "bé hơn thực tế nhiều lắm".

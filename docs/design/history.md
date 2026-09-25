@@ -1,8 +1,9 @@
-# Bối cảnh lịch sử năm 200: thành trì, kiến trúc, địa lý
+# Bối cảnh lịch sử năm 219 (kiến trúc Đông Hán): thành trì, kiến trúc, địa lý
 
 > **Vai trò:** SOT cho *cái gì đúng lịch sử* khi dựng thế giới 3D.
 > - Hướng visual: `direction.md`.
-> - Toạ độ các thành: `data/world.json` → `lonlat`.
+> - Toạ độ các thành: `data/world.json` → `lonlat` (14 thành của thế giới năm 200 mà engine đang chạy); sáu thủ phủ mới của kịch bản 219 có `lonlat` riêng trong `data/cities.json`.
+> - Bố cục từng thành năm 219: `data/cities.json`. Báo cáo tra cứu gốc: `docs/research/cities*.md`.
 > - Địa hình thật: `tools/bake-map.mjs` → `assets/map/`.
 >
 > **Cách lập:** ngày 2026-09-25, tra cứu bằng công cụ tìm kiếm web. Môi trường chặn truy cập trực tiếp Wikipedia, Baidu và các trang khảo cổ, nên mọi dữ kiện lấy từ đoạn trích trong kết quả tìm kiếm. Nguồn ghi dưới mỗi mục. `[?]` là chưa chắc chắn, `[suy luận]` là suy luận của người soạn.
@@ -41,7 +42,7 @@ Nguồn (kiến trúc):
 - baike.baidu.com/item/甲渠候官遗址/3494383
 - zh.wikipedia.org/zh-hans/瓮城
 
-## Mười bốn thành, trạng thái năm 200
+## Mười bốn thành gốc: số đo và trạng thái năm 200
 
 Kích thước là số đo thật. Khi dựng trên bản đồ (1 đơn vị = 3 km), thành được phóng to như mọi game chiến lược: `đơn vị ≈ 2,8 × km^0,8`. Nhờ vậy vẫn giữ đúng thứ bậc: kinh đô lớn hơn thủ phủ châu.
 
@@ -96,18 +97,48 @@ Nguồn (theo nhóm):
 
 Đối chiếu lần 2 (2026-09-25, sau khi mở mạng): toàn bộ 14 thành được kiểm lại bằng Wikipedia (Anh, Trung), Wikimedia Commons, OSM và bài khảo cổ. Đã sửa toạ độ Hứa Xương (lệch 8 km), Trường An, Kiến Nghiệp, Xương Ấp, Nghiệp Thành; vẽ lại đường viền Trường An và Lâm Truy theo bình đồ; Thành Đô xoay đúng N30°E. Báo cáo đầy đủ, bảng "ta / đúng / nguồn" cho từng thành: `docs/research/cities.md`.
 
-## Chỗ kịch bản lệch với lịch sử năm 200 (chờ chủ dự án quyết)
+## Năm 219: thành đổi gì so với năm 200
 
-- **Kiến Nghiệp** chưa tồn tại năm 200. Tôn Quyền đóng ở Ngô. Hai hướng: giữ tên Kiến Nghiệp và dựng theo dáng năm 212, hoặc đổi thủ phủ Tôn Quyền thành Ngô.
-- **Trường An** thuộc Tư Lệ (Kinh Triệu) chứ không phải Lương Châu. Kịch bản đặt Trường An làm thủ phủ "Lương Châu" cho Tần Thủy Hoàng; đây là lựa chọn lối chơi, có thể giữ.
-- **Hạ Khẩu** năm 200 là đất của Hoàng Tổ (phe Lưu Biểu), chưa thuộc Tôn Quyền.
-- **Nghiệp Thành** năm 200 là của Viên Thiệu, chưa thuộc Tào Tháo.
-- Vai trò thủ phủ trong kịch bản lệch với năm 200 (đối chiếu lần 2): Bành Thành không phải châu trị Từ Châu (châu trị là Đàm); Hứa Xương không phải châu trị Dự Châu (là Tiếu); Phiên Ngung là quận trị Nam Hải của Sĩ Vũ, chưa thuộc Tôn Quyền; U Châu năm 200 thuộc Viên Hy.
-- Chủ đích của kịch bản ("hoàng đế xuyên không") cho phép lệch. Riêng hình dáng thành thì dựng theo năm 200: Lạc Dương và Trường An hoang tàn, Nghiệp Thành chưa có ba đài.
+Kịch bản đặt mốc mùa thu 219 (`docs/product/scenario.md`). Kiến trúc vẫn là Đông Hán; bảng dưới chỉ ghi phần nhìn thấy được đã đổi. Nguồn: `docs/research/cities219-*.md`.
 
-## Địa lý năm 200 so với bản đồ hiện đại
+| Thành | Mùa thu 219 | Đã dựng trong `cities.json` |
+| --- | --- | --- |
+| **Lạc Dương** | Hồi sinh một phần. Tường, cổng đã vá. Nam cung, Bắc cung vẫn là nền cháy từ 190; chỉ có điện Dương An dựng tạm năm 196. Tháng 10/219 Tào Tháo về đóng, khởi công điện Kiến Thủy trong Bắc cung (ông mất ở đây đầu năm 220). Minh Đường, Tích Ung, Thái Học còn đổ (dựng lại 221–224) | Cổng nguyên; hai cung giữ dạng nền cháy; phủ Hà Nam doãn; nền điện Kiến Thủy; khoảng 30% phường có dân, quanh cổng, chợ, phủ; phần còn lại là vườn, bãi trống. Bỏ phục đạo (hành lang gỗ đã cháy) |
+| **Trường An** | Hành dinh của Tào Tháo suốt mùa thu 219 (sau trận Hán Trung). Tường còn, dân về dần ở bắc và đông bắc. Cung Vị Ương, Trường Lạc vẫn là phế tích từ 195: khảo cổ không thấy lớp cư trú sau Hán trong cung | Cổng nguyên; hai cung giữ dạng nền cháy; phủ Kinh Triệu (hành dinh) gần cổng Tuyên Bình; kho quân lương thay Vũ khố; bỏ cặp khuyết (khuyết đứng ở cổng cung đã cháy); khoảng 20% phường có dân |
+| **Nghiệp Thành** | Kinh đô nước Ngụy (Ngụy công 213, Ngụy vương 216). Tam Đài trên tường tây, góc tây bắc: Băng Tỉnh (bắc), Đồng Tước (giữa, cao 10 trượng, 210), Kim Hổ (nam, 213). Cung Ngụy vương quanh điện Văn Xương; vườn Đồng Tước ở góc tây bắc | Ba đài đứng trên tường thành (`onWall`), cao khoảng 2,3 lần tường; cung Ngụy vương; vườn Đồng Tước |
+| **Tương Dương** | Của Tào (Lã Thường giữ). Tháng 8/219 sông Hán tràn, bảy quân Vu Cấm bị nhấn chìm; Quan Vũ đem thuyền vây Phàn Thành và Tương Dương | Đội chiến thuyền của Quan Vũ trên sông Hán; mộ Lưu Biểu ngoài cổng đông. Chưa dựng: nước lụt, doanh trại vây (cần kiểu đối tượng mới) |
+| **Phiên Ngung** | Năm 217 Bộ Chất (thứ sử Giao Châu của Tôn Quyền) dời châu trị về đây, đắp lại tường cũ của Triệu Đà | Đổi tên phủ thành châu phủ Giao Châu; đường viền giữ nguyên |
+| **Kiến Nghiệp** | Tôn Quyền ở đây tới tháng 10 nhuận 219 rồi mới ra Công An; dáng năm 212 (Thạch Đầu) đúng niên đại | Không đổi |
+| **Hạ Khẩu** | Ngô giữ từ 209 (Tôn Kiểu đốc). Vẫn là đồn Khước Nguyệt; thành trên núi Hoàng Hộc năm 221–223 mới xây | Không đổi hình |
+| **Thành Đô** | Trị sở Lưu Bị từ 214; Hán Trung vương từ thu 219 | Không đổi hình |
+| Hứa Xương, Lâm Truy, Xương Ấp, Bành Thành, Tấn Dương, Kế | Không có thay đổi nhìn thấy được. Tịnh Châu và U Châu đã nhập vào Ký Châu năm 213 (chỉ là hành chính) | Không đổi |
+
+## Sáu thủ phủ mới năm 219
+
+| Châu (id) | Thành | Di chỉ | Hình dạng, kích thước | Mùa thu 219 | Độ tin |
+| --- | --- | --- | --- | --- | --- |
+| Lũng Tây (`longxi`) | **Thiên Thủy**, tức thành **Ký** (冀), quận trị Hán Dương | Phố cổ Cam Cốc; sông Vị cách 1,9 km về bắc. Không chọn Thượng Khuê (Thiên Thủy ngày nay): chỉ thành quận trị lại từ đời Tấn | Chưa tìm thấy tường Hán; dựng chữ nhật 1,3 × 1 km, có hào (suy luận từ trận vây 213) | Của Tào. Châu trị Lương Châu 168–213; Mã Siêu vây tám tháng năm 213; quê Khương Duy | Vị trí vừa (±3 km); hình dạng đoán |
+| Hà Tây (`hexi`) | **Cô Tang** (姑臧), quận trị Vũ Uy | Dưới phố cổ Vũ Uy (thành dời về đây cuối Tây Hán) | "Thành Ngọa Long" của Hung Nô, nam–bắc 7 lý, đông–tây 3 lý (khoảng 2,9 × 1,25 km), không đều, "có đầu, đuôi, hai cánh". Bốn thành phụ, 22 cổng là của Tiền Lương (thế kỷ 4), chưa có | Hào tộc Nhan Tuấn chiếm quận, tự xưng tướng quân, gửi con tin cho Tào Tháo. Chợ họp bốn lần một ngày | Vị trí vừa (±1,5 km); kích thước theo sách, hình đoán |
+| Hoài (`huai`) | **Chung Ly** (钟离) | Di chỉ thành Chung Ly, 1,5–3 km đông Lâm Hoài Quan; có ấn phong nê "钟离丞印" thời Hán | Khoảng 380 × 360 m, tường đất nện chân 18 m, 4 cổng giữa bốn mặt, dấu hào; sông Hoài cách 1 km về bắc | Hầu quốc thuộc Cửu Giang, của Tào. Đất Giang–Hoài bị bỏ trống từ 213: đồn nhỏ, nửa vắng | Cao |
+| Hán Trung (`han_zhong`) | **Nam Trịnh** (南郑) | Chồng lên thành Hán Trung đời sau, lệch đông | Chỉ dựng nội thành 1,7 × 1,06 km (ngoại thành "42 lý" chưa kiểm được). Cổ Hán Đài (nền 156 × 72 m, cao 7 m), ao Ẩm Mã, Bái Tướng Đàn ngoài tường nam. Thời Hán sông Hán chảy sát tường nam (nay lùi 2 km) | Lưu Bị chiếm tháng 5/219, xưng Hán Trung vương ở Miện Dương (cách 40 km); Ngụy Diên trấn giữ. Tào Tháo đã dời hơn tám vạn dân đi | Vị trí vừa; hình đoán; các đài theo OSM |
+| Kinh Nam (`jing_nan`) | **Giang Lăng** (江陵) | Giữa tường thành Minh–Thanh (tường chỉ dời dưới 50 m từ thời Tam Quốc) | Đường viền theo tường Minh, khoảng 4,8 km². "Thành vốn có tường ngăn giữa: bắc là thành cũ, nam do Quan Vũ đắp" (Nguyên Hòa quận huyện chí); đường ngăn là suy luận | Nam quận của Quan Vũ. Vũ đang vây Phàn Thành; Mi Phương giữ thành; ba vạn hàng binh Vu Cấm giải về đây. Tháng 10 nhuận Lã Mông lấy thành | Cao cho vị trí, đường viền; thấp cho đường ngăn, vị trí phủ |
+| Nam Trung (`nanzhong`) | **Điền Trì** (滇池), quận trị Ích Châu | Phía đông di chỉ Hà Bạc Sở (khai quật 2021–2024, ngói đề "益州"), cạnh núi Thạch Trại (nghĩa địa vua Điền) | Lõi vuông khoảng 18 ha trong vòng hào khoảng 1,8 km (0,5 × 0,4 km); đường đông–tây, nhà quan trên nền thấp; bờ hồ nay cách 1,45 km về tây | Danh nghĩa của Lưu Bị từ 214; hào tộc Ung Khải nắm thực quyền. Từ 225 quận trị dời về Vị huyện | Cao |
+
+## Kịch bản 219 so với sử
+
+Bốn chỗ lệch của kịch bản năm 200 (Kiến Nghiệp chưa có, Trường An gán Lương Châu, Hạ Khẩu của Hoàng Tổ, Nghiệp của Viên Thiệu) không còn: năm 219 khớp sử ở cả bốn chỗ. Còn lại vài chỗ để luồng kịch bản biết (Claude không sửa `scenario.md`):
+- **Giao (`jiao`) trung lập "nhà Sĩ"**: năm 219 ở Phiên Ngung là thứ sử Bộ Chất của Tôn Quyền; Sĩ Nhiếp ngồi ở Giao Chỉ và triều cống Ngô. Chữ trên thành để trung tính.
+- **Hà Tây**: Cô Tang nằm trong tay hào tộc Nhan Tuấn, chỉ thần phục Tào trên danh nghĩa. Hợp với việc Lưu Triệt xuất hiện ở đây.
+- **Nam Trung**: danh nghĩa của Thục, thực quyền của hào tộc. Hợp với trạng thái trung lập.
+- **Tịnh, U**: đã nhập vào Ký Châu năm 213. Kịch bản giữ làm châu riêng để có ô chơi.
+- **Thiên Thủy**: thủ phủ thật là thành Ký của quận Hán Dương; tên "Thiên Thủy" là tên quận đời sau.
+
+## Địa lý năm 200–219 so với bản đồ hiện đại
 
 - Hoàng Hà chảy ra Bột Hải qua bắc Sơn Đông. Dòng hiện đại gần đúng, dùng được.
 - Hoài Hà chảy **thẳng ra Hoàng Hải**. Hồ Hồng Trạch chỉ hình thành từ đời Tống–Minh. `bake-map.mjs` đã sửa theo dòng cũ.
 - Bờ biển quanh Thượng Hải và Thiên Tân lùi vào đất liền hơn bây giờ. Chưa sửa [việc sau].
 - Vân Mộng Trạch giữa Kinh Châu và Hạ Khẩu còn lớn hơn hồ Động Đình ngày nay. Chưa dựng [việc sau].
+- Hồ Điền Trì: Natural Earth không có; `bake-map.mjs` lần theo mặt nước phẳng trong DEM (1.886 m, dâng 2 m) được khoảng 300 km², bằng hồ ngày nay. Thời Hán hồ có thể rộng hơn [?].
+- Hà Tây: sa mạc sỏi giữa dãy Kỳ Liên và cát Đằng Cách Lý; chỉ ốc đảo Cô Tang trên sông Thạch Dương là ruộng. Trường Thành Hán đi phía đông bắc ốc đảo [suy luận: tuyến vẽ gần đúng].
+- Sông Hoài: Natural Earth cắt thành nhiều đoạn và ghi nhầm đoạn giữa (Hoài Nam – Chung Ly) là "Hudi". `bake-map.mjs` nối lại thành một dòng và bỏ cửa ra Trường Giang năm 1851.

@@ -68,7 +68,6 @@
   gu.uEdgeFog.value = cu.uEdgeFog.value = 1; cu.uCrownK.value = 3; // parcels and grass at the round-5 scale (a city is ~4 units)
   if (SHOT === 'strategic') { gu.uTint.value = 0.42; gu.uBorder.value = 1.0; gu.uBorderW.value = 1.2; cu.uTint.value = 0.3; }
   if (SHOT === 'overview') { gu.uBorder.value = 0.6; gu.uBorderW.value = 0.9; }
-  if (far || SHOT === 'region') cu.uTint.value = Math.max(cu.uTint.value, 0.02); // lets the wasteland edge show over forest too
   if (SHOT === 'region') { gu.uBorder.value = 0.7; gu.uBorderW.value = 0.4; }
   for (const k of ['uBorder', 'uBorderW']) cu[k].value = gu[k].value;
   cu.uCanopyBorder.value = far || SHOT === 'region' ? 1 : 0; // realm borders stay visible over forests
@@ -139,9 +138,11 @@
         // find open water on that side (or around the blockade point) and moor boats there
         const want = e.type === 'ships' ? e.n : lodC === 'full' ? 7 : 3;
         const cand = [];
+        let sx = e.x, sz = e.z; // a fleet: from the plan point, the nearest open water (the plan is in km, the river was nudged)
+        if (e.type === 'ships') for (let r = 0, found = false; r < 6 && !found; r += 0.25) for (let k = 0; k < 24 && !found; k++) { const x = e.x + Math.cos(k * 0.2618) * r, z = e.z + Math.sin(k * 0.2618) * r; if (terr.riverSD(x, z) < -0.45) { sx = x; sz = z; found = true; } }
         for (let k = 0; k < 600 && cand.length < want; k++) {
           const a = K.rr(0, 6.283), d = K.rr(c.r * 0.6, c.r * 1.9);
-          const x = e.type === 'ships' ? e.x + K.rr(-2, 2) : c.x + Math.cos(a) * d, z = e.type === 'ships' ? e.z + K.rr(-2, 2) : c.z + Math.sin(a) * d;
+          const x = e.type === 'ships' ? sx + K.rr(-1.5, 1.5) : c.x + Math.cos(a) * d, z = e.type === 'ships' ? sz + K.rr(-1.5, 1.5) : c.z + Math.sin(a) * d;
           if (e.dir && (Math.cos(a) * e.dir[0] + Math.sin(a) * e.dir[1]) < 0.5) continue;
           if (terr.riverSD(x, z) > -0.35 || cand.some(([u, v]) => Math.hypot(u - x, v - z) < 0.45)) continue;
           cand.push([x, z]);
@@ -164,7 +165,12 @@
     const R = SHOT === 'city' ? Math.min(22, view.D * 1.4) : SHOT === 'campaign' ? 34 : 0;
     const avoid = (x, z) => Object.values(MC).some((c) => Math.hypot(x - c.x, z - c.z) < c.r * 0.9);
     // lone trees only up close: from the campaign camera they read as specks, the canopy shell carries the woods
-    scene.add(...Flora.trees(terr, { cx: view.target[0], cz: view.target[2], R, scale: PS, spacing: SHOT === 'city' ? 0.19 : 0.22, minForest: 0.3, lone: SHOT === 'city' ? 1500 : 0, loneR: R, minH: 0.2, avoid, extra: extraTrees }));
+    // tree budget (decisions/0005: ≤ 3 M triangles up close): in deep forest (Nanzhong, Qinling) widen the spacing
+    let sp = SHOT === 'city' ? 0.19 : 0.22, cover = 0, nS = 0;
+    for (let a = -R; a <= R; a += 1) for (let b = -R; b <= R; b += 1) if (a * a + b * b < R * R) { nS++; cover += terr.forestAt(view.target[0] + a, view.target[2] + b) > 0.3 ? 1 : 0; }
+    const est = (cover / Math.max(1, nS)) * Math.PI * R * R / (sp * sp);
+    if (est > 16000) sp *= Math.sqrt(est / 16000);
+    scene.add(...Flora.trees(terr, { cx: view.target[0], cz: view.target[2], R, scale: PS, spacing: sp, minForest: 0.3, lone: SHOT === 'city' ? 1500 : 0, loneR: R, minH: 0.2, avoid, extra: extraTrees }));
   }
   scene.add(...Flora.hamlets(terr, { scale: 0.38 }), Flora.greatWall(terr, { scale: 0.45, color: 0xa08e70, towerEvery: 12 }));
   const br = Flora.bridges(terr, { wet: (x, z) => terr.riverSD(x, z) < 0, deck: (a, b) => Math.max(terr.h(a[0], a[1]), terr.h(b[0], b[1])) + 0.02, scale: 0.35, maxLen: 1.3 });
@@ -201,8 +207,8 @@
     if (south) {
       const pts = south.a === 'jing' ? south.pts : south.pts.slice().reverse();
       const atD = (dist) => { let acc = 0; for (let k = 1; k < pts.length; k++) { acc += Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]); if (acc >= dist) return k; } return pts.length - 1; };
-      for (let k = 0; k < 4; k++) { const i = atD(7 + k * 1.5), [x, z] = pts[i], [x2, z2] = pts[Math.max(0, i - 2)]; regiment('liu_bei', x, z, Math.atan2(x2 - x, z2 - z), 8, 6); }
-      const [lx, lz] = pts[atD(8.5)]; armyAnchors.liu_army = { x: lx, y: terr.h(lx, lz) + 1.4, z: lz };
+      for (let k = 0; k < 4; k++) { const i = atD(3.2 + k * 1.3), [x, z] = pts[i], [x2, z2] = pts[Math.max(0, i - 2)]; regiment('liu_bei', x, z, Math.atan2(x2 - x, z2 - z), 8, 6); } // at the south walls: the siege
+      const [lx, lz] = pts[atD(4.5)]; armyAnchors.liu_army = { x: lx, y: terr.h(lx, lz) + 1.4, z: lz };
     }
     men.instanceMatrix.needsUpdate = true; men.instanceColor.needsUpdate = true; men.castShadow = true;
     scene.add(men);

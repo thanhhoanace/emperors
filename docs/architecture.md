@@ -12,12 +12,16 @@ data/personas/*  ├─► src/engine/engine.js ──► tests/engine.test.mjs,
                  │                           ──► [frontend mới — chờ duyệt design]
 index.html ── Phase 1 slice cũ (three r146, tự chứa, không dùng engine)
 docs/design/prototypes/ ── cảnh three.js để render ảnh duyệt design
-                           world.html (vòng 5) = terrain-real.js + hancity.js, trên nền terrain.js + flora.js + city.js + kit.js
+                           world.html (vòng 5–7) = terrain-real.js + hancity.js, trên nền terrain.js + flora.js + city.js + kit.js
+                             dựng thế giới thu 219: chủ đất từ data/scenario/219.json (chỉ đọc), màu phe từ world.json,
+                             bố cục thành từ data/cities.json; đường nối các châu chung biên; đất hoang (thảo nguyên, sa mạc,
+                             Tây Tạng) không chủ
                            map.html (vòng 4) = terrain.js + flora.js + city.js + kit.js (lens)
 
 tools/bake-map.mjs ──► assets/map/  (chạy tay, commit kết quả)
   nguồn: AWS Terrain Tiles z7 + Natural Earth 10 m (tải vào .cache/, không commit)
-         + data/world.json (lonlat) + data/cities.json (kích thước thành)
+         + data/world.json (lonlat 14 châu năm 200) + data/cities.json (kích thước thành; lonlat của thủ phủ mới năm 219;
+           alias guan → liang: cùng một thành Trường An)
   ra:    height-fine.bin.gz   lưới 0,5 đơn vị trên vùng chơi (delta 2 chiều + gzip, ~1,8 MB)
          height-coarse.bin.gz lưới 2 đơn vị tới chân trời (~0,3 MB)
          water.json           sông (đường, mực nước, bề rộng, phù sa) + hồ

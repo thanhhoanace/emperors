@@ -7,19 +7,16 @@
 
 ## Đang chờ
 
-- **Visual vòng 5 và bản đồ toàn quốc** (Claude):
-  - Canvas vòng 5 đã đưa lên (https://claude.ai/artifact/958ZoQxAFcGPKTUNGVdWeV): địa hình thật, thành theo khảo cổ; ADR 0005, 0006.
-  - Trang "Vòng 6" của canvas: kịch bản 219 vẽ trên bản đồ toàn quốc (`docs/design/proposal-all-china.jpg`) và bảng cải cách 3 tầng chép từ `scenario.md`.
-  - Phần *hình* của `docs/product/proposal-all-china.md` còn chờ chủ dự án chọn:
-    - phạm vi: biên giới nay hay thế giới nhà Hán;
-    - tỉ lệ A, B hay C;
-    - phép chiếu Albers;
-    - chia ô, nướng mặt nạ, bản đồ tranh khi thu nhỏ.
-  - Phần xuất phát và lợi thế trong proposal đã được thay bằng kịch bản 219 (ADR 0007).
+- **Visual vòng 7, thế giới thu 219** (Claude): canvas trang "Vòng 7" (https://claude.ai/artifact/958ZoQxAFcGPKTUNGVdWeV) chờ chủ dự án xem: sáu thành mới, Lạc Dương – Trường An hồi sinh một phần, Tam Đài ở Nghiệp, Quan Vũ vây Tương Dương, đất hoang không chủ.
 - **Nhập engine** (kịch bản đã OK): `219.json` + đình chiến khách + cải cách + gates + **menu ngoại giao** (`docs/product/diplomacy.md`) + event `attack` đủ `from`/`to` cho hành quân (`docs/product/march.md`).
 
 ## Đã xong
 
+- 2026-09-25 tối (Claude, vòng 7):
+  - Chủ dự án chốt phần hình vòng 6 (Trung Quốc ngày nay + nhãn cửa Hán, tỉ lệ C, Albers): ghi vào ADR 0006 (chuyển Chấp nhận) và `proposal-all-china.md`.
+  - `world.html` dựng thu 219: 20 thủ phủ, chủ đất đọc từ `data/scenario/219.json`; thảo nguyên, sa mạc, Tây Tạng, Đài Loan là đất hoang không chủ.
+  - `data/cities.json` theo năm 219 (nguồn `docs/research/cities219-*.md`, tóm tắt ở `docs/design/history.md`): sáu thủ phủ mới; Lạc Dương, Trường An hết phế tích nhưng cung Hán vẫn là nền cháy (đúng sử); Tam Đài ở Nghiệp; thuyền Quan Vũ ở Tương Dương.
+  - `bake-map.mjs`: hồ Điền Trì lần theo DEM; nối các đoạn sông Hoài (Natural Earth ghi nhầm "Hudi"); sông Thạch Dương; ốc đảo Cô Tang, cát Đằng Cách Lý.
 - 2026-09-25 chiều: chủ dự án chốt `scenario.md` ổn. Khóa ngoại giao kiểu chọn điều khoản (không chỉ pact) và hành quân là phần nhìn.
 - 2026-09-25 (Claude, sau khi mở mạng):
   - Đọc toàn bộ mã dat.city; tra bản đồ TW3K và vùng biên năm 200 (`docs/research/`). Sửa ADR 0005 chỗ đoán sai về dat.city.
@@ -37,13 +34,8 @@
 
 1. Nhập engine: snapshot 219 + diplomacy deals + guestTruce + reforms + gates. Cùng commit: `rules.md`, test, `npm run sim -- 500`.
 2. Chế độ người chơi = 1 đế, 6 phe MOCK.
-3. Claude, bản đồ và thành cho năm 219:
-   - châu mới (Quan Trung tách khỏi Lương, Lũng Tây, Hà Tây, Hoài, Hán Trung, Kinh Nam, Nam Trung);
-   - Lạc Dương và Trường An năm 219 không còn là phế tích 190–195;
-   - Kiến Nghiệp dáng 212 trở thành đúng niên đại;
-   - Hạ Khẩu là thành của Tôn Quyền;
-   - `cities.json` thêm Thiên Thủy, Cô Tang, Chung Ly, Nam Trịnh, Giang Lăng, Điền Trì.
-4. Claude: bản đồ toàn quốc theo phương án được chọn (bake Albers, chia ô, mặt nạ nướng sẵn).
+3. Khi nhập 219 vào `world.json` (luồng luật): `lonlat` của sáu thủ phủ mới đang nằm trong `data/cities.json` (Claude giữ tạm vì chưa có chỗ khác). Chép sang `world.json`, rồi báo Claude xoá bản trong `cities.json` và đổi khoá `liang` thành `guan` (Trường An; hiện `alias` trỏ `guan` về `liang` để test năm 200 vẫn qua).
+4. Claude: bản đồ toàn quốc theo phương án đã chốt (bake Albers, chia ô, mặt nạ nướng sẵn, nhãn cửa Hán, bản đồ tranh khi thu nhỏ).
 5. Claude: tướng đi đường theo event `attack` (`march.md`).
 6. Persona thoại cho deal và cửa Trường An / Nghiệp / Hoài.
 
@@ -51,9 +43,11 @@
 
 - Engine vẫn năm 200 / 14 châu. Sim cũ không dùng cho 219.
 - `219.json` trên repo đang là bản rút; bảng châu đầy đủ nằm ở `scenario.md`.
-- Prototype `world.html` và `cities.json` vẫn dựng thế giới năm 200 (14 châu; Lạc Dương, Trường An là phế tích).
+- `world.html` đã là thế giới 219 nhưng vẫn trên bản đồ vòng 5 (phép chiếu phẳng, lưới mịn tới 101°E): toàn cảnh lộ mép bản đồ; Hà Tây, Điền Trì sát mép.
+- Chưa dựng được: nước lụt sông Hán quanh Phàn Thành (thu 219), doanh trại vây. Cần kiểu đối tượng mới.
+- Hình dạng Thiên Thủy, Nam Trịnh, Cô Tang là đoán (chưa có số đo khảo cổ); Điền Trì, Chung Ly, Giang Lăng có di chỉ.
 - Hiệu năng vòng 5 (`decisions/0005`):
-  - tải về khoảng 2,4 MB, vượt trần lần đầu, cần chia ô tải dần;
+  - tải về khoảng 3 MB chưa nén HTTP (độ cao 2 MB), vượt trần lần đầu, cần chia ô tải dần;
   - dựng mặt nạ lúc mở trang mất khoảng 13 giây trong container;
   - chưa đo FPS trên máy thật.
 - `index.html` vẫn là Phase 1 slice cũ.

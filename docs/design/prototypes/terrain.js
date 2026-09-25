@@ -407,7 +407,7 @@
     const ownData = new Uint8Array(N * 4), tOwn = mkTex(ownData);
     const bordData = new Uint8Array(N * 4), tBord = mkTex(bordData);
     // Owner colours are re-baked whenever ownership changes (one pass over the grid, a few ms).
-    // tOwn: owner colour (A = 1 if owned). tBord: R = proximity (1 at the line, 0 at 1.5 units) to a border (B: to the wasteland edge, terrain-real)
+    // tOwn: owner colour (A = 1 if owned). tBord: R = proximity (1 at the line, 0 at 1.5 units) to a border (B: to the wasteland edge, terrain-real; not drawn: over rugged land it speckles, the pale wash marks wasteland instead)
     // between different owners, G = proximity to a province border inside one realm.
     function setOwners(colorOf, ownerOf2) {
       const cols = provIds.map((id) => { const c = colorOf(id); return c ? [c.r, c.g, c.b, 1] : [0.45, 0.45, 0.42, 0]; });
@@ -507,7 +507,6 @@
     float edgeFog(vec2 wp){ vec2 ex = max(uGrid.xy - wp, wp - uGrid.xy - uGrid.zw); return uEdgeFog * smoothstep(-10.0, 45.0, max(ex.x, ex.y)); }
     const vec3 EDGE_HAZE = vec3(0.74, 0.79, 0.81);
     vec3 applyBorders(vec3 col, vec4 own, vec4 bd, float land, vec2 wp){
-      bd.r = max(bd.r, bd.b * step(0.01, uTint)); // wasteland edge (B) only in the tinted map views
       float dR = (1.0 - bd.r) * 1.5, feR = max(fwidth(dR), 1e-4), wR = max(uBorderW, feR * 0.9);
       float lineR = (1.0 - smoothstep(wR - feR, wR + feR, dR)) * step(0.004, bd.r) * land;
       float dP = (1.0 - bd.g) * 1.5, feP = max(fwidth(dP), 1e-4), wP = max(uBorderW * 0.5, feP * 0.7);

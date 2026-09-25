@@ -374,7 +374,7 @@
       for (let n = 0; n < N; n++) {
         const c = cols[provOf[n]], o = n * 4, wild = provOf[n] === WILDI || prov2[n] === WILDI, same = owner[provOf[n]] === owner[prov2[n]] && !wild, p = clamp(1 - border[n] / 2.5, 0, 1);
         ownData[o] = b8(c[0]); ownData[o + 1] = b8(c[1]); ownData[o + 2] = b8(c[2]); ownData[o + 3] = b8(c[3]);
-        // B: the edge of the wasteland, drawn in the map views only (up close it wanders over flat desert)
+        // B: proximity to the wasteland edge (kept for later; the shaders mark wasteland with a pale wash, a line speckles)
         bordData[o] = b8(same || wild ? 0 : p); bordData[o + 1] = b8(same ? p : 0); bordData[o + 2] = b8(wild ? p : 0);
       }
       tOwn.needsUpdate = true; tBord.needsUpdate = true;

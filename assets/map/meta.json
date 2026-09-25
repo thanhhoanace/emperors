@@ -37,7 +37,7 @@
  "history": [
   "Huai river routed to the Yellow Sea (pre-1128 course); Hongze Lake removed",
   "Only Dongting, Poyang, Tai and Chao lakes kept (plus Dian lake traced from the DEM)",
-  "Modern Huai side channels (Natural Earth \"Hudi\") dropped",
+  "Huai pieces (Natural Earth \"Hudi\" is its middle course) chained into one river; the 1851 outlet dropped",
   "Added Luo, Zi, Si, Bian, He canal, Chengdu Pi/Jian, Guangzhou Pearl channel, Shiyang (Wuwei); Daye marsh, Ji West Lake"
  ],
  "cities": {
@@ -140,46 +140,46 @@
    "scale": 2.9278
   },
   "longxi": {
-   "x": -209.89,
-   "z": -101.72,
-   "y": 4.599,
-   "r": 3.61,
-   "scale": 2.6178
+   "x": -209.8,
+   "z": -101.06,
+   "y": 4.567,
+   "r": 3.38,
+   "scale": 2.6569
   },
   "hexi": {
-   "x": -294.54,
-   "z": -218.56,
-   "y": 4.728,
-   "r": 3.61,
-   "scale": 2.6178
+   "x": -294.64,
+   "z": -218.45,
+   "y": 4.784,
+   "r": 4.58,
+   "scale": 2.263
   },
   "huai": {
-   "x": 178.11,
-   "z": -34.28,
+   "x": 178.55,
+   "z": -33.5,
    "y": 0.35,
-   "r": 3.61,
-   "scale": 2.6178
+   "r": 2.06,
+   "scale": 3.3978
   },
   "han_zhong": {
-   "x": -156.4,
-   "z": -39.44,
-   "y": 1.662,
-   "r": 3.61,
-   "scale": 2.6178
+   "x": -156.27,
+   "z": -39.51,
+   "y": 1.663,
+   "r": 3.72,
+   "scale": 2.5181
   },
   "jing_nan": {
    "x": 5.98,
-   "z": 60.81,
+   "z": 60.67,
    "y": 0.35,
-   "r": 3.61,
-   "scale": 2.6178
+   "r": 5.69,
+   "scale": 2.1284
   },
   "nanzhong": {
-   "x": -291.08,
-   "z": 269.05,
-   "y": 5.951,
-   "r": 3.61,
-   "scale": 2.6178
+   "x": -292.72,
+   "z": 268.65,
+   "y": 5.852,
+   "r": 3.49,
+   "scale": 2.844
   },
   "guan": {
    "x": -98.21,

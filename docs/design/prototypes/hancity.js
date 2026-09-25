@@ -292,7 +292,9 @@
     const yAt = (x, z) => (o.groundAt ? Math.max(-0.2, o.groundAt(...toW(x, z)) - o.y) : 0); // local ground height
     const wet = (x, z) => (o.wetAt ? o.wetAt(...toW(x, z)) : 9);
     const bag = new Bag();
-    const H = rank === 'capital' ? 0.3 : rank === 'fort' ? 0.16 : 0.22;
+    // walls, gates and towers shrink with small towns (Chung Ly, Dianchi are ~0.4–0.5 km): full-size gate towers would crowd them
+    const ox = def.outline.map((p) => p[0]), oz = def.outline.map((p) => p[1]), Lkm = Math.max(Math.max(...ox) - Math.min(...ox), Math.max(...oz) - Math.min(...oz));
+    const H = (rank === 'capital' ? 0.3 : rank === 'fort' ? 0.16 : 0.22) * Math.min(1, Math.max(0.65, Lkm / 1.2));
     const ruined = def.state === 'ruined';
     const P = { y0: 0, rank, lite, ruined, passages: def.passages || 1, palisade: def.wallType === 'palisade', mat: E, H, base: H * 1.5, top: H * 0.5 };
     const outline = def.outline.map(L);
@@ -396,11 +398,15 @@
     const towns = [];
     for (const f of def.features || []) {
       let [fx, fz] = f.at ? L(f.at) : [0, 0];
-      const fw = f.size ? f.size[0] * s : 0, fd = f.size ? f.size[1] * s : 0;
+      let fw = f.size ? f.size[0] * s : 0, fd = f.size ? f.size[1] * s : 0;
       if (f.type === 'platform') {
-        const hh = 0.05 * f.height, y = yAt(fx, fz);
+        // onWall: a terrace raised on the city wall itself (Ye's Three Terraces): it starts at the wall top and must
+        // overhang the exaggerated wall, with a larger hall on top
+        if (f.onWall) { fw = Math.max(fw, P.base * 1.4); fd = Math.max(fd, 0.22); }
+        const hh = f.onWall ? P.H * 0.58 * f.height : 0.05 * f.height, y = yAt(fx, fz) + (f.onWall ? P.H * 0.9 : 0), k = f.onWall ? 2 : 1; // Tongque: 10 zhang on a ~4 zhang wall
+        if (f.onWall) bag.at(E, box(fw, P.H * 0.9, fd), fx, yAt(fx, fz) + P.H * 0.45, fz);
         if (f.oval) bag.add(E, cyl(1, 1.15, hh, 20).scale(fw / 2, 1, fd / 2), T(fx, y + hh / 2, fz)); else bag.at(E, box(fw, hh, fd), fx, y + hh / 2, fz);
-        bag.merge(hall(Math.min(fw, fd) * 0.5, Math.min(fw, fd) * 0.4, 0.06, { roofH: 0.045, detail: false }), T(fx, y + hh, fz));
+        bag.merge(hall(Math.min(fw, fd) * 0.5 * k, Math.min(fw, fd) * 0.4 * k, 0.06 * k, { roofH: 0.045 * k, detail: !lite && f.onWall }), T(fx, y + hh, fz));
         block(fx, fz, fw, fd); anchors.labels.push({ name: f.name, x: fx, y: y + hh + 0.25, z: fz });
       } else if (f.type === 'coveredWay') {
         const [ax, az] = L(f.from), [bx, bz] = L(f.to), len = Math.hypot(bx - ax, bz - az), cw = new Bag();

@@ -3,44 +3,45 @@
   "alias": {"guan": "liang"},
   "cities": {
     "si_li": {
-      "name": "Lạc Dương", "rank": "capital", "state": "ruined",
+      "name": "Lạc Dương", "rank": "capital", "state": "intact", "era": "Hồi sinh một phần: tường, cổng đã vá; Nam cung, Bắc cung vẫn là nền cháy từ năm 190; tháng 10/219 Tào Tháo về đóng, khởi công điện Kiến Thủy",
       "outline": [[-1.3, -1.95], [-0.2, -1.95], [0.1, -1.85], [1.3, -1.85], [1.3, 1.95], [-1.3, 1.95]],
       "gates": {"n": 2, "s": 4, "e": 3, "w": 3},
       "passages": 3, "que": "imperial",
       "palaces": [
         {"name": "Nam cung", "at": [0.15, 1.15], "size": [1.0, 1.6], "platform": 2, "ruined": true},
-        {"name": "Bắc cung", "at": [-0.15, -1.05], "size": [1.0, 1.6], "platform": 2, "ruined": true}
+        {"name": "Bắc cung", "at": [-0.15, -1.05], "size": [1.0, 1.6], "platform": 2, "ruined": true},
+        {"name": "Phủ Hà Nam doãn", "at": [0.75, -0.3], "size": [0.3, 0.25], "platform": 1.5}
       ],
       "features": [
-        {"type": "coveredWay", "from": [0, 0.35], "to": [0, -0.25]},
         {"type": "granary", "at": [1.0, -1.6]},
-        {"type": "garden", "at": [-0.85, -1.1], "size": [0.6, 1.2]},
+        {"type": "garden", "at": [-0.85, -1.1], "size": [0.6, 1.2], "name": "Trạc Long viên"},
         {"type": "platform", "name": "Linh Đài", "at": [-0.5, 2.9], "size": [0.25, 0.25], "height": 2},
-        {"type": "platform", "name": "Minh Đường", "at": [0.1, 2.9], "size": [0.35, 0.35], "height": 1.5},
-        {"type": "platform", "name": "Tích Ung", "at": [0.7, 2.9], "size": [0.3, 0.3], "height": 1.2},
+        {"type": "platform", "name": "Minh Đường", "at": [0.1, 2.9], "size": [0.35, 0.35], "height": 0.7},
+        {"type": "platform", "name": "Tích Ung", "at": [0.7, 2.9], "size": [0.3, 0.3], "height": 0.7},
         {"type": "market", "name": "Kim thị", "at": [-1.05, -0.1]},
         {"type": "garden", "name": "Vĩnh An cung", "at": [0.75, -1.0], "size": [0.4, 0.6]},
-        {"type": "platform", "name": "Thái Học", "at": [1.25, 2.8], "size": [0.3, 0.2], "height": 1}
-      ]
+        {"type": "platform", "name": "Thái Học", "at": [1.25, 2.8], "size": [0.3, 0.2], "height": 0.7},
+        {"type": "platform", "name": "Dương An điện (196)", "at": [0.15, 0.75], "size": [0.12, 0.1], "height": 1},
+        {"type": "platform", "name": "Kiến Thủy điện (khởi công đông 219)", "at": [-0.15, -0.75], "size": [0.2, 0.12], "height": 1.5}
+      ],
+      "houses": 0.3
     },
     "liang": {
-      "name": "Trường An", "rank": "capital", "state": "ruined",
+      "name": "Trường An", "rank": "capital", "state": "intact", "era": "Hành dinh của Tào Tháo (9/218 – 10/219) sau trận Hán Trung; cung Hán vẫn là phế tích từ năm 195, dân ở phía bắc và đông bắc",
       "outline": [[-3.0, -1.5], [-2.15, -2.1], [-1.0, -2.1], [-1.0, -2.45], [-0.3, -2.45], [0.85, -3.2], [1.0, -3.45], [3.25, -3.5], [3.25, 2.5], [0.65, 2.5], [0.65, 3.5], [-0.35, 3.5], [-0.35, 3.3], [-3.25, 3.3], [-3.25, 0.95], [-3.0, 0.95]],
       "gates": {"n": 3, "s": 3, "e": 3, "w": 3},
-      "passages": 3, "que": "imperial",
+      "passages": 3, "que": "none",
       "palaces": [
         {"name": "Vị Ương cung", "at": [-2.0, 2.15], "size": [2.25, 2.15], "platform": 4, "ruined": true, "frontHall": [0.2, 0.35]},
-        {"name": "Trường Lạc cung", "at": [1.6, 1.2], "size": [2.9, 2.05], "platform": 2, "ruined": true}
+        {"name": "Trường Lạc cung", "at": [1.6, 1.2], "size": [2.9, 2.05], "platform": 2, "ruined": true},
+        {"name": "Phủ Kinh Triệu (hành dinh Tào Tháo)", "at": [2.4, -2.1], "size": [0.4, 0.35], "platform": 1.5}
       ],
       "features": [
-        {"type": "granary", "name": "Vũ khố", "at": [-0.1, 1.45]},
+        {"type": "granary", "name": "Kho quân lương", "at": [1.9, -2.5]},
         {"type": "market", "name": "Đông thị · Tây thị", "at": [-1.9, -1.3]}
       ],
-      "queAt": [
-        {"at": [-0.8, 2.15], "face": "e"},
-        {"at": [-2.0, 0.95], "face": "n"}
-      ],
-      "moat": {"sides": "nesw", "width": 0.045}
+      "moat": {"sides": "nesw", "width": 0.045},
+      "houses": 0.2
     },
     "ji": {
       "name": "Nghiệp Thành", "rank": "provincial", "state": "intact", "era": "Kinh đô nước Ngụy của Tào Tháo (Ngụy công 213, Ngụy vương 216); Tam Đài dựng 210–214",
@@ -53,9 +54,9 @@
       "features": [
         {"type": "avenueEW", "z": 0.12},
         {"type": "garden", "name": "Đồng Tước viên", "at": [-0.75, -0.4], "size": [0.6, 0.75]},
-        {"type": "platform", "name": "Băng Tỉnh Đài", "at": [-1.13, -0.79], "size": [0.07, 0.11], "height": 3.5},
-        {"type": "platform", "name": "Đồng Tước Đài", "at": [-1.14, -0.65], "size": [0.07, 0.12], "height": 4},
-        {"type": "platform", "name": "Kim Hổ Đài", "at": [-1.14, -0.49], "size": [0.07, 0.12], "height": 3.5}
+        {"type": "platform", "name": "Băng Tỉnh Đài", "onWall": true, "at": [-1.13, -0.79], "size": [0.07, 0.11], "height": 3.5},
+        {"type": "platform", "name": "Đồng Tước Đài", "onWall": true, "at": [-1.14, -0.65], "size": [0.07, 0.12], "height": 4},
+        {"type": "platform", "name": "Kim Hổ Đài", "onWall": true, "at": [-1.14, -0.49], "size": [0.07, 0.12], "height": 3.5}
       ],
       "river": {"sides": "n"}
     },
@@ -223,70 +224,105 @@
       "river": {"sides": "ne"}
     },
     "longxi": {
-      "name": "Ký thành", "rank": "provincial", "state": "intact",
-      "lonlat": [105.33, 34.76],
-      "outline": [[-0.7, -0.6], [0.7, -0.6], [0.7, 0.6], [-0.7, 0.6]],
+      "name": "Thiên Thủy", "rank": "provincial", "state": "intact", "era": "Thành Ký, quận trị Hán Dương (Thiên Thủy) của Tào; châu trị Lương Châu 168–213; Mã Siêu vây tám tháng năm 213; quê Khương Duy",
+      "lonlat": [105.333, 34.742],
+      "outline": [[-0.65, -0.5], [0.65, -0.5], [0.65, 0.5], [-0.65, 0.5]],
       "gates": {"n": 1, "s": 1, "e": 1, "w": 1},
       "passages": 1, "que": "official",
+      "moat": {"sides": "nesw", "width": 0.03},
       "palaces": [
-        {"name": "Quận phủ", "at": [0, -0.1], "size": [0.4, 0.3], "platform": 1.5}
+        {"name": "Quận phủ Hán Dương", "at": [0, -0.15], "size": [0.4, 0.3], "platform": 1.5}
       ],
-      "features": []
+      "features": [],
+      "river": {"sides": "ne"}
     },
     "hexi": {
-      "name": "Cô Tang", "rank": "provincial", "state": "intact",
-      "lonlat": [102.64, 37.93],
-      "outline": [[-0.7, -0.6], [0.7, -0.6], [0.7, 0.6], [-0.7, 0.6]],
-      "gates": {"n": 1, "s": 1, "e": 1, "w": 1},
+      "name": "Cô Tang", "rank": "provincial", "state": "intact", "era": "Quận trị Vũ Uy; hào tộc Nhan Tuấn chiếm quận, tự xưng tướng quân, gửi con tin cho Tào Tháo; thành Ngọa Long của Hung Nô, chưa có bốn thành Tiền Lương",
+      "lonlat": [102.637, 37.927],
+      "outline": [[-0.3, -1.45], [0.3, -1.45], [0.55, -1.1], [0.6, -0.45], [0.72, -0.1], [0.62, 0.35], [0.58, 0.95], [0.35, 1.45], [-0.35, 1.45], [-0.58, 0.95], [-0.62, 0.35], [-0.72, -0.1], [-0.6, -0.45], [-0.55, -1.1]],
+      "gates": {"n": 1, "s": 1, "e": 2, "w": 2},
       "passages": 1, "que": "official",
       "palaces": [
-        {"name": "Quận phủ", "at": [0, -0.1], "size": [0.4, 0.3], "platform": 1.5}
+        {"name": "Quận phủ Vũ Uy", "at": [0, -0.2], "size": [0.4, 0.3], "platform": 1.5}
       ],
-      "features": []
+      "features": [
+        {"type": "market", "name": "Cô Tang thị", "at": [0.1, 0.45]}
+      ],
+      "river": {"sides": "ew"}
     },
     "huai": {
-      "name": "Chung Ly", "rank": "provincial", "state": "intact",
-      "lonlat": [117.66, 32.93],
-      "outline": [[-0.7, -0.6], [0.7, -0.6], [0.7, 0.6], [-0.7, 0.6]],
+      "name": "Chung Ly", "rank": "provincial", "state": "intact", "era": "Huyện (hầu quốc) Chung Ly của Tào; đất Giang–Hoài bỏ trống từ năm 213, đồn nhỏ canh sông Hoài",
+      "lonlat": [117.674, 32.909],
+      "outline": [[-0.13, -0.2], [0.17, -0.16], [0.18, 0.18], [-0.18, 0.18]],
       "gates": {"n": 1, "s": 1, "e": 1, "w": 1},
-      "passages": 1, "que": "official",
+      "passages": 1, "que": "none",
+      "moat": {"sides": "nesw", "width": 0.02},
+      "houses": 0.35,
       "palaces": [
-        {"name": "Quận phủ", "at": [0, -0.1], "size": [0.4, 0.3], "platform": 1.5}
+        {"name": "Huyện nha Chung Ly", "at": [0, -0.03], "size": [0.1, 0.08], "platform": 1}
       ],
-      "features": []
+      "features": [
+        {"type": "watchtower", "at": [-0.15, -0.17]},
+        {"type": "harbour", "side": "n"}
+      ],
+      "river": {"sides": "n"}
     },
     "han_zhong": {
-      "name": "Nam Trịnh", "rank": "provincial", "state": "intact",
-      "lonlat": [107.03, 33.07],
-      "outline": [[-0.7, -0.6], [0.7, -0.6], [0.7, 0.6], [-0.7, 0.6]],
+      "name": "Nam Trịnh", "rank": "provincial", "state": "intact", "era": "Quận trị Hán Trung; Lưu Bị chiếm từ tháng 5/219, xưng Hán Trung vương ở Miện Dương, Ngụy Diên trấn giữ; Tào Tháo đã dời hơn tám vạn dân đi",
+      "lonlat": [107.034, 33.072],
+      "outline": [[-0.85, -0.53], [0.85, -0.53], [0.85, 0.53], [-0.85, 0.53]],
       "gates": {"n": 1, "s": 1, "e": 1, "w": 1},
       "passages": 1, "que": "official",
+      "houses": 0.6,
       "palaces": [
-        {"name": "Quận phủ", "at": [0, -0.1], "size": [0.4, 0.3], "platform": 1.5}
+        {"name": "Quận phủ (Hán Đài)", "at": [-0.47, 0.08], "size": [0.08, 0.16], "platform": 2}
       ],
-      "features": []
+      "features": [
+        {"type": "platform", "name": "Bái Tướng Đàn", "at": [-0.67, 0.63], "size": [0.06, 0.13], "height": 1},
+        {"type": "garden", "name": "Ẩm Mã Trì", "at": [-0.2, 0.22], "size": [0.07, 0.05]},
+        {"type": "granary", "at": [0.45, -0.3]},
+        {"type": "harbour", "side": "s"}
+      ],
+      "river": {"sides": "s"}
     },
     "jing_nan": {
-      "name": "Giang Lăng", "rank": "provincial", "state": "intact",
-      "lonlat": [112.19, 30.35],
-      "outline": [[-0.7, -0.6], [0.7, -0.6], [0.7, 0.6], [-0.7, 0.6]],
-      "gates": {"n": 1, "s": 1, "e": 1, "w": 1},
+      "name": "Giang Lăng", "rank": "provincial", "state": "intact", "era": "Nam quận của Quan Vũ; thu 219 Vũ vây Phàn Thành, Mi Phương giữ thành, ba vạn hàng binh Vu Cấm giải về đây; cựu thành Hán ở bắc, nam thành do Quan Vũ đắp thêm",
+      "lonlat": [112.19, 30.354],
+      "outline": [[-1.97, 0.08], [-1.76, -0.55], [-0.8, -1.05], [-0.33, -0.81], [0.5, -0.86], [0.8, -0.69], [0.93, -0.37], [1.97, -0.23], [1.92, 0.83], [1.83, 1.05], [0.94, 0.56], [-1.92, 0.43]],
+      "gates": {"n": 2, "s": 1, "e": 2, "w": 1},
       "passages": 1, "que": "official",
-      "palaces": [
-        {"name": "Quận phủ", "at": [0, -0.1], "size": [0.4, 0.3], "platform": 1.5}
+      "sub": [
+        {"type": "smallCity", "name": "Nam thành (Quan Vũ đắp)", "outline": [[-0.3, 0.1], [0.93, 0.1], [0.93, -0.37], [1.97, -0.23], [1.92, 0.83], [1.83, 1.05], [0.94, 0.56], [-0.3, 0.5]], "gates": {"n": 1, "s": 1, "e": 0, "w": 1}}
       ],
-      "features": []
+      "moat": {"sides": "nesw", "width": 0.03},
+      "palaces": [
+        {"name": "Phủ Quan Vũ", "at": [0.2, 0.3], "size": [0.25, 0.16], "platform": 1.5},
+        {"name": "Phủ Nam quận (Mi Phương)", "at": [-0.8, -0.35], "size": [0.35, 0.3], "platform": 1.5}
+      ],
+      "features": [
+        {"type": "granary", "at": [1.35, 0.25]},
+        {"type": "harbour", "side": "s"},
+        {"type": "watchtower", "at": [-1.3, 0.9]},
+        {"type": "watchtower", "at": [1.3, 1.5]}
+      ],
+      "river": {"sides": "s"}
     },
     "nanzhong": {
-      "name": "Điền Trì", "rank": "provincial", "state": "intact",
-      "lonlat": [102.75, 24.7],
-      "outline": [[-0.7, -0.6], [0.7, -0.6], [0.7, 0.6], [-0.7, 0.6]],
+      "name": "Điền Trì", "rank": "provincial", "state": "intact", "era": "Quận trị Ích Châu (Nam Trung), danh nghĩa thuộc Lưu Bị từ 214, hào tộc Ung Khải lộng quyền; cạnh đô ấp cũ của nước Điền; từ 225 quận trị dời về Vị huyện",
+      "lonlat": [102.698, 24.711],
+      "outline": [[-0.245, -0.185], [0.245, -0.185], [0.245, 0.185], [-0.245, 0.185]],
       "gates": {"n": 1, "s": 1, "e": 1, "w": 1},
       "passages": 1, "que": "official",
+      "moat": {"sides": "nesw", "width": 0.025},
       "palaces": [
-        {"name": "Quận phủ", "at": [0, -0.1], "size": [0.4, 0.3], "platform": 1.5}
+        {"name": "Phủ thái thú Ích Châu", "at": [-0.08, 0.0], "size": [0.14, 0.1], "platform": 1}
       ],
-      "features": []
+      "features": [
+        {"type": "avenueEW", "z": 0.06},
+        {"type": "hill", "name": "Thạch Trại Sơn", "at": [-0.32, -0.74], "size": [0.2, 0.45], "height": 1.2},
+        {"type": "harbour", "side": "w"}
+      ],
+      "river": {"sides": "w"}
     }
   }
 }

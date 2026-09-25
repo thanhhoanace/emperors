@@ -8,6 +8,9 @@
 | `datcity.md` | Đọc mã nguồn dat.city (Ryan Sael): renderer, mức chất lượng, instancing, dựng dần, hậu kỳ, camera; số đo lệnh vẽ và tam giác; mục cuối là những điều nên làm theo |
 | `tw3k.md` | Bản đồ chiến dịch Total War: Three Kingdoms: phạm vi, số quận huyện, tỉ lệ đo được, cách vẽ mùa, thành, quân |
 | `cities.md` | Đối chiếu 14 thành với Wikipedia, Commons và bài khảo cổ: bảng "ta / đúng / nguồn" và các chỉnh sửa đã áp dụng vào `data/cities.json` |
+| `cities219-west.md` | Thiên Thủy (thành Ký), Cô Tang, Nam Trịnh, Điền Trì năm 219: vị trí di chỉ, hình thành, trạng thái mùa thu 219 |
+| `cities219-east.md` | Chung Ly, Giang Lăng; Lạc Dương và Trường An năm 219 (hồi sinh một phần, cung vẫn là phế tích) |
+| `cities219-diff.md` | Mười hai thành còn lại: thay đổi từ 200 tới 219 (Tam Đài ở Nghiệp, Quan Vũ vây Phàn Thành, Bộ Chất ở Phiên Ngung…) |
 | `periphery.md` | Vùng biên Trung Quốc năm 200 và lợi thế có căn cứ lịch sử cho từng hoàng đế |
 
 Ảnh chụp TW3K và dữ liệu TWDB mà các báo cáo nhắc tới **không có trong repo**. Đó là tư liệu của game thương mại, chỉ dùng để tham khảo (`AGENTS.md`).

@@ -178,7 +178,6 @@ for (const r of EXTRA_RIVERS) lines.push({ name: r.name, rank: 9, hw: r.hw, silt
 for (const f of rivGeo.features) {
   if (!f.geometry || f.properties.featurecla === 'Lake Centerline') continue;
   const name = f.properties.name || '', rank = f.properties.scalerank;
-  if (name === 'Hudi') continue; // modern Huai channels: a near-duplicate of the main stream past Zhongli, and the 1851 outlet via Gaoyou to the Yangtze
   const parts = f.geometry.type === 'LineString' ? [f.geometry.coordinates] : f.geometry.coordinates;
   for (const part of parts) {
     const w = part.map(([lon, lat]) => toWorld(lon, lat));
@@ -194,13 +193,29 @@ for (const f of rivGeo.features) {
     lines.push({ name, rank, hw, silt: SILT.has(name), pts: w });
   }
 }
-// History (200 CE): Hongze Lake did not exist; the Huai ran straight to the Yellow Sea.
-for (const l of lines) if (l.name === 'Huai') {
-  const cut = l.pts.findIndex(([x]) => x > toWorld(118.45, 33.2)[0]);
-  if (cut > 0) l.pts = l.pts.slice(0, cut);
-  const last = l.pts[l.pts.length - 1];
+// History (200 CE): Hongze Lake did not exist; the Huai ran straight to the Yellow Sea. Natural Earth splits the Huai
+// into pieces and names its middle course (Huainan–Zhongli) "Hudi": chain the pieces west to east, cut the chain where
+// the Hongze basin begins, add the old mouth. Pieces that do not join (Hongze, the 1851 outlet to the Yangtze) drop out.
+{
+  const parts = lines.filter((l) => l.name === 'Huai' || l.name === 'Hudi');
+  const rest = parts.slice().sort((p, q) => Math.min(...p.pts.map((v) => v[0])) - Math.min(...q.pts.map((v) => v[0])));
+  const first = rest.shift(), west = first.pts[0][0] < first.pts[first.pts.length - 1][0] ? first.pts.slice() : first.pts.slice().reverse();
+  let chain = west;
+  for (let joined = true; joined; ) {
+    joined = false;
+    const end = chain[chain.length - 1];
+    for (let k = 0; k < rest.length; k++) {
+      const P = rest[k].pts, dA = Math.hypot(P[0][0] - end[0], P[0][1] - end[1]), dB = Math.hypot(P[P.length - 1][0] - end[0], P[P.length - 1][1] - end[1]);
+      if (Math.min(dA, dB) < 1.5) { chain = chain.concat((dA <= dB ? P : P.slice().reverse()).slice(1)); rest.splice(k, 1); joined = true; break; }
+    }
+  }
+  const cutX = toWorld(118.45, 33.2)[0], cut = chain.findIndex(([x]) => x > cutX);
+  if (cut > 0) chain = chain.slice(0, cut);
+  const last = chain[chain.length - 1];
   const oldHuai = [[118.8, 33.45], [119.25, 33.62], [119.7, 33.85], [120.1, 34.05], [120.45, 34.2]].map(([a, b]) => toWorld(a, b));
-  l.pts = [...l.pts, ...oldHuai.filter(([x]) => x > last[0])];
+  chain = [...chain, ...oldHuai.filter(([x]) => x > last[0])];
+  for (const l of parts) lines.splice(lines.indexOf(l), 1);
+  lines.push({ name: 'Huai', rank: first.rank, hw: first.hw, silt: false, pts: chain });
 }
 // Keep rivers out of the (enlarged) city footprints but hugging the walls, as they did (rivers were moats).
 // Each river is shifted sideways, away from the city on the side it already flows, with a cosine bump along
@@ -358,7 +373,7 @@ fs.writeFileSync(path.join(OUT, 'meta.json'), JSON.stringify({
   projection: { lon0: LON0, lat0: LAT0, kmPerUnit: KM_PER_UNIT, unitsPerDegLon: +KX.toFixed(5), unitsPerDegLat: +KZ.toFixed(5), note: 'x = (lon - lon0) * unitsPerDegLon, z = (lat0 - lat) * unitsPerDegLat' },
   height: { step: Q, encoding: 'delta2d-zigzag-planes-gzip', landFormula: 'h = 0.1 + metres * 0.003; sea = metres * 0.008', fine: FINE, coarse: COARSE },
   sources: ['AWS Terrain Tiles (terrarium, z7) — Mapzen/Tilezen: SRTM, ETOPO1, GMTED2010 and others; attribution per tilezen/joerd', 'Natural Earth 10m rivers and lakes (public domain)'],
-  history: ['Huai river routed to the Yellow Sea (pre-1128 course); Hongze Lake removed', 'Only Dongting, Poyang, Tai and Chao lakes kept (plus Dian lake traced from the DEM)', 'Modern Huai side channels (Natural Earth "Hudi") dropped', 'Added Luo, Zi, Si, Bian, He canal, Chengdu Pi/Jian, Guangzhou Pearl channel, Shiyang (Wuwei); Daye marsh, Ji West Lake'],
+  history: ['Huai river routed to the Yellow Sea (pre-1128 course); Hongze Lake removed', 'Only Dongting, Poyang, Tai and Chao lakes kept (plus Dian lake traced from the DEM)', 'Huai pieces (Natural Earth "Hudi" is its middle course) chained into one river; the 1851 outlet dropped', 'Added Luo, Zi, Si, Bian, He canal, Chengdu Pi/Jian, Guangzhou Pearl channel, Shiyang (Wuwei); Daye marsh, Ji West Lake'],
   cities: Object.fromEntries([...cities.map((c) => [c.id, { x: +c.x.toFixed(2), z: +c.z.toFixed(2), y: +c.y.toFixed(3), r: c.r, scale: c.scale }]),
     ...Object.entries(cityJson.alias || {}).map(([a, b]) => { const c = cities.find((q) => q.id === b); return [a, { x: +c.x.toFixed(2), z: +c.z.toFixed(2), y: +c.y.toFixed(3), r: c.r, scale: c.scale, alias: b }]; })]),
 }, null, 1));
