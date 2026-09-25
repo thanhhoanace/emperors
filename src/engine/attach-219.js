@@ -223,7 +223,12 @@ function attach(Engine) {
         }
         return d;
       }
-      return Engine.decide(g, id);
+      if (typeof Engine.projectPerception === 'function' && typeof Engine.decideFromContext === 'function') {
+        const ctx = Engine.projectPerception(g, id);
+        const d = Engine.decideFromContext(ctx, g.state);
+        return d;
+      }
+      return (Engine.decideLegacy || Engine.decide)(g, id);
     });
   };
 
@@ -231,3 +236,9 @@ function attach(Engine) {
 }
 
 if (typeof module === 'object' && module.exports) module.exports = attach;
+else {
+  var root = typeof self !== 'undefined' ? self : this;
+  root.EmperorsAttach219 = attach;
+  root.attach = attach;
+  if (root.EmperorsEngine) root.EmperorsEngine = attach(root.EmperorsEngine);
+}

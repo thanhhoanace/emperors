@@ -6,6 +6,28 @@ import { Engine, world, personas, newGame, ROOT } from './load.mjs';
 
 const ACTIONS = Object.keys(Engine.ACTIONS);
 
+test('calendar: turn 1 is Autumn 219 and winter crosses the year', () => {
+  const g = newGame(1);
+  assert.deepEqual(Engine.calendar(g, 1), { year: 219, season: 'Thu' });
+  assert.deepEqual(Engine.calendar(g, 2), { year: 219, season: 'Đông' });
+  assert.deepEqual(Engine.calendar(g, 3), { year: 220, season: 'Xuân' });
+  const r = Engine.playTurn(g);
+  assert.equal(r.calendar.year, 219);
+  assert.equal(r.calendar.season, 'Thu');
+});
+
+test('attack uses player from when owned and adjacent', () => {
+  const g = newGame(1);
+  assert.equal(Engine.STRATAGEMS.join(','), 'discord,burn,defect');
+  assert.equal(Engine.attackOrigin(g, { fid: 'cao_cao', from: 'jing', target: 'jing_nan' }), 'jing');
+  assert.equal(Engine.attackOrigin(g, { fid: 'cao_cao', from: 'yu', target: 'jing_nan' }), Engine.originFor(g, 'cao_cao', 'jing_nan'));
+  g.state.factions.cao_cao.troops = 200000;
+  const r = Engine.resolveTurn(g, [{ fid: 'cao_cao', action: 'attack', from: 'jing', target: 'jing_nan', targetKind: 'province' }]);
+  const atk = r.events.find((e) => e.kind === 'attack');
+  assert.ok(atk);
+  assert.equal(atk.from, 'jing');
+});
+
 test('world data: neighbors are symmetric and ids resolve', () => {
   const ids = new Set(world.provinces.map((p) => p.id));
   assert.equal(world.provinces.length, 20);

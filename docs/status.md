@@ -6,12 +6,19 @@
 
 ## Đang chờ
 
-- **Claude — HUD Perception:** file `src/engine/perception.js` + `data/scenario/intel-rules.json` đã lên nhánh. Chưa nạp vào `game.html`. Chưa sửa gameplay.
-- **Grok:** wire `decideFromContext` + calendar/`from`/STRATAGEMS vào `engine.js` + đổi `tests/load.mjs` sang `perception.js` (file local đã có; push engine.js lớn chưa xong qua API).
-- **Grok A.5:** bốn máy statecraft — chưa.
+- **Claude — HUD:** nạp `src/engine/perception.js` sau `attach-219.js`. HUD đọc `projectPerception(game, playerFid)`, không đọc truth phe khác. Không sửa luật.
+- **Grok A.5:** bốn máy statecraft — chưa. Deal đầy đủ — chưa.
 
-## Đã xong trên remote (Round A docs + perception file)
+## Round A (engine)
 
-- `23a2214` docs: align gameplay SOT with freeze
-- `467df97` feat: isolate AI decisions through perception (`perception.js`, `intel-rules.json`)
-- loader Node vẫn attach-219 để test cũ không gãy khi engine.js chưa export `decideFromContext`.
+Node và server cùng compose: `engine.js` → `attach-219.js` → `perception.js`.
+
+- Lịch: lượt 1 = Thu 219 (`startSeason`).
+- Tấn công: `from` hợp lệ thì dùng, không thì `originFor`. `STRATAGEMS` đã export. Browser: `EmperorsAttach219`.
+- Perception: một snapshot trước khi quyết định; `projectPerception` không mutate; không `seed`, không `bandValues` trong DecisionContext.
+- `npm test`: 44 pass. `npm run sim -- 500`: Lý 36.0%, 3K không bắn đế yếu ẩn (0).
+
+## Chặn còn
+
+1. Ngoại giao deal đủ điều khoản — vòng riêng.
+2. `game.html` chưa nạp `perception.js` — HUD vẫn truth cho đến vòng Claude.

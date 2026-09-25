@@ -1,14 +1,15 @@
 # Kịch bản khóa — Thu 219, Thất hùng rìa
 
 > **Vai trò:** SOT cho *chuyện thế giới và snapshot*. Luật số nằm ở `data/scenario/219.json` (bản nháp) rồi mới nhập `data/world.json` khi engine đọc được.
-> Nhân vật, 3 ô trung lập (mặt), thừa kế: `docs/product/characters.md`.
-> Tin · sương · danh tính: `docs/product/intel.md`.
+> Gameplay khóa: `docs/product/GAMEPLAY-FREEZE.md`.
+> Nhân vật: `docs/product/characters.md`.
+> Tin: `docs/product/perception.md`. Log cũ: `docs/product/intel.md`.
 > Visual / DEM / thành: `docs/product/proposal-all-china.md` và `docs/design/`.
 > Chủ dự án chốt hướng này ngày 2026-09-25. ADR: `docs/decisions/0007-scenario-219-periphery.md`.
 
 ## Premise một câu
 
-Ba nước Tào–Thục–Ngô đã thành hình và đang giằng Kinh / Hán Trung. Bốn hoàng đế xuyên không xuất hiện ở **rìa và khe**, không ngồi trên ruột ba nước. Đầu game Tam Quốc áp đảo. Giữa game đế bứt nhờ địa thế + cải cách đời sau + **tin lệch sử mà 3 nước không có**. Bàn cờ đọc như Chiến Quốc Thất Hùng.
+Ba nước Tào–Thục–Ngô đã thành hình và đang giằng Kinh / Hán Trung. Bốn hoàng đế xuyên không xuất hiện ở **rìa và khe**, không ngồi trên ruột ba nước. Đầu game Tam Quốc áp đảo. Giữa game đế bứt nhờ địa thế + **tin lệch** (A-hybrid: Lý/Chu có prior mẫu có điều kiện; Tần/Vũ không có walkthrough Tam Quốc). Bàn cờ đọc như Chiến Quốc Thất Hùng.
 
 ## Không làm
 
@@ -78,14 +79,9 @@ Tam Quốc tấn công đế đang chỉ có 1 châu: trừ Uy, sĩ khí thấp,
 Chi tiết mặt và ai chiêu rẻ: `characters.md` mục 1.
 Đất hoang trên map lớn chưa phải châu turn 0.
 
-### 3. Cải cách 3 tầng — chỉ 4 đế
+### 3. Cải cách / statecraft — Round A.5 (chưa wire)
 
-| Phe | Tầng 1 | Tầng 2 | Tầng 3 |
-| --- | --- | --- | --- |
-| Tần | Huyện–quận | Trực Đạo | Tổng động viên |
-| Lý | Phủ binh | Huyền Giáp | Thiên Khả Hãn |
-| Lưu Triệt | Đồn điền | Thiên mã | Tơ lụa |
-| Chu | Vệ sở | Lúa Chiêm | Hỏa khí / hỏa thuyền |
+Bảng 3 tầng cũ (Tần huyện–quận, Vũ đồn điền/thiên mã/tơ, Chu lúa Chiêm, …) là log thiết kế đã bị `GAMEPLAY-FREEZE.md` thay. Không còn là luật. Không implement trong Round A. Không bonus theo id châu. Chưa chốt cây tiến triển cuối.
 
 ## Thừa kế (tóm)
 
@@ -102,8 +98,10 @@ Cửa là shot + cờ. Không phải tin để cả 7 phe đọc giống nhau �
 Chi tiết: `docs/product/intel.md`.
 
 - Người xem / Claude: cả bàn.
-- Tam Quốc: châu mình + láng giềng; cửa = đồn; không biết đế là ai.
-- Đế: đai nhớ + sách sử về 3 nước; cửa = intel; **không** nhận đế khác là xuyên không trừ khi tự xưng.
+- Tam Quốc: châu mình + láng giềng; không biết đế là ai; không thấy `time_displaced`.
+- Tần / Vũ: không walkthrough Tam Quốc.
+- Lý / Chu: prior mẫu lịch sử có neo — không phải tử vi. Neo gãy thì prior hết.
+- Đế không nhận đế khác là xuyên không trừ khi tự xưng.
 - Không sƠn đen 20 ô kiểu Civ.
 
 Thống nhất: 12 / 20 châu, hoặc còn 1 phe.

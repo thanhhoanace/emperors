@@ -17,7 +17,7 @@ JSON.stringify(projectPerception(game, fid))
 + persona[fid]
 ```
 
-Adapter **không** nhận `game`. Context **không** chứa `bandValues` hay quân đúng phe ẩn.
+Adapter **không** nhận `game`. Context **không** chứa `seed`, `bandValues`, hay quân đúng phe ẩn.
 
 ## Cấm
 

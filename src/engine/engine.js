@@ -23,6 +23,8 @@
     fortify: { label: 'Củng cố', icon: '🛡' },
   };
   const NEUTRAL = 'neutral';
+  const STRATAGEMS = ['discord', 'burn', 'defect'];
+  const STRATAGEM_NAMES = { discord: 'ly gián', burn: 'đốt lương', defect: 'chiêu hàng tướng' };
 
   // ---------------------------------------------------------------- helpers
 
@@ -235,10 +237,26 @@
     return adj.includes(f.seat) ? f.seat : adj[0];
   }
 
+  function validAttackFrom(g, fid, from, target) {
+    if (!from || !target) return false;
+    const pv = g.state.provinces[from];
+    const P = g.def.P[target];
+    if (!pv || !P || pv.owner !== fid) return false;
+    return P.neighbors.indexOf(from) !== -1;
+  }
+
+  function attackOrigin(g, d) {
+    if (d && validAttackFrom(g, d.fid, d.from, d.target)) return d.from;
+    return originFor(g, d.fid, d.target);
+  }
+
   function calendar(g, turn) {
     const t = (turn || g.state.turn) - 1;
-    const seasons = g.def.world.meta.seasons;
-    return { year: g.def.world.meta.startYear + Math.floor(t / 4), season: seasons[t % 4] };
+    const seasons = g.def.world.meta.seasons || ['Xuân', 'Hạ', 'Thu', 'Đông'];
+    const startName = (g.def.world.meta && g.def.world.meta.startSeason) || seasons[0];
+    const startIdx = Math.max(0, seasons.indexOf(startName));
+    const idx = startIdx + t;
+    return { year: g.def.world.meta.startYear + Math.floor(idx / seasons.length), season: seasons[idx % seasons.length] };
   }
 
   // Display name of a target: a province shows its city, a faction its ruler.
@@ -483,8 +501,6 @@
     }
   }
 
-  const STRATAGEM_NAMES = { discord: 'ly gián', burn: 'đốt lương', defect: 'chiêu hàng tướng' };
-
   function resolveStratagem(g, d, events) {
     const st = g.state;
     const F = g.def.F[d.fid];
@@ -529,7 +545,7 @@
     const P = g.def.P[d.target];
     const name = F.persona.name;
     if (!f.alive || pv.owner === d.fid) return;
-    const from = originFor(g, d.fid, d.target);
+    const from = attackOrigin(g, d);
     if (!from) {
       events.push({ kind: 'event', fid: d.fid, tone: 'neutral', text: `Đường tiến quân của ${name} tới ${P.city} bị cắt, đại quân quay về.` });
       return;
@@ -750,6 +766,8 @@
   return {
     ACTIONS,
     NEUTRAL,
+    STRATAGEMS,
+    STRATAGEM_NAMES,
     createGame,
     restoreGame,
     decide,
@@ -762,6 +780,9 @@
     hasPact,
     aliveIds,
     calendar,
+    originFor,
+    validAttackFrom,
+    attackOrigin,
     attackOf,
     defenseOf,
     income,

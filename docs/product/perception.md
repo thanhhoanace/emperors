@@ -15,17 +15,18 @@ truth state
 `resolveTurn` đọc truth. RuntimeEvent = clip.
 
 Sau khi `perception.js` đã attach:
-- `decide` **chỉ** nhận DecisionContext.
-- `fillDecisions` / `decideAll` **bắt buộc** projectPerception rồi decide(context).
+- `decide(context, rng)` chỉ nhận DecisionContext. `rng` là `{seed}` private, không nằm trong context.
+- `fillDecisions` / `decideAll`: `observeFactions` một lần, project mọi phe từ cùng snapshot, quyết định xong mới ghi `faction.last`.
+- `projectPerception` không mutate intel và không đọc quyết định cùng lượt của phe khác.
 - Gọi `decide(game, fid)` ném lỗi.
-- Map band → số **private** trong engine. Context không có `bandValues`.
+- Không `bandValues`, không `seed` trong context.
 
 ## DecisionContext v1
 
 ```
 {
   v: 1,
-  fid, seed, turn,
+  fid, turn,
   calendar: { year, season },
   self: { troops, grain, loyalty, prestige, seat, provinces[], pacts, last, grudge,
           weights, traits, name, short, quotes, homeCity },

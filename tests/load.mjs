@@ -6,8 +6,10 @@ import { fileURLToPath } from 'node:url';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
-export const Engine = require(path.join(ROOT, 'src/engine/attach-219.js'))(
-  require(path.join(ROOT, 'src/engine/engine.js'))
+export const Engine = require(path.join(ROOT, 'src/engine/perception.js'))(
+  require(path.join(ROOT, 'src/engine/attach-219.js'))(
+    require(path.join(ROOT, 'src/engine/engine.js'))
+  )
 );
 
 function readJson(rel) {

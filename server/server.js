@@ -6,12 +6,15 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
-const Engine = require(path.join(ROOT, 'src/engine/attach-219.js'))(
-  require(path.join(ROOT, 'src/engine/engine.js'))
+const Engine = require(path.join(ROOT, 'src/engine/perception.js'))(
+  require(path.join(ROOT, 'src/engine/attach-219.js'))(
+    require(path.join(ROOT, 'src/engine/engine.js'))
+  )
 );
 const world = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/world.json'), 'utf8'));
 world.gatesPack = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/scenario/gates.json'), 'utf8'));
 world.charactersPack = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/scenario/characters.json'), 'utf8'));
+world.intelRules = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/scenario/intel-rules.json'), 'utf8'));
 const personas = Object.fromEntries(
   world.factions.map((f) => [f.id, JSON.parse(fs.readFileSync(path.join(ROOT, `data/personas/${f.id}.json`), 'utf8'))])
 );
