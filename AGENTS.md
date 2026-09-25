@@ -104,6 +104,7 @@ Trong container không có GPU: đặt `PUPPETEER_EXECUTABLE_PATH` tới Chromiu
 - Sông nội địa là dải nước riêng, nâng trên lưới thô khi nhìn xa.
 - Toạ độ thành = tâm di chỉ thời Hán, không phải tâm đô thị nay.
 - DEM: lượng tử + delta 2 chiều + gzip.
+- Chờ tiến trình nền: không dùng `until ! pgrep -f "<lệnh>"`. `pgrep -f` khớp cả shell đang chờ (dòng lệnh chứa chuỗi đó), vòng lặp không bao giờ dừng. Chờ theo PID hoặc file kết quả.
 
 ## Workflow
 

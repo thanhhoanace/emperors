@@ -2,7 +2,7 @@
 
 **Trạng thái (cập nhật 2026-09-25):**
 - Phần *luật* của đề xuất này (mục 4–6: châu, nơi xuất phát, lợi thế) **đã được thay** bằng kịch bản thu 219 mà chủ dự án chốt: `docs/product/scenario.md`, `decisions/0007`. Kịch bản có 20 châu có chủ; Tần ở Lũng Tây, Lý ở Tịnh, Lưu Triệt ở Hà Tây, Chu ở Hoài; cải cách 3 tầng thay cho bảng lợi thế ở mục 6. Mục 4–6 chỉ giữ lại làm tư liệu.
-- Phần *hình* (mục 3, 8, 9: phạm vi, phép chiếu, tỉ lệ, kỹ thuật bản đồ) **vẫn chờ chủ dự án chọn**.
+- Phần *hình* (mục 3, 8, 9) **đã chốt** (mục 11): Trung Quốc ngày nay kèm nhãn cửa Hán, tỉ lệ C, phép chiếu Albers. Ghi quyết định: `decisions/0006`, mục "Bổ sung vòng 6".
 
 Mọi con số dưới đây chỉ là ví dụ.
 
@@ -43,17 +43,17 @@ Chi tiết và nguồn nằm ở `docs/research/` (`tw3k.md`, `periphery.md`); p
 
 ## 3. Phạm vi và tỉ lệ bản đồ
 
-- **Phạm vi:** lãnh thổ Trung Quốc ngày nay.
-  - Giao Chỉ, Lạc Lãng, Đại Uyển (Ferghana) và Mạc Bắc là "cửa" ra ngoài bản đồ: có tên, có đường, không có đất chơi.
-  - Cần anh xác nhận: có đưa Bắc Việt Nam và Bắc Triều Tiên (thế giới nhà Hán) vào không.
-- **Phép chiếu:** Albers nón (vĩ tuyến chuẩn 25° và 47°, kinh tuyến giữa 105°E), phép chiếu chuẩn của bản đồ Trung Quốc. Phép chiếu phẳng hiện tại sẽ làm Tân Cương và Mãn Châu phình ra.
-- **Tỉ lệ:** có ba cách.
+- **Phạm vi (đã chốt):** lãnh thổ Trung Quốc ngày nay.
+  - Giao Chỉ, Lạc Lãng, Đại Uyển (Ferghana) là nhãn "cửa Hán" ở mép bản đồ: có tên, có đường, không có đất chơi.
+  - Không vẽ thêm Bắc Việt Nam, Bắc Triều Tiên, và không thêm châu có chủ.
+- **Phép chiếu (đã chốt):** Albers nón (vĩ tuyến chuẩn 25° và 47°, kinh tuyến giữa 105°E), phép chiếu chuẩn của bản đồ Trung Quốc. Phép chiếu phẳng hiện tại sẽ làm Tân Cương và Mãn Châu phình ra.
+- **Tỉ lệ (đã chốt C):** có ba cách.
 
 | Cách | Mô tả | Được | Mất |
 | --- | --- | --- | --- |
 | A | Đúng tỉ lệ 3 km/ô trên toàn bộ (khoảng 2.200 × 1.450 ô) | Thật nhất, rộng nhất | Nặng; vùng biên rộng mà thưa sự kiện |
 | B | Đúng tỉ lệ ở lõi Hán; nén 1,5–2,5 lần cao nguyên Tây Tạng, Tân Cương, Mông Cổ (khoảng 1.500 × 1.100 ô), giống cách TW3K bóp méo | Gọn, dễ nhìn | Ngược với ý anh "bản đồ bé hơn thực tế" và với `decisions/0006` |
-| **C (đề xuất)** | Đúng tỉ lệ toàn bộ, nhưng mật độ chi tiết theo vùng (bên dưới) | Thật mà vẫn nhẹ | Vùng biên ít chi tiết hơn lõi |
+| **C (đã chọn)** | Đúng tỉ lệ toàn bộ, nhưng mật độ chi tiết theo vùng (bên dưới) | Thật mà vẫn nhẹ | Vùng biên ít chi tiết hơn lõi |
 
 Chi tiết theo vùng của cách C:
 - **Lõi Hán:** chi tiết như vòng 5.
@@ -158,12 +158,13 @@ Mỗi hoàng đế có ba lợi thế, gắn với một vùng trên bản đồ
 
 ## 10. Thứ tự làm
 
-1. Chủ dự án chốt phần hình: phạm vi và tỉ lệ.
-2. Luật 219 nhập engine theo `scenario.md` (không thuộc đề xuất này).
-3. Bake toàn quốc theo phép chiếu Albers, có ô và mặt nạ nướng sẵn; bản đồ tranh cho chế độ thu nhỏ.
-4. Thành năm 219: Lạc Dương, Trường An đã dựng lại sau loạn; thêm Thiên Thủy, Cô Tang, Chung Ly, Nam Trịnh, Giang Lăng, Điền Trì. Render lại, đưa lên canvas duyệt.
+1. ~~Chủ dự án chốt phần hình: phạm vi và tỉ lệ.~~ Xong (mục 11).
+2. Luật 219 nhập engine theo `scenario.md` (việc của luồng luật, không thuộc đề xuất này).
+3. Thành năm 219: Lạc Dương, Trường An đã dựng lại sau loạn; thêm Thiên Thủy, Cô Tang, Chung Ly, Nam Trịnh, Giang Lăng, Điền Trì. Render lại, đưa lên canvas duyệt.
+4. Bake toàn quốc theo phép chiếu Albers, có ô và mặt nạ nướng sẵn; bản đồ tranh cho chế độ thu nhỏ.
 
-## 11. Cần anh quyết (phần hình)
+## 11. Chủ dự án đã quyết (2026-09-25)
 
-1. Phạm vi bản đồ hình: đúng biên giới Trung Quốc ngày nay, hay theo thế giới nhà Hán (có Bắc Việt Nam, Bắc Triều Tiên)? Luật vẫn chỉ 20 châu có chủ; phần còn lại là đất hoang có tên.
-2. Tỉ lệ: A, B hay C (em đề xuất C)?
+1. Phạm vi: Trung Quốc ngày nay, kèm nhãn cửa Hán (Giao Chỉ, Lạc Lãng, Đại Uyển). Không thêm châu có chủ.
+2. Tỉ lệ C, phép chiếu Albers.
+3. Kịch bản 219 giữ nguyên.

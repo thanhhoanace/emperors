@@ -407,7 +407,7 @@
     const ownData = new Uint8Array(N * 4), tOwn = mkTex(ownData);
     const bordData = new Uint8Array(N * 4), tBord = mkTex(bordData);
     // Owner colours are re-baked whenever ownership changes (one pass over the grid, a few ms).
-    // tOwn: owner colour (A = 1 if owned). tBord: R = proximity (1 at the line, 0 at 1.5 units) to a border
+    // tOwn: owner colour (A = 1 if owned). tBord: R = proximity (1 at the line, 0 at 1.5 units) to a border (B: to the wasteland edge, terrain-real)
     // between different owners, G = proximity to a province border inside one realm.
     function setOwners(colorOf, ownerOf2) {
       const cols = provIds.map((id) => { const c = colorOf(id); return c ? [c.r, c.g, c.b, 1] : [0.45, 0.45, 0.42, 0]; });
@@ -507,6 +507,7 @@
     float edgeFog(vec2 wp){ vec2 ex = max(uGrid.xy - wp, wp - uGrid.xy - uGrid.zw); return uEdgeFog * smoothstep(-10.0, 45.0, max(ex.x, ex.y)); }
     const vec3 EDGE_HAZE = vec3(0.74, 0.79, 0.81);
     vec3 applyBorders(vec3 col, vec4 own, vec4 bd, float land, vec2 wp){
+      bd.r = max(bd.r, bd.b * step(0.01, uTint)); // wasteland edge (B) only in the tinted map views
       float dR = (1.0 - bd.r) * 1.5, feR = max(fwidth(dR), 1e-4), wR = max(uBorderW, feR * 0.9);
       float lineR = (1.0 - smoothstep(wR - feR, wR + feR, dR)) * step(0.004, bd.r) * land;
       float dP = (1.0 - bd.g) * 1.5, feP = max(fwidth(dP), 1e-4), wP = max(uBorderW * 0.5, feP * 0.7);
@@ -653,6 +654,9 @@
           col *= mix(0.74 + 0.5 * gA * 0.75, 0.86 + 0.28 * gA * 0.75, uSoft) + 0.25 * (gB - 0.5);
           col = pow(col, vec3(2.2)); // authored in sRGB, lit in linear
           col = mix(col, own.rgb, uTint * own.a * step(0.1, hgt));
+          // wasteland (no province at all; encoded as black, alpha 0): washed pale in the owner view
+          float wild = (1.0 - own.a) * (1.0 - step(0.05, own.r + own.g + own.b));
+          col = mix(col, vec3(dot(col, vec3(0.3, 0.55, 0.15))) * 0.9 + vec3(0.1, 0.09, 0.07), uTint * wild * 1.6 * step(0.1, hgt));
           col = applyBorders(col, own, bd, step(0.2, hgt), vWP.xz);
           diffuseColor.rgb = mix(col, pow(EDGE_HAZE, vec3(2.2)), edgeFog(vWP.xz));
           #ifdef DEBUG_MASKS
@@ -722,6 +726,7 @@
           if (mA.r < 0.13 + 0.14 * (1.0 - crown * detail) + 0.08 * (tnoise(vWP.xz * 0.8) - 0.5)) discard;
           diffuseColor.rgb = pow(col, vec3(2.2));
           { vec4 own = texture2D(tOwn, uvG); diffuseColor.rgb = mix(diffuseColor.rgb, own.rgb, uTint * own.a * 0.8);
+            float wild = (1.0 - own.a) * (1.0 - step(0.05, own.r + own.g + own.b)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(dot(diffuseColor.rgb, vec3(0.3, 0.55, 0.15))) * 0.9 + vec3(0.1, 0.09, 0.07), uTint * wild * 1.6);
             if (uCanopyBorder > 0.0) diffuseColor.rgb = mix(diffuseColor.rgb, applyBorders(diffuseColor.rgb, own, texture2D(tBord, uvG), 1.0, vWP.xz), uCanopyBorder); }
           #ifdef DEBUG_FLAT
             diffuseColor.rgb = vec3(0.1, 0.2, 0.08); tBump = 0.0;

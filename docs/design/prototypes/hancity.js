@@ -453,18 +453,31 @@
     // houses: packed rows of courtyard compounds facing south; ruined cities keep only some
     const key = lite ? 'lite' : 'full';
     const proto = (PROTO[key] = PROTO[key] || [...HOUSES.map(([w, d], k) => (lite ? houseLite(w, d) : house(w, d, { gateX: k % 2 ? -0.2 : 0.2, watchtower: k === 3 })).grouped()), shell(0.52, 0.42).grouped()]);
-    const hs = 0.55, placed = proto.map(() => []), SHELL = HOUSES.length;
+    const hs = 0.55, placed = proto.map(() => []), SHELL = HOUSES.length, slots = [];
     const all = polys.flat(), xs = all.map((p) => p[0]), zs = all.map((p) => p[1]);
     for (let z = Math.min(...zs); z < Math.max(...zs); z += 0.44 * hs + 0.05) {
       for (let x = Math.min(...xs) + rr(0, 0.1); x < Math.max(...xs); ) {
         const k = Math.floor(r() * HOUSES.length), w = HOUSES[k][0] * hs, d = HOUSES[k][1] * hs, cx = x + w / 2, cz = z + d / 2;
         if (free(cx, cz, w + 0.04, d + 0.04)) {
-          const tw = towns.find((t) => inPoly(cx, cz, t.poly)), q = r();
-          // Luoyang 196: "the palaces all burnt, the officials cut back the thorns and camped among the walls"
-          if (!ruined || q < 0.1) placed[k].push([cx, cz, 0, hs, tw ? tw.y : P.y0]); else if (q < 0.45) placed[SHELL].push([cx, cz, 0, hs, P.y0]); else if (q < 0.6) extras.push({ type: 'grove', x: cx, z: cz, w, d, sparse: true });
+          const tw = towns.find((t) => inPoly(cx, cz, t.poly));
+          slots.push({ k, cx, cz, w, d, y: tw ? tw.y : P.y0 });
           block(cx, cz, w + 0.03, d + 0.03); x += w + rr(0.02, 0.06);
         } else x += 0.08;
       }
+    }
+    // Re-settled in part (Luoyang and Chang'an in 219, def.houses < 1): the wards in use cluster round the palaces
+    // still standing, the markets and the gates; the rest of the walled area is orchards and open ground.
+    const fill = def.houses ?? 1;
+    if (!ruined && fill < 1) {
+      const hubs = [...(def.palaces || []).filter((p) => !p.ruined).map((p) => L(p.at)), ...(def.features || []).filter((f) => f.type === 'market').map((f) => L(f.at)), ...gates.map((g) => [g.x, g.z])];
+      const score = (x, z) => -Math.min(...hubs.map(([hx, hz]) => Math.hypot(x - hx, z - hz))) + 0.3 * (Math.sin(x * 1.7 + z * 0.4) + Math.sin(z * 2.1 - x * 0.8));
+      slots.forEach((q) => (q.v = score(q.cx, q.cz)));
+      const order = [...slots].sort((a, b) => b.v - a.v), nHouse = Math.round(slots.length * fill);
+      order.forEach((q, i) => { if (i < nHouse) placed[q.k].push([q.cx, q.cz, 0, hs, q.y]); else if (i < nHouse + (slots.length - nHouse) * 0.35) extras.push({ type: 'grove', x: q.cx, z: q.cz, w: q.w, d: q.d, sparse: true }); });
+    } else for (const q of slots) {
+      // Luoyang 196: "the palaces all burnt, the officials cut back the thorns and camped among the walls"
+      const v = r();
+      if (!ruined || v < 0.1) placed[q.k].push([q.cx, q.cz, 0, hs, q.y]); else if (v < 0.45) placed[SHELL].push([q.cx, q.cz, 0, hs, P.y0]); else if (v < 0.6) extras.push({ type: 'grove', x: q.cx, z: q.cz, w: q.w, d: q.d, sparse: true });
     }
     if (ruined) for (let k = 0; k < (lite ? 20 : 120); k++) { const x = rr(Math.min(...xs), Math.max(...xs)), z = rr(Math.min(...zs), Math.max(...zs)); if (free(x, z, 0.1, 0.1)) bag.merge(rubble(4, 0.1), T(x, P.y0, z)); }
 

@@ -115,13 +115,18 @@
     const region = (x, z) => {
       const [lon, lat] = toLonLat(x + 6 * (fbm(x * 0.02, z * 0.02, 2) - 0.5), z + 6 * (fbm(z * 0.02 + 3, x * 0.02, 2) - 0.5)), e = h(x, z);
       const tibet = sstep(7.5, 10.5, e) * sstep(105, 103, lon);
-      const steppe = clamp(sstep(40.2, 41.4, lat) * sstep(119.5, 117.5, lon) + sstep(37.5, 39, lat) * sstep(104.5, 103.5, lon), 0, 1);
+      // Hexi corridor: gravel desert between the Qilian range and the Tengger sands, green only in the Wuwei
+      // (Guzang) oasis on the Shiyang river
+      const oasis = sstep(1.1, 0.7, ell(lon, lat, 102.65, 37.95, 0.45, 0.35) + 0.5 * (fbm(x * 0.09, z * 0.09, 3) - 0.5));
+      const gobi = sstep(36.9, 37.5, lat) * sstep(104.2, 103.4, lon) * sstep(9.5, 7.5, e);
+      const tengger = sstep(1.05, 0.7, ell(lon, lat, 104.2, 38.7, 1.3, 0.75) + 0.7 * (fbm(x * 0.07 + 5, z * 0.07, 3) - 0.5)) * (1 - oasis);
+      const steppe = clamp(Math.max(sstep(40.2, 41.4, lat) * sstep(119.5, 117.5, lon) + sstep(37.5, 39, lat) * sstep(104.5, 103.5, lon), gobi) * (1 - 0.85 * oasis), 0, 1);
       const loess = sstep(104.3, 105.2, lon) * sstep(113.8, 112.6, lon) * sstep(34.2, 35.0, lat) * sstep(39.6, 38.6, lat) * sstep(1.2, 2.2, e);
-      const ordos = sstep(1.05, 0.7, ell(lon, lat, 108.9, 39.4, 2.0, 0.85) + 0.7 * (fbm(x * 0.07, z * 0.07, 3) - 0.5)) * (0.55 + 0.45 * sstep(0.35, 0.65, fbm(x * 0.2 + 7, z * 0.2, 2))); // Mu Us / Kubuqi sands in patches
+      const ordos = Math.max(tengger, sstep(1.05, 0.7, ell(lon, lat, 108.9, 39.4, 2.0, 0.85) + 0.7 * (fbm(x * 0.07, z * 0.07, 3) - 0.5))) * (0.55 + 0.45 * sstep(0.35, 0.65, fbm(x * 0.2 + 7, z * 0.2, 2))); // Mu Us / Kubuqi / Tengger sands in patches
       const sichuan = sstep(1.05, 0.8, ell(lon, lat, 105.3, 30.2, 2.1, 1.4)) * sstep(2.6, 1.9, e);
       const south = sstep(29.8, 27.5, lat);
       const northPlain = sstep(113.3, 114.3, lon) * sstep(40.2, 39.4, lat) * sstep(32.6, 33.4, lat) * sstep(0.9, 0.55, e);
-      return { tibet, steppe, loess, ordos, sichuan, south, northPlain, lon, lat };
+      return { tibet, steppe, loess, ordos, sichuan, south, northPlain, oasis, gobi, lon, lat };
     };
 
     // --- karst towers, sandstone pillars, granite peaks (real places)
@@ -184,34 +189,31 @@
       return path;
     }
     const chaikin = (p, it) => { for (let k = 0; k < it; k++) { const o = [p[0]]; for (let i = 0; i < p.length - 1; i++) { const [ax, az] = p[i], [bx, bz] = p[i + 1]; o.push([ax * 0.75 + bx * 0.25, az * 0.75 + bz * 0.25], [ax * 0.25 + bx * 0.75, az * 0.25 + bz * 0.75]); } o.push(p[p.length - 1]); p = o; } return p; };
-    const roads = [], done = new Set();
-    for (const [a, list] of Object.entries(opts.neighbors)) for (const b of list) {
-      const key = [a, b].sort().join('>'); if (done.has(key) || !PROV[a] || !PROV[b]) continue; done.add(key);
-      roads.push({ a, b, pts: chaikin(astar(PROV[a][0], PROV[a][1], PROV[b][0], PROV[b][1]), 3) });
-    }
-    const road = new Float32Array(N).fill(9);
-    for (const r of roads) for (let k = 0; k < r.pts.length - 1; k++) {
-      const [ax, az] = r.pts[k], [bx, bz] = r.pts[k + 1];
-      const i0 = Math.max(0, Math.floor((Math.min(ax, bx) - 2 - G.x0) / G.step)), i1 = Math.min(G.nx - 1, Math.ceil((Math.max(ax, bx) + 2 - G.x0) / G.step));
-      const j0 = Math.max(0, Math.floor((Math.min(az, bz) - 2 - G.z0) / G.step)), j1 = Math.min(G.nz - 1, Math.ceil((Math.max(az, bz) + 2 - G.z0) / G.step));
-      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const d = T.polyDist(gx(i), gz(j), [[ax, az], [bx, bz]]), n = idx(i, j); if (d < road[n]) road[n] = d; }
-    }
-    const roadD = (x, z) => (inGrid(x, z) ? lookup(road, x, z) : 9);
-    mark('roads');
 
     // --- provinces: nearest seat by travel cost, not straight distance, so borders follow ridges and big
     // rivers the way the Han zhou did (Qinling, Taihang, Huai…). One Dijkstra per seat on a 2-unit grid;
     // each fine cell takes the two cheapest seats (bilinear), border = half the cost gap.
     const provIds = Object.keys(PROV);
-    const provOf = new Uint8Array(N), prov2 = new Uint8Array(N), border = new Float32Array(N), gap = new Float32Array(N);
+    const provOf = new Uint8Array(N), prov2 = new Uint8Array(N), border = new Float32Array(N), gap = new Float32Array(N), reach = new Float32Array(N);
+    // opts.wild: how far (travel cost) a province reaches into arid land; beyond it the land has no owner
+    // (219: 20 provinces, the steppe, deserts and Tibet are wasteland)
+    const WILD = opts.wild || 0, WILDI = provIds.length;
     {
       const PG = { x0: G.x0, z0: G.z0, st: 2 }; PG.nx = Math.floor(G.w / PG.st) + 1; PG.nz = Math.floor(G.d / PG.st) + 1;
-      const PN = PG.nx * PG.nz, pc = new Float32Array(PN);
+      const PN = PG.nx * PG.nz, pc = new Float32Array(PN), aridPG = new Float32Array(PN);
       for (let j = 0; j < PG.nz; j++) for (let i = 0; i < PG.nx; i++) {
         const x = PG.x0 + i * PG.st, z = PG.z0 + j * PG.st, e = lookup(height, x, z), rd = riverSD(x, z);
         const s = Math.hypot(lookup(height, x + 1, z) - lookup(height, x - 1, z), lookup(height, x, z + 1) - lookup(height, x, z - 1)) / 2;
         const hw = inGrid(x, z) ? riverHW[idx(Math.round((x - G.x0) / G.step), Math.round((z - G.z0) / G.step))] : 0;
-        pc[j * PG.nx + i] = e < 0.05 && rd > 0 ? 3 : 1 + 40 * s * s + Math.max(0, e - 2.5) * 0.5 + (rd < 0 ? 2 + hw * 5 : 0) + 0.8 * fbm(x * 0.03, z * 0.03, 2);
+        // with opts.wild: steppe, sand, plateau (and Taiwan, beyond Han reach) are the wasteland of 219
+        let arid = 0;
+        if (WILD) { const R = region(x, z); arid = clamp(R.steppe + R.ordos + R.tibet + (R.lon > 119.8 && R.lat < 25.5 ? 1 : 0), 0, 1); }
+        aridPG[j * PG.nx + i] = arid;
+        pc[j * PG.nx + i] = e < 0.05 && rd > 0 ? 3 : 1 + 40 * s * s + Math.max(0, e - 2.5) * 0.5 + (rd < 0 ? 2 + hw * 5 : 0) + 0.8 * fbm(x * 0.03, z * 0.03, 2) + 2 * arid;
+      }
+      if (WILD) for (let pass = 0; pass < 2; pass++) for (const [di, dj] of [[1, 0], [0, 1]]) { // box blur r=3 (6 units): no speckled wasteland in rugged terrain
+        const src = aridPG.slice();
+        for (let j = 0; j < PG.nz; j++) for (let i = 0; i < PG.nx; i++) { let a = 0, c = 0; for (let k = -3; k <= 3; k++) { const ii = i + di * k, jj = j + dj * k; if (ii >= 0 && jj >= 0 && ii < PG.nx && jj < PG.nz) { a += src[jj * PG.nx + ii]; c++; } } aridPG[j * PG.nx + i] = a / c; }
       }
       const hk = new Float32Array(PN * 8), hv = new Int32Array(PN * 8);
       const D = provIds.map((id) => {
@@ -239,7 +241,7 @@
           const dk = D[k], d = (dk[q] * (1 - u) + dk[q + 1] * u) * (1 - v) + (dk[q + PG.nx] * (1 - u) + dk[q + PG.nx + 1] * u) * v;
           if (d < d1) { d2 = d1; p2 = p1; d1 = d; p1 = k; } else if (d < d2) { d2 = d; p2 = k; }
         }
-        provOf[idx(i, j)] = p1; prov2[idx(i, j)] = p2; gap[idx(i, j)] = (d2 - d1) * 0.5;
+        provOf[idx(i, j)] = p1; prov2[idx(i, j)] = p2; gap[idx(i, j)] = (d2 - d1) * 0.5; reach[idx(i, j)] = d1;
       }
       // border distance in world units: the cost gap (d2 − d1) is smooth, so divide it by its own gradient —
       // sub-cell precise, no staircase from the grid (a label-edge distance transform steps at 1 unit)
@@ -248,8 +250,45 @@
         const gr = Math.hypot(gapAt(i + 1, j) - gapAt(i - 1, j), gapAt(i, j + 1) - gapAt(i, j - 1)) / 2;
         border[idx(i, j)] = Math.min(50, gap[idx(i, j)] / Math.max(0.3, gr));
       }
+      // the wasteland edge the same way: f = W − reach over its own gradient, W falling from 600 on settled land
+      // to opts.wild on arid land
+      if (WILD) {
+        const f = new Float32Array(N);
+        for (let j = 0; j < G.nz; j++) for (let i = 0; i < G.nx; i++) {
+          const a = aridPG[clamp(Math.round((gz(j) - PG.z0) / PG.st), 0, PG.nz - 1) * PG.nx + clamp(Math.round((gx(i) - PG.x0) / PG.st), 0, PG.nx - 1)];
+          f[idx(i, j)] = 600 + (WILD - 600) * sstep(0.3, 0.6, a) - reach[idx(i, j)];
+        }
+        const fAt = (i, j) => f[idx(clamp(i, 0, G.nx - 1), clamp(j, 0, G.nz - 1))];
+        for (let j = 0; j < G.nz; j++) for (let i = 0; i < G.nx; i++) {
+          const n = idx(i, j), gr = Math.max(0.3, Math.hypot(fAt(i + 1, j) - fAt(i - 1, j), fAt(i, j + 1) - fAt(i, j - 1)) / 2), wb = f[n] / gr;
+          if (wb <= 0) { prov2[n] = provOf[n]; provOf[n] = WILDI; border[n] = Math.min(50, -wb); } else if (wb < border[n]) { prov2[n] = WILDI; border[n] = wb; }
+        }
+      }
     }
     mark('provinces');
+
+    // --- roads between neighbouring seats. Without a neighbour graph (the 219 seats have none yet), provinces
+    // that share at least ~5 units (15 km) of border are neighbours.
+    if (!opts.neighbors) {
+      const cnt = new Map();
+      for (let n = 0; n < N; n++) if (border[n] < 1 && provOf[n] !== prov2[n] && provOf[n] !== WILDI && prov2[n] !== WILDI) { const k = Math.min(provOf[n], prov2[n]) + ':' + Math.max(provOf[n], prov2[n]); cnt.set(k, (cnt.get(k) || 0) + 1); }
+      opts.neighbors = {};
+      for (const [k, c] of cnt) if (c >= 10) { const [a, b] = k.split(':').map((q) => provIds[+q]); (opts.neighbors[a] = opts.neighbors[a] || []).push(b); }
+    }
+    const roads = [], done = new Set();
+    for (const [a, list] of Object.entries(opts.neighbors)) for (const b of list) {
+      const key = [a, b].sort().join('>'); if (done.has(key) || !PROV[a] || !PROV[b]) continue; done.add(key);
+      roads.push({ a, b, pts: chaikin(astar(PROV[a][0], PROV[a][1], PROV[b][0], PROV[b][1]), 3) });
+    }
+    const road = new Float32Array(N).fill(9);
+    for (const r of roads) for (let k = 0; k < r.pts.length - 1; k++) {
+      const [ax, az] = r.pts[k], [bx, bz] = r.pts[k + 1];
+      const i0 = Math.max(0, Math.floor((Math.min(ax, bx) - 2 - G.x0) / G.step)), i1 = Math.min(G.nx - 1, Math.ceil((Math.max(ax, bx) + 2 - G.x0) / G.step));
+      const j0 = Math.max(0, Math.floor((Math.min(az, bz) - 2 - G.z0) / G.step)), j1 = Math.min(G.nz - 1, Math.ceil((Math.max(az, bz) + 2 - G.z0) / G.step));
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const d = T.polyDist(gx(i), gz(j), [[ax, az], [bx, bz]]), n = idx(i, j); if (d < road[n]) road[n] = d; }
+    }
+    const roadD = (x, z) => (inGrid(x, z) ? lookup(road, x, z) : 9);
+    mark('roads');
 
     // --- baked sun visibility and cavity AO (1-unit grid = mask grid)
     const sun = opts.sun.clone().normalize();
@@ -275,15 +314,16 @@
       if (e < 0.05 || river[n] < 0) continue;
       const R = region(x, z), s = slopeAt(x, z), rd = river[n], dc = nearPad(x, z), road0 = road[n];
       const arid = clamp(R.loess * 0.75 + R.steppe * 0.9 + R.ordos + R.tibet * 0.7 + 0.2 * R.northPlain, 0, 1);
-      let fm = sstep(30, 10, dc) * sstep(0.5, 1.5, dc) * 0.9 + sstep(10, 2, rd) * 0.55 * (0.6 + 0.4 * R.south) + R.northPlain * 0.75 + R.sichuan * 0.7 + R.loess * 0.25;
+      let fm = sstep(30, 10, dc) * sstep(0.5, 1.5, dc) * 0.9 + sstep(10, 2, rd) * 0.55 * (0.6 + 0.4 * R.south) + R.northPlain * 0.75 + R.sichuan * 0.7 + R.loess * 0.25 + R.oasis * 0.9;
       fm += sstep(1.6, 0.6, e) * sstep(0.12, 0.04, s) * 0.45 * (1 - arid); // lowland plains were farmed by 200
-      fm *= sstep(0.4, 0.18, s) * sstep(6, 3, e) * (1 - R.ordos) * (1 - R.tibet) * (1 - 0.7 * R.steppe);
+      fm *= sstep(0.4, 0.18, s) * Math.max(sstep(6, 3, e), sstep(30, 8, dc)) * (1 - R.ordos) * (1 - R.tibet) * (1 - 0.7 * R.steppe); // high basins round a city were farmed too (Dian, Guzang, Tianshui)
       fm = clamp(fm * 0.9 + (fbm(x * 0.05 + 40, z * 0.05, 3) - 0.5) * 1.1, 0, 1);
       field[n] = sstep(0.4, 0.62, fm);
       let fd = (fbm(x * 0.03 + 9, z * 0.03 + 2) - 0.42) * 3 + sstep(1.3, 4.5, e) * 0.9 + R.south * 0.55 - R.northPlain * 0.6;
       const wx = x + 9 * (fbm(x * 0.05 + 1, z * 0.05, 2) - 0.5), wz = z + 9 * (fbm(z * 0.05 + 6, x * 0.05, 2) - 0.5); // warped: ragged, not round
       fd += sstep(0.6, 0.72, fbm(wx * 0.16 + 3, wz * 0.16 + 8, 3)) * 1.6 * (1 - arid); // woodlots and groves on the plains
-      fd -= arid * 1.4 + field[n] * 1.2 + sstep(2.0, 0.6, rd) + sstep(1.4, 0.5, road0) + sstep(4, 0, dc) * 2 + sstep(10.5, 13, e) * 2;
+      fd -= arid * 1.4 + field[n] * (1.2 + 1.6 * sstep(3.5, 5, e) * sstep(0.1, 0.04, s)) + // farmed high basins (Dian, Guzang) beat the upland forest bonus
+         sstep(2.0, 0.6, rd) + sstep(1.4, 0.5, road0) + sstep(4, 0, dc) * 2 + sstep(10.5, 13, e) * 2 + (R.gobi + R.oasis) * 2 * sstep(8.5, 7, e); // Hexi: spruce only up on the Qilian slopes
       for (const [kx, kz, kr] of pillars) if (Math.abs(x - kx) < kr && Math.abs(z - kz) < kr && Math.hypot(x - kx, z - kz) < kr * 0.8) fd = Math.max(fd, 0.9);
       forest[n] = clamp(fd, 0, 1);
     }
@@ -329,12 +369,13 @@
     const tA = mkTex(texA), tB = mkTex(texB), tD = mkTex(texD);
     const ownData = new Uint8Array(N * 4), tOwn = mkTex(ownData), bordData = new Uint8Array(N * 4), tBord = mkTex(bordData);
     function setOwners(colorOf, ownerOf2) {
-      const cols = provIds.map((id) => { const c = colorOf(id); return c ? [c.r, c.g, c.b, 1] : [0.45, 0.45, 0.42, 0]; });
-      const owner = provIds.map((id) => ownerOf2(id) || null);
+      const cols = [...provIds.map((id) => { const c = colorOf(id); return c ? [c.r, c.g, c.b, 1] : [0.45, 0.45, 0.42, 0]; }), [0, 0, 0, 0]]; // wasteland: black, alpha 0
+      const owner = [...provIds.map((id) => ownerOf2(id) || null), null];
       for (let n = 0; n < N; n++) {
-        const c = cols[provOf[n]], o = n * 4, same = owner[provOf[n]] === owner[prov2[n]], p = clamp(1 - border[n] / 2.5, 0, 1);
+        const c = cols[provOf[n]], o = n * 4, wild = provOf[n] === WILDI || prov2[n] === WILDI, same = owner[provOf[n]] === owner[prov2[n]] && !wild, p = clamp(1 - border[n] / 2.5, 0, 1);
         ownData[o] = b8(c[0]); ownData[o + 1] = b8(c[1]); ownData[o + 2] = b8(c[2]); ownData[o + 3] = b8(c[3]);
-        bordData[o] = b8(same ? 0 : p); bordData[o + 1] = b8(same ? p : 0);
+        // B: the edge of the wasteland, drawn in the map views only (up close it wanders over flat desert)
+        bordData[o] = b8(same || wild ? 0 : p); bordData[o + 1] = b8(same ? p : 0); bordData[o + 2] = b8(wild ? p : 0);
       }
       tOwn.needsUpdate = true; tBord.needsUpdate = true;
     }

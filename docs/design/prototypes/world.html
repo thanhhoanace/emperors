@@ -18,26 +18,30 @@
   const params = new URLSearchParams(location.search);
   const SHOT = params.get('shot') || 'overview';
   const W = 1440, H = 900;
-  const [world, cityDefs, baked] = await Promise.all([
+  // The world of autumn 219 (docs/product/scenario.md): 20 seats, owners from data/scenario/219.json, faction
+  // colours from data/world.json. Seats the year-200 world.json lacks carry their lonlat in cities.json (bake-map).
+  const [world, cityJson, sc, baked] = await Promise.all([
     fetch('/data/world.json').then((r) => r.json()),
-    fetch('/data/cities.json').then((r) => r.json()).then((j) => j.cities),
+    fetch('/data/cities.json').then((r) => r.json()),
+    fetch('/data/scenario/219.json').then((r) => r.json()),
     Terrain.loadBaked('/assets/map/'),
   ]);
   const loadMs = performance.now() - T0;
-  const MC = baked.meta.cities;
-  const PROV = {}, NEI = {}, CITY = {};
-  for (const p of world.provinces) { PROV[p.id] = [MC[p.id].x, MC[p.id].z]; NEI[p.id] = p.neighbors; CITY[p.id] = p.city; }
+  const alias = cityJson.alias || {}, cityDefs = new Proxy(cityJson.cities, { get: (t, k) => t[alias[k] || k] });
   const ownerOf = {}, seatOf = {}, FCOL = {};
-  for (const f of world.factions) { FCOL[f.id] = new THREE.Color(f.color); seatOf[f.id] = f.start.seat; for (const p of f.start.provinces) ownerOf[p] = f.id; }
+  for (const f of world.factions) FCOL[f.id] = new THREE.Color(f.color);
+  for (const [fid, st] of Object.entries(sc.factionsStart)) { seatOf[fid] = st.seat; for (const p of st.provinces) ownerOf[p] = fid; }
   const isSeat = (pid) => ownerOf[pid] && seatOf[ownerOf[pid]] === pid;
+  const MC = {}, PROV = {}, CITY = {};
+  for (const pid of [...Object.keys(ownerOf), ...Object.keys(sc.neutral)]) { MC[pid] = baked.meta.cities[pid]; PROV[pid] = [MC[pid].x, MC[pid].z]; CITY[pid] = cityDefs[pid].name; }
 
   // ---------------------------------------------------------------- views
   const orbit = (t, D, az, el) => [t[0] + D * Math.cos(el) * Math.sin(az), t[1] + D * Math.sin(el), t[2] + D * Math.cos(el) * Math.cos(az)];
   const CID = params.get('c') || 'jing', J = MC.jing;
   const cityView = (id) => { const c = MC[id], t = [c.x, c.y + 0.25, c.z], D = Number(params.get('d')) || 3 + c.r * 2.5; return { target: t, cam: orbit(t, D, Number(params.get('az') ?? 0.55), Number(params.get('el') ?? 0.6)), fov: 30, sun: [-0.62, 0.5, 0.4], focus: id, D }; };
   const view = {
-    overview: { target: [-15, 0, 28], cam: [5, 700, 478], fov: 34, sun: [-0.5, 0.5, -0.3] },
-    strategic: { target: [-20, 0, 0], cam: [-10, 980, 300], fov: 34, sun: [-0.5, 0.6, -0.3] },
+    overview: { target: [-22, 0, 22], cam: [-8, 800, 560], fov: 36, sun: [-0.5, 0.5, -0.3] }, // 219: the rim (Hexi, Longxi, Nanzhong) in frame
+    strategic: { target: [-12, 0, 22], cam: [-4, 1080, 330], fov: 36, sun: [-0.5, 0.6, -0.3] },
     region: { target: [40, 0, -60], cam: [95, 165, 105], fov: 34, sun: [-0.5, 0.45, -0.3] },
     campaign: { target: [J.x + 12, J.y, J.z - 13], cam: [J.x + 44, 25, J.z + 34], fov: 32, sun: [0.55, 0.4, -0.35], focus: 'jing' },
     city: cityView(CID),
@@ -51,8 +55,8 @@
 
   // ---------------------------------------------------------------- terrain
   // Han Great Wall (rammed loess), approximate line from Liaodong to Hexi
-  const WALL = [[122.5, 41.8], [120.0, 41.9], [117.5, 41.5], [115.0, 41.2], [113.0, 40.9], [111.0, 41.0], [109.0, 41.2], [107.5, 41.3], [106.5, 40.2], [105.8, 38.9], [104.5, 37.5], [102.8, 37.6], [101.0, 38.6], [99.0, 39.6]];
-  const terr = Terrain.createReal({ baked, provinces: PROV, neighbors: NEI, cities: MC, sun: sunDir, wall: WALL, canopy: 0.42 });
+  const WALL = [[122.5, 41.8], [120.0, 41.9], [117.5, 41.5], [115.0, 41.2], [113.0, 40.9], [111.0, 41.0], [109.0, 41.2], [107.5, 41.3], [106.5, 40.2], [105.8, 38.9], [104.5, 37.5], [103.4, 37.35], [103.15, 37.85], [102.95, 38.25], [102.3, 38.45], [101.0, 38.75], [99.0, 39.6]];
+  const terr = Terrain.createReal({ baked, provinces: PROV, neighbors: null, wild: Number(params.get('wild') || 40), cities: MC, sun: sunDir, wall: WALL, canopy: 0.42 });
   terr.setOwners((pid) => (ownerOf[pid] ? FCOL[ownerOf[pid]] : null), (pid) => ownerOf[pid]);
   const grass = Terrain.detailTexture(512);
   const waterNormals = Terrain.waterNormalTexture(256); waterNormals.repeat.set(160, 160);
@@ -64,6 +68,7 @@
   gu.uEdgeFog.value = cu.uEdgeFog.value = 1; cu.uCrownK.value = 3; // parcels and grass at the round-5 scale (a city is ~4 units)
   if (SHOT === 'strategic') { gu.uTint.value = 0.42; gu.uBorder.value = 1.0; gu.uBorderW.value = 1.2; cu.uTint.value = 0.3; }
   if (SHOT === 'overview') { gu.uBorder.value = 0.6; gu.uBorderW.value = 0.9; }
+  if (far || SHOT === 'region') cu.uTint.value = Math.max(cu.uTint.value, 0.02); // lets the wasteland edge show over forest too
   if (SHOT === 'region') { gu.uBorder.value = 0.7; gu.uBorderW.value = 0.4; }
   for (const k of ['uBorder', 'uBorderW']) cu[k].value = gu[k].value;
   cu.uCanopyBorder.value = far || SHOT === 'region' ? 1 : 0; // realm borders stay visible over forests
@@ -190,7 +195,13 @@
       const atD = (dist) => { let acc = 0; for (let k = 1; k < pts.length; k++) { acc += Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]); if (acc >= dist) return k; } return pts.length - 1; };
       for (let k = 0; k < 5; k++) { const i = atD(15 + k * 1.6), [x, z] = pts[i], [x2, z2] = pts[Math.max(0, i - 2)]; regiment('cao_cao', x, z, Math.atan2(x2 - x, z2 - z), 8, 7); }
       const [ax, az] = pts[atD(18)]; armyAnchors.cao_army = { x: ax, y: terr.h(ax, az) + 1.4, z: az };
-      for (let k = 0; k < 3; k++) { const i = atD(8.5 + k * 0.2), [x, z] = pts[i], [x2, z2] = pts[i + 3]; const nx = -(z2 - z), nz = x2 - x, l = Math.hypot(nx, nz) || 1; regiment('liu_bei', x + (nx / l) * (k - 1) * 1.3, z + (nz / l) * (k - 1) * 1.3, Math.atan2(x2 - x, z2 - z), 8, 5); }
+    }
+    // autumn 219: Guan Yu comes up the Han from Jiangling against Xiangyang and Fancheng (Cao relief from the north)
+    const south = terr.roads.find((r) => [r.a, r.b].sort().join() === 'jing,jing_nan');
+    if (south) {
+      const pts = south.a === 'jing' ? south.pts : south.pts.slice().reverse();
+      const atD = (dist) => { let acc = 0; for (let k = 1; k < pts.length; k++) { acc += Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]); if (acc >= dist) return k; } return pts.length - 1; };
+      for (let k = 0; k < 4; k++) { const i = atD(7 + k * 1.5), [x, z] = pts[i], [x2, z2] = pts[Math.max(0, i - 2)]; regiment('liu_bei', x, z, Math.atan2(x2 - x, z2 - z), 8, 6); }
       const [lx, lz] = pts[atD(8.5)]; armyAnchors.liu_army = { x: lx, y: terr.h(lx, lz) + 1.4, z: lz };
     }
     men.instanceMatrix.needsUpdate = true; men.instanceColor.needsUpdate = true; men.castShadow = true;

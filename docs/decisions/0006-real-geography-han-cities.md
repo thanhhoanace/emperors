@@ -1,6 +1,6 @@
 # 0006 — Bản đồ theo địa hình thật, thành trì theo khảo cổ Đông Hán
 
-**Trạng thái:** Đề xuất · 2026-09-25 (chờ chủ dự án duyệt cùng canvas vòng 5)
+**Trạng thái:** Chấp nhận · 2026-09-25. Chủ dự án chốt phần hình vòng 6 dựa trên hướng này; xem mục "Bổ sung vòng 6" ở cuối.
 
 ## Bối cảnh
 
@@ -47,3 +47,16 @@ Môi trường làm việc chặn Wikipedia, Baidu, dat.city, fandom/twdb (ảnh
   - Nghiệp Thành là của Viên Thiệu.
 - Chưa đối chiếu được với ảnh bản đồ TW3K và cách dat.city render, vì mạng bị chặn. Khi môi trường mở mạng (hoặc chủ dự án gửi ảnh chụp) thì so lại.
 - `data/world.json` đổi `geo` thành `lonlat` (kinh độ, vĩ độ thật). Prototype vòng 4 (`map.html`) giữ toạ độ cũ trong chính nó để còn render được.
+
+## Bổ sung vòng 6 (chủ dự án chốt 2026-09-25)
+
+- **Phạm vi hình:** lãnh thổ Trung Quốc ngày nay.
+  - Giao Chỉ, Lạc Lãng, Đại Uyển chỉ là nhãn "cửa Hán" ở mép bản đồ, không thêm đất.
+  - Không thêm châu có chủ: luật vẫn là 20 châu của kịch bản 219 (`decisions/0007`). Phần còn lại là đất hoang có tên.
+- **Tỉ lệ C:** đúng tỉ lệ 3 km/đơn vị trên toàn bộ; chi tiết giảm dần ra vùng biên; cao nguyên, sa mạc, rừng bắc là đất hoang, chỉ có vài hành lang đi qua; thu nhỏ hết cỡ thì chuyển sang bản đồ tranh. Chi tiết ở `docs/product/proposal-all-china.md`, mục 3 và 8.
+- **Phép chiếu Albers nón** (vĩ tuyến chuẩn 25° và 47°, kinh tuyến giữa 105°E) thay cho phép chiếu phẳng quanh 112°E ở mục 1. Bake toàn quốc sẽ chia ô và nướng sẵn mặt nạ.
+- **Thành theo năm 219**, không còn năm 200:
+  - Lạc Dương và Trường An đã dựng lại một phần sau loạn 190–195, không còn là phế tích.
+  - Thêm sáu thủ phủ mới của kịch bản: Thiên Thủy, Cô Tang, Chung Ly, Nam Trịnh, Giang Lăng, Điền Trì.
+  - Bốn chỗ lệch năm 200 nêu ở mục Hệ quả không còn là câu hỏi: kịch bản 219 khớp sử ở những chỗ đó.
+- Mạng của môi trường đã mở sau vòng 5. Dữ kiện thành được đối chiếu lại với Wikipedia, Commons và bài khảo cổ (`docs/research/cities.md`).

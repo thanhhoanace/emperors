@@ -1,5 +1,6 @@
 {
-  "_doc": "Layout of each city as it stood around 200 CE, for the renderer. Facts and sources: docs/design/history.md. Coordinates are kilometres relative to the city centre (data/world.json lonlat): x east, z south. The renderer scales each city uniformly so its longest side becomes 2.8 * km^0.8 world units.",
+  "_doc": "Layout of each city as it stood in autumn 219 CE (docs/product/scenario.md), for the renderer. Facts and sources: docs/design/history.md. Coordinates are kilometres relative to the city centre, x east, z south. The centre is data/world.json lonlat, or the entry's own lonlat for the 219 seats the year-200 world.json does not have yet. alias: 219 province id -> key of the same city here (guan is Chang'an, still keyed liang while the engine runs the year-200 world). houses < 1: only part of the walled area re-settled. The renderer scales each city uniformly so its longest side becomes 2.8 * km^0.8 world units.",
+  "alias": {"guan": "liang"},
   "cities": {
     "si_li": {
       "name": "Lạc Dương", "rank": "capital", "state": "ruined",
@@ -42,21 +43,24 @@
       "moat": {"sides": "nesw", "width": 0.045}
     },
     "ji": {
-      "name": "Nghiệp Thành", "rank": "provincial", "state": "intact", "era": "Viên Thiệu (Đồng Tước Đài chưa xây)",
+      "name": "Nghiệp Thành", "rank": "provincial", "state": "intact", "era": "Kinh đô nước Ngụy của Tào Tháo (Ngụy công 213, Ngụy vương 216); Tam Đài dựng 210–214",
       "outline": [[-1.2, -0.85], [1.2, -0.85], [1.2, 0.85], [-1.2, 0.85]],
       "gates": {"n": 2, "s": 3, "e": 1, "w": 1},
       "passages": 1, "que": "official",
       "palaces": [
-        {"name": "Châu phủ", "at": [0, -0.42], "size": [0.7, 0.55], "platform": 1.5}
+        {"name": "Cung Ngụy vương (Văn Xương điện)", "at": [0, -0.42], "size": [0.7, 0.55], "platform": 2}
       ],
       "features": [
         {"type": "avenueEW", "z": 0.12},
-        {"type": "garden", "at": [-0.8, -0.45], "size": [0.6, 0.5]}
+        {"type": "garden", "name": "Đồng Tước viên", "at": [-0.75, -0.4], "size": [0.6, 0.75]},
+        {"type": "platform", "name": "Băng Tỉnh Đài", "at": [-1.13, -0.79], "size": [0.07, 0.11], "height": 3.5},
+        {"type": "platform", "name": "Đồng Tước Đài", "at": [-1.14, -0.65], "size": [0.07, 0.12], "height": 4},
+        {"type": "platform", "name": "Kim Hổ Đài", "at": [-1.14, -0.49], "size": [0.07, 0.12], "height": 3.5}
       ],
       "river": {"sides": "n"}
     },
     "yu": {
-      "name": "Hứa Xương", "rank": "capital", "state": "intact", "era": "Kinh đô tạm của Hán Hiến Đế; vòng thành ngoài có thể do Tào Ngụy đắp sau",
+      "name": "Hứa Xương", "rank": "capital", "state": "intact", "era": "Kinh đô của Hán Hiến Đế từ 196, dưới quyền Tào Tháo",
       "outline": [[-0.95, -0.95], [0.95, -0.95], [0.95, 0.95], [-0.95, 0.95]],
       "gates": {"n": 2, "s": 2, "e": 2, "w": 2},
       "passages": 1, "que": "imperial",
@@ -89,23 +93,25 @@
       "river": {"sides": "ew"}
     },
     "jing": {
-      "name": "Tương Dương", "rank": "provincial", "state": "intact", "era": "Châu trị Kinh Châu của Lưu Biểu",
+      "name": "Tương Dương", "rank": "provincial", "state": "intact", "era": "Quận trị Tương Dương của Tào (Lã Thường giữ); thu 219 Quan Vũ vây Phàn Thành và Tương Dương, sông Hán tràn bờ",
       "outline": [[-0.75, -0.62], [0.75, -0.62], [0.75, 0.62], [-0.75, 0.62]],
       "gates": {"n": 1, "s": 1, "e": 1, "w": 1},
       "passages": 1, "que": "official",
       "moat": {"sides": "ews", "width": 0.14},
       "palaces": [
-        {"name": "Châu phủ Lưu Biểu", "at": [0, -0.1], "size": [0.5, 0.4], "platform": 1.5}
+        {"name": "Phủ quận (phủ cũ của Lưu Biểu)", "at": [0, -0.1], "size": [0.5, 0.4], "platform": 1.5}
       ],
       "features": [
         {"type": "twinTown", "name": "Phàn Thành", "at": [0.15, -1.55], "size": [0.45, 0.4]},
         {"type": "harbour", "side": "n"},
-        {"type": "platform", "name": "Cảnh Thăng đài", "at": [1.2, -0.5], "size": [0.08, 0.08], "height": 2}
+        {"type": "platform", "name": "Cảnh Thăng đài", "at": [1.2, -0.5], "size": [0.08, 0.08], "height": 2},
+        {"type": "mound", "name": "Mộ Lưu Biểu", "at": [1.03, 0.05], "size": [0.08, 0.08], "height": 0.6},
+        {"type": "blockade", "name": "Thuyền Quan Vũ", "at": [0.15, -1.0], "ships": 8}
       ],
       "river": {"sides": "ne"}
     },
     "yang": {
-      "name": "Kiến Nghiệp", "rank": "provincial", "state": "intact", "era": "Dáng năm 212 (năm 200 chưa có)",
+      "name": "Kiến Nghiệp", "rank": "provincial", "state": "intact", "era": "Trị sở của Tôn Quyền từ 211; đổi tên Kiến Nghiệp và đắp Thạch Đầu năm 212",
       "outline": [[-1.1, -0.95], [1.1, -0.95], [1.1, 0.95], [-1.1, 0.95]],
       "wallType": "palisade",
       "gates": {"n": 1, "s": 2, "e": 1, "w": 1},
@@ -122,13 +128,11 @@
       "river": {"sides": "w"}
     },
     "jiang": {
-      "name": "Hạ Khẩu", "rank": "fort", "state": "intact", "era": "Đồn Khước Nguyệt của Hoàng Tổ",
+      "name": "Hạ Khẩu", "rank": "fort", "state": "intact", "era": "Đồn Khước Nguyệt ở cửa sông Hán; Ngô giữ, Tôn Kiểu đốc Hạ Khẩu (thành trên núi Hoàng Hộc chưa xây)",
       "outline": [[-0.35, -0.25], [0.1, -0.35], [0.4, -0.15], [0.45, 0.15], [0.2, 0.3], [0.25, 0.1], [0.1, -0.05], [-0.15, 0.0], [-0.35, 0.2]],
       "gates": {"n": 0, "s": 1, "e": 1, "w": 0},
       "passages": 1, "que": "none",
-      "palaces": [
-
-      ],
+      "palaces": [],
       "features": [
         {"type": "watchtower", "at": [0.3, 0.0]},
         {"type": "harbour", "side": "n"}
@@ -136,7 +140,7 @@
       "river": {"sides": "ne"}
     },
     "yi": {
-      "name": "Thành Đô", "rank": "provincial", "state": "intact",
+      "name": "Thành Đô", "rank": "provincial", "state": "intact", "era": "Trị sở của Lưu Bị từ 214; Hán Trung vương từ thu 219",
       "outline": [[0, -0.72], [0.64, -0.81], [0.85, -0.34], [0.81, 0.3], [0.6, 0.68], [0, 0.64]],
       "rotation": 30,
       "gates": {"n": 2, "s": 3, "e": 3, "w": 0},
@@ -154,36 +158,33 @@
       "river": {"sides": "s"}
     },
     "jiao": {
-      "name": "Phiên Ngung", "rank": "provincial", "state": "intact",
+      "name": "Phiên Ngung", "rank": "provincial", "state": "intact", "era": "Châu trị Giao Châu từ 217: Bộ Chất dời châu về, đắp lại tường cũ của Triệu Đà",
       "outline": [[-0.25, -0.4], [0.25, -0.4], [0.25, 0.4], [-0.25, 0.4]],
       "gates": {"n": 1, "s": 1, "e": 1, "w": 1},
       "passages": 1, "que": "official",
       "palaces": [
-        {"name": "Quận phủ", "at": [0, -0.2], "size": [0.35, 0.3], "platform": 1.5}
+        {"name": "Châu phủ Giao Châu", "at": [0, -0.2], "size": [0.35, 0.3], "platform": 1.5}
       ],
       "features": [
         {"type": "garden", "at": [-0.12, 0.2], "size": [0.2, 0.15]},
         {"type": "harbour", "side": "s"}
       ],
-      "river": {"sides": "ews"},
-      "era": "Quận trị Nam Hải (Sĩ Vũ); châu trị Giao Châu từ 217"
+      "river": {"sides": "ews"}
     },
     "bing": {
-      "name": "Tấn Dương", "rank": "provincial", "state": "intact",
+      "name": "Tấn Dương", "rank": "provincial", "state": "intact", "era": "Quận trị Thái Nguyên; Tịnh Châu đã nhập vào Ký Châu năm 213",
       "outline": [[-1.35, -1.35], [1.35, -1.35], [1.35, 1.35], [-1.35, 1.35]],
       "gates": {"n": 1, "s": 2, "e": 2, "w": 1},
       "passages": 1, "que": "official",
       "palaces": [
         {"name": "Châu phủ", "at": [-0.2, -0.3], "size": [0.6, 0.5], "platform": 1.5}
       ],
-      "features": [
-
-      ],
+      "features": [],
       "river": {"sides": "e"},
       "moat": {"sides": "swn", "width": 0.04}
     },
     "you": {
-      "name": "Kế Thành", "rank": "provincial", "state": "intact",
+      "name": "Kế Thành", "rank": "provincial", "state": "intact", "era": "Quận trị Quảng Dương; U Châu đã nhập vào Ký Châu năm 213",
       "outline": [[-1.45, -1.85], [1.45, -1.85], [1.45, 1.85], [-1.45, 1.85]],
       "gates": {"n": 1, "s": 2, "e": 1, "w": 1},
       "passages": 1, "que": "official",
@@ -220,6 +221,72 @@
         {"type": "hill", "name": "Hộ Bộ sơn · Hí Mã Đài", "at": [0.1, 1.35], "size": [0.45, 0.35], "height": 1.6, "terrace": true}
       ],
       "river": {"sides": "ne"}
+    },
+    "longxi": {
+      "name": "Ký thành", "rank": "provincial", "state": "intact",
+      "lonlat": [105.33, 34.76],
+      "outline": [[-0.7, -0.6], [0.7, -0.6], [0.7, 0.6], [-0.7, 0.6]],
+      "gates": {"n": 1, "s": 1, "e": 1, "w": 1},
+      "passages": 1, "que": "official",
+      "palaces": [
+        {"name": "Quận phủ", "at": [0, -0.1], "size": [0.4, 0.3], "platform": 1.5}
+      ],
+      "features": []
+    },
+    "hexi": {
+      "name": "Cô Tang", "rank": "provincial", "state": "intact",
+      "lonlat": [102.64, 37.93],
+      "outline": [[-0.7, -0.6], [0.7, -0.6], [0.7, 0.6], [-0.7, 0.6]],
+      "gates": {"n": 1, "s": 1, "e": 1, "w": 1},
+      "passages": 1, "que": "official",
+      "palaces": [
+        {"name": "Quận phủ", "at": [0, -0.1], "size": [0.4, 0.3], "platform": 1.5}
+      ],
+      "features": []
+    },
+    "huai": {
+      "name": "Chung Ly", "rank": "provincial", "state": "intact",
+      "lonlat": [117.66, 32.93],
+      "outline": [[-0.7, -0.6], [0.7, -0.6], [0.7, 0.6], [-0.7, 0.6]],
+      "gates": {"n": 1, "s": 1, "e": 1, "w": 1},
+      "passages": 1, "que": "official",
+      "palaces": [
+        {"name": "Quận phủ", "at": [0, -0.1], "size": [0.4, 0.3], "platform": 1.5}
+      ],
+      "features": []
+    },
+    "han_zhong": {
+      "name": "Nam Trịnh", "rank": "provincial", "state": "intact",
+      "lonlat": [107.03, 33.07],
+      "outline": [[-0.7, -0.6], [0.7, -0.6], [0.7, 0.6], [-0.7, 0.6]],
+      "gates": {"n": 1, "s": 1, "e": 1, "w": 1},
+      "passages": 1, "que": "official",
+      "palaces": [
+        {"name": "Quận phủ", "at": [0, -0.1], "size": [0.4, 0.3], "platform": 1.5}
+      ],
+      "features": []
+    },
+    "jing_nan": {
+      "name": "Giang Lăng", "rank": "provincial", "state": "intact",
+      "lonlat": [112.19, 30.35],
+      "outline": [[-0.7, -0.6], [0.7, -0.6], [0.7, 0.6], [-0.7, 0.6]],
+      "gates": {"n": 1, "s": 1, "e": 1, "w": 1},
+      "passages": 1, "que": "official",
+      "palaces": [
+        {"name": "Quận phủ", "at": [0, -0.1], "size": [0.4, 0.3], "platform": 1.5}
+      ],
+      "features": []
+    },
+    "nanzhong": {
+      "name": "Điền Trì", "rank": "provincial", "state": "intact",
+      "lonlat": [102.75, 24.7],
+      "outline": [[-0.7, -0.6], [0.7, -0.6], [0.7, 0.6], [-0.7, 0.6]],
+      "gates": {"n": 1, "s": 1, "e": 1, "w": 1},
+      "passages": 1, "que": "official",
+      "palaces": [
+        {"name": "Quận phủ", "at": [0, -0.1], "size": [0.4, 0.3], "platform": 1.5}
+      ],
+      "features": []
     }
   }
 }

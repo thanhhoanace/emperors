@@ -102,13 +102,50 @@ const sampleH = (g, h, x, z) => { const fx = Math.max(0, Math.min(g.nx - 1.001, 
 const inFine = (x, z) => x >= FINE.x0 && x <= FINE.x0 + FINE.w && z >= FINE.z0 && z <= FINE.z0 + FINE.d;
 const heightAtWorld = (x, z) => (inFine(x, z) ? sampleH(FINE, fine, x, z) : sampleH(COARSE, coarse, x, z));
 
+// Lakes Natural Earth 10m lacks, traced from the DEM before any carving: flood the flat water surface from a
+// seed inside the lake (+2 m ≈ today's shore), then contour the flooded cells (marching squares, longest loop).
+const DEM_LAKES = [{ name: 'Điền Trì', lon: 102.7, lat: 24.84, rise: 0.006 }]; // Dian lake, 1886 m, ~300 km²
+const demLakes = DEM_LAKES.map((L) => {
+  const g = FINE, [sx, sz] = toWorld(L.lon, L.lat), s0 = Math.round((sz - g.z0) / g.step) * g.nx + Math.round((sx - g.x0) / g.step);
+  const top = fine[s0] + L.rise, wet = new Uint8Array(g.nx * g.nz), stack = [s0];
+  while (stack.length) {
+    const n = stack.pop(), i = n % g.nx; if (wet[n] || fine[n] > top || i === 0 || i === g.nx - 1 || n < g.nx || n >= g.nx * (g.nz - 1)) continue;
+    wet[n] = 1; stack.push(n - 1, n + 1, n - g.nx, n + g.nx);
+  }
+  const P = (i, j) => wet[j * g.nx + i], adj = new Map(), key = (x, z) => x * 2 + ',' + z * 2;
+  const link = (a, b) => { for (const [u, v] of [[a, b], [b, a]]) { const k = key(...u); if (!adj.has(k)) adj.set(k, { p: u, n: [] }); adj.get(k).n.push(key(...v)); } };
+  const SEG = { 1: [['L', 'B']], 2: [['B', 'R']], 3: [['L', 'R']], 4: [['T', 'R']], 5: [['T', 'R'], ['L', 'B']], 6: [['T', 'B']], 7: [['T', 'L']], 8: [['T', 'L']], 9: [['T', 'B']], 10: [['T', 'L'], ['B', 'R']], 11: [['T', 'R']], 12: [['L', 'R']], 13: [['R', 'B']], 14: [['L', 'B']] };
+  for (let j = 0; j < g.nz - 1; j++) for (let i = 0; i < g.nx - 1; i++) {
+    const c = P(i, j) * 8 + P(i + 1, j) * 4 + P(i + 1, j + 1) * 2 + P(i, j + 1);
+    const m = { T: [i + 0.5, j], R: [i + 1, j + 0.5], B: [i + 0.5, j + 1], L: [i, j + 0.5] };
+    for (const [a, b] of SEG[c] || []) link(m[a], m[b]);
+  }
+  let best = [];
+  const seen = new Set();
+  for (const [k0] of adj) {
+    if (seen.has(k0)) continue;
+    const loop = []; let prev = null, k = k0;
+    while (k && !seen.has(k)) { seen.add(k); const v = adj.get(k); loop.push(v.p); const nx = v.n.find((q) => q !== prev && !seen.has(q)); prev = k; k = nx; }
+    if (loop.length > best.length) best = loop;
+  }
+  let ring = best.map(([i, j]) => [g.x0 + i * g.step, g.z0 + j * g.step]);
+  for (let k = 0; k < 2; k++) ring = ring.flatMap(([ax, az], n) => { const [bx, bz] = ring[(n + 1) % ring.length]; return [[ax * 0.75 + bx * 0.25, az * 0.75 + bz * 0.25], [ax * 0.25 + bx * 0.75, az * 0.25 + bz * 0.75]]; });
+  ring = ring.filter((_, n) => n % 3 === 0); ring.push(ring[0]);
+  console.log('lake', L.name, (wet.reduce((a, b) => a + b, 0) * g.step * g.step * KM_PER_UNIT ** 2).toFixed(0), 'km²,', ring.length, 'shore points');
+  return { name: L.name, ring };
+});
+
 // ---------------------------------------------------------------- rivers
 console.log('rivers…');
 const world = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'world.json'), 'utf8'));
-const cityDefs = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'cities.json'), 'utf8')).cities;
+const cityJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'cities.json'), 'utf8')), cityDefs = cityJson.cities;
 // Each city is drawn larger than life (like every strategy map): longest side L km → 2.8·L^0.8 units.
 const cityScale = (L) => (2.8 * Math.pow(L, 0.8)) / L;
-const cities = world.provinces.map((p) => {
+// Seats: the provinces of data/world.json (year 200, what the engine runs), plus the 219 seats that carry their
+// own lonlat in data/cities.json until the engine imports the 219 scenario. Aliases (a 219 id for a city already
+// listed, e.g. guan → Chang'an) share that city's pad in meta.json.
+const seats = [...world.provinces, ...Object.entries(cityDefs).filter(([id, d]) => d.lonlat && !world.provinces.some((p) => p.id === id)).map(([id, d]) => ({ id, lonlat: d.lonlat }))];
+const cities = seats.map((p) => {
   const def = cityDefs[p.id];
   // footprint: walls, inner cities and the features that stand on the city's own ground (not twin towns or forts)
   const near = (def.features || []).filter((f) => f.at && ['platform', 'mound', 'hill', 'granary', 'garden', 'market', 'ironworks', 'watchtower'].includes(f.type)).map((f) => f.at);
@@ -134,11 +171,14 @@ const EXTRA_RIVERS = [
   { name: 'Pi', hw: 0.35, ll: [[103.62, 31.0], [103.83, 30.84], [103.98, 30.7], [104.07, 30.645], [104.12, 30.61], [104.0, 30.4], [103.87, 30.2]] },
   { name: 'Jian', hw: 0.35, ll: [[103.66, 30.95], [103.88, 30.76], [104.02, 30.63], [104.12, 30.61]] },
   { name: 'Zhu', hw: 1.3, ll: [[112.85, 23.15], [113.05, 23.12], [113.27, 23.105], [113.45, 23.09], [113.58, 22.93], [113.65, 22.78]] },
+  // Shiyang: Qilian meltwater that made the Guzang (Wuwei) oasis, out to the Minqin marshes
+  { name: 'Shiyang', hw: 0.3, ll: [[102.42, 37.5], [102.55, 37.7], [102.66, 37.86], [102.72, 38.0], [102.85, 38.2], [103.0, 38.42], [103.1, 38.62]] },
 ];
 for (const r of EXTRA_RIVERS) lines.push({ name: r.name, rank: 9, hw: r.hw, silt: !!r.silt, pts: r.ll.map(([lon, lat]) => toWorld(lon, lat)) });
 for (const f of rivGeo.features) {
   if (!f.geometry || f.properties.featurecla === 'Lake Centerline') continue;
   const name = f.properties.name || '', rank = f.properties.scalerank;
+  if (name === 'Hudi') continue; // modern Huai channels: a near-duplicate of the main stream past Zhongli, and the 1851 outlet via Gaoyou to the Yangtze
   const parts = f.geometry.type === 'LineString' ? [f.geometry.coordinates] : f.geometry.coordinates;
   for (const part of parts) {
     const w = part.map(([lon, lat]) => toWorld(lon, lat));
@@ -148,6 +188,7 @@ for (const f of rivGeo.features) {
     if (lon < 99 || lon > 126.5) continue; // Tibet/Myanmar/Korea rivers are beyond the play area
     let hw = HW[rank] ?? 0.4;
     if (name === 'Jinsha') hw = 0.9;
+    if (name === 'Nanpan' && lon < 104.5) hw = 0.45; // headwaters on the Yunnan plateau, not the lower river
     if (name === 'Chang Jiang' || name === 'Yangtze') hw = lon > 111 ? 2.0 : 1.3;
     if (rank >= 8 && !inFine(...w[Math.floor(w.length / 2)])) continue; // small rivers only on the playable map
     lines.push({ name, rank, hw, silt: SILT.has(name), pts: w });
@@ -244,31 +285,34 @@ carve(COARSE, coarse);
 const KEEP_LAKES = /Dongting|Poyang|Boyang|Tai Hu|Taihu|^Tai$|Chao/i;
 const lakeGeo = JSON.parse(fs.readFileSync(path.join(CACHE, 'ne_10m_lakes.geojson'), 'utf8'));
 const lakes = [];
+function addLake(name, ring) {
+  const shore = ring.map(([x, z]) => heightAtWorld(x, z)).sort((a, b) => a - b);
+  const level = Math.max(0.05, shore[Math.floor(shore.length * 0.15)] - 0.05);
+  lakes.push({ name, level: +level.toFixed(3), ring: ring.map(([x, z]) => [+x.toFixed(2), +z.toFixed(2)]) });
+  // carve the basin: depth grows away from the shore
+  for (const [g, h] of [[FINE, fine], [COARSE, coarse]]) {
+    const xs = ring.map((p) => p[0]), zs = ring.map((p) => p[1]);
+    for (let j = Math.floor((Math.min(...zs) - g.z0) / g.step); j <= Math.ceil((Math.max(...zs) - g.z0) / g.step); j++)
+      for (let i = Math.floor((Math.min(...xs) - g.x0) / g.step); i <= Math.ceil((Math.max(...xs) - g.x0) / g.step); i++) {
+        if (i < 0 || j < 0 || i >= g.nx || j >= g.nz) continue;
+        const x = g.x0 + i * g.step, z = g.z0 + j * g.step;
+        let inside = false; for (let a = 0, b = ring.length - 1; a < ring.length; b = a++) { const [xa, za] = ring[a], [xb, zb] = ring[b]; if ((za > z) !== (zb > z) && x < ((xb - xa) * (z - za)) / (zb - za) + xa) inside = !inside; }
+        if (!inside) continue;
+        let dmin = 1e9; for (let a = 0; a < ring.length - 1; a++) { const [xa, za] = ring[a], [xb, zb] = ring[a + 1], dx = xb - xa, dz = zb - za, tt = Math.max(0, Math.min(1, ((x - xa) * dx + (z - za) * dz) / (dx * dx + dz * dz || 1))); dmin = Math.min(dmin, Math.hypot(x - xa - dx * tt, z - za - dz * tt)); }
+        const n = j * g.nx + i; h[n] = Math.min(h[n], level - 0.15 - Math.min(1.2, dmin * 0.25));
+      }
+  }
+}
 for (const f of lakeGeo.features) {
   const name = f.properties.name || '';
   if (!f.geometry || !KEEP_LAKES.test(name)) continue;
   const polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
   for (const poly of polys) {
     const ring = poly[0].map(([lon, lat]) => toWorld(lon, lat));
-    if (!ring.every(([x, z]) => inFine(x, z))) continue;
-    const shore = ring.map(([x, z]) => heightAtWorld(x, z)).sort((a, b) => a - b);
-    const level = Math.max(0.05, shore[Math.floor(shore.length * 0.15)] - 0.05);
-    lakes.push({ name, level: +level.toFixed(3), ring: ring.map(([x, z]) => [+x.toFixed(2), +z.toFixed(2)]) });
-    // carve the basin: depth grows away from the shore
-    for (const [g, h] of [[FINE, fine], [COARSE, coarse]]) {
-      const xs = ring.map((p) => p[0]), zs = ring.map((p) => p[1]);
-      for (let j = Math.floor((Math.min(...zs) - g.z0) / g.step); j <= Math.ceil((Math.max(...zs) - g.z0) / g.step); j++)
-        for (let i = Math.floor((Math.min(...xs) - g.x0) / g.step); i <= Math.ceil((Math.max(...xs) - g.x0) / g.step); i++) {
-          if (i < 0 || j < 0 || i >= g.nx || j >= g.nz) continue;
-          const x = g.x0 + i * g.step, z = g.z0 + j * g.step;
-          let inside = false; for (let a = 0, b = ring.length - 1; a < ring.length; b = a++) { const [xa, za] = ring[a], [xb, zb] = ring[b]; if ((za > z) !== (zb > z) && x < ((xb - xa) * (z - za)) / (zb - za) + xa) inside = !inside; }
-          if (!inside) continue;
-          let dmin = 1e9; for (let a = 0; a < ring.length - 1; a++) { const [xa, za] = ring[a], [xb, zb] = ring[a + 1], dx = xb - xa, dz = zb - za, tt = Math.max(0, Math.min(1, ((x - xa) * dx + (z - za) * dz) / (dx * dx + dz * dz || 1))); dmin = Math.min(dmin, Math.hypot(x - xa - dx * tt, z - za - dz * tt)); }
-          const n = j * g.nx + i; h[n] = Math.min(h[n], level - 0.15 - Math.min(1.2, dmin * 0.25));
-        }
-    }
+    if (ring.every(([x, z]) => inFine(x, z))) addLake(name, ring);
   }
 }
+for (const l of demLakes) addLake(l.name, l.ring);
 
 // small historical lakes Natural Earth does not carry (ellipses in lon/lat)
 for (const e of [{ name: 'Đại Dã trạch', lon: 116.05, lat: 35.47, rx: 0.16, ry: 0.1 }, { name: 'Tây hồ (Kế)', lon: 116.27, lat: 39.88, rx: 0.035, ry: 0.025 }]) {
@@ -314,7 +358,8 @@ fs.writeFileSync(path.join(OUT, 'meta.json'), JSON.stringify({
   projection: { lon0: LON0, lat0: LAT0, kmPerUnit: KM_PER_UNIT, unitsPerDegLon: +KX.toFixed(5), unitsPerDegLat: +KZ.toFixed(5), note: 'x = (lon - lon0) * unitsPerDegLon, z = (lat0 - lat) * unitsPerDegLat' },
   height: { step: Q, encoding: 'delta2d-zigzag-planes-gzip', landFormula: 'h = 0.1 + metres * 0.003; sea = metres * 0.008', fine: FINE, coarse: COARSE },
   sources: ['AWS Terrain Tiles (terrarium, z7) — Mapzen/Tilezen: SRTM, ETOPO1, GMTED2010 and others; attribution per tilezen/joerd', 'Natural Earth 10m rivers and lakes (public domain)'],
-  history: ['Huai river routed to the Yellow Sea (pre-1128 course); Hongze Lake removed', 'Only Dongting, Poyang, Tai and Chao lakes kept', 'Added Luo, Zi, Si, Bian, He canal, Chengdu Pi/Jian, Guangzhou Pearl channel; Daye marsh, Ji West Lake'],
-  cities: Object.fromEntries(cities.map((c) => [c.id, { x: +c.x.toFixed(2), z: +c.z.toFixed(2), y: +c.y.toFixed(3), r: c.r, scale: c.scale }])),
+  history: ['Huai river routed to the Yellow Sea (pre-1128 course); Hongze Lake removed', 'Only Dongting, Poyang, Tai and Chao lakes kept (plus Dian lake traced from the DEM)', 'Modern Huai side channels (Natural Earth "Hudi") dropped', 'Added Luo, Zi, Si, Bian, He canal, Chengdu Pi/Jian, Guangzhou Pearl channel, Shiyang (Wuwei); Daye marsh, Ji West Lake'],
+  cities: Object.fromEntries([...cities.map((c) => [c.id, { x: +c.x.toFixed(2), z: +c.z.toFixed(2), y: +c.y.toFixed(3), r: c.r, scale: c.scale }]),
+    ...Object.entries(cityJson.alias || {}).map(([a, b]) => { const c = cities.find((q) => q.id === b); return [a, { x: +c.x.toFixed(2), z: +c.z.toFixed(2), y: +c.y.toFixed(3), r: c.r, scale: c.scale, alias: b }]; })]),
 }, null, 1));
 console.log('fine', FINE.nx, 'x', FINE.nz, 'coarse', COARSE.nx, 'x', COARSE.nz, 'rivers', rivers.length, 'lakes', lakes.length);
