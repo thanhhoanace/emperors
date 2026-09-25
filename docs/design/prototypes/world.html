@@ -18,22 +18,19 @@
   const params = new URLSearchParams(location.search);
   const SHOT = params.get('shot') || 'overview';
   const W = 1440, H = 900;
-  // The world of autumn 219 (docs/product/scenario.md): 20 seats, owners from data/scenario/219.json, faction
-  // colours from data/world.json. Seats the year-200 world.json lacks carry their lonlat in cities.json (bake-map).
-  const [world, cityJson, sc, baked] = await Promise.all([
+  // The world of autumn 219: seats, neighbours and owners from data/world.json (the engine's world; the year-200 world in
+  // data/archive is never loaded), city layouts from data/cities.json.
+  const [world, cityDefs, baked] = await Promise.all([
     fetch('/data/world.json').then((r) => r.json()),
-    fetch('/data/cities.json').then((r) => r.json()),
-    fetch('/data/scenario/219.json').then((r) => r.json()),
+    fetch('/data/cities.json').then((r) => r.json()).then((j) => j.cities),
     Terrain.loadBaked('/assets/map/'),
   ]);
   const loadMs = performance.now() - T0;
-  const alias = cityJson.alias || {}, cityDefs = new Proxy(cityJson.cities, { get: (t, k) => t[alias[k] || k] });
+  const MC = baked.meta.cities, PROV = {}, NEI = {}, CITY = {};
+  for (const p of world.provinces) { PROV[p.id] = [MC[p.id].x, MC[p.id].z]; NEI[p.id] = p.neighbors; CITY[p.id] = p.city; }
   const ownerOf = {}, seatOf = {}, FCOL = {};
-  for (const f of world.factions) FCOL[f.id] = new THREE.Color(f.color);
-  for (const [fid, st] of Object.entries(sc.factionsStart)) { seatOf[fid] = st.seat; for (const p of st.provinces) ownerOf[p] = fid; }
+  for (const f of world.factions) { FCOL[f.id] = new THREE.Color(f.color); seatOf[f.id] = f.start.seat; for (const p of f.start.provinces) ownerOf[p] = f.id; }
   const isSeat = (pid) => ownerOf[pid] && seatOf[ownerOf[pid]] === pid;
-  const MC = {}, PROV = {}, CITY = {};
-  for (const pid of [...Object.keys(ownerOf), ...Object.keys(sc.neutral)]) { MC[pid] = baked.meta.cities[pid]; PROV[pid] = [MC[pid].x, MC[pid].z]; CITY[pid] = cityDefs[pid].name; }
 
   // ---------------------------------------------------------------- views
   const orbit = (t, D, az, el) => [t[0] + D * Math.cos(el) * Math.sin(az), t[1] + D * Math.sin(el), t[2] + D * Math.cos(el) * Math.cos(az)];
@@ -56,7 +53,7 @@
   // ---------------------------------------------------------------- terrain
   // Han Great Wall (rammed loess), approximate line from Liaodong to Hexi
   const WALL = [[122.5, 41.8], [120.0, 41.9], [117.5, 41.5], [115.0, 41.2], [113.0, 40.9], [111.0, 41.0], [109.0, 41.2], [107.5, 41.3], [106.5, 40.2], [105.8, 38.9], [104.5, 37.5], [103.4, 37.35], [103.15, 37.85], [102.95, 38.25], [102.3, 38.45], [101.0, 38.75], [99.0, 39.6]];
-  const terr = Terrain.createReal({ baked, provinces: PROV, neighbors: null, wild: Number(params.get('wild') || 40), cities: MC, sun: sunDir, wall: WALL, canopy: 0.42 });
+  const terr = Terrain.createReal({ baked, provinces: PROV, neighbors: NEI, wild: Number(params.get('wild') || 40), cities: MC, sun: sunDir, wall: WALL, canopy: 0.42 });
   terr.setOwners((pid) => (ownerOf[pid] ? FCOL[ownerOf[pid]] : null), (pid) => ownerOf[pid]);
   const grass = Terrain.detailTexture(512);
   const waterNormals = Terrain.waterNormalTexture(256); waterNormals.repeat.set(160, 160);

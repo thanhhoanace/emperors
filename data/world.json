@@ -63,7 +63,7 @@
     {"id":"hexi","name":"Hà Tây","city":"Cô Tang","terrain":"desert","fertility":3,"population":18,"defense":1.1,"river":true,"north":true,"strategic":true,"lonlat":[102.637,37.927],"neighbors":["longxi"]},
     {"id":"huai","name":"Hoài","city":"Chung Ly","terrain":"plains","fertility":7,"population":32,"defense":1.05,"river":true,"north":false,"strategic":true,"lonlat":[117.674,32.909],"neighbors":["xu","yan","yu","yang"]},
     {"id":"you","name":"U","city":"Kế Thành","terrain":"plains","fertility":4,"population":30,"defense":1.05,"river":false,"north":true,"strategic":false,"lonlat":[116.35,39.88],"neighbors":["ji","bing"]},
-    {"id":"nanzhong","name":"Nam Trung","city":"Điền Trì","terrain":"jungle","fertility":5,"population":22,"defense":1.2,"river":false,"north":false,"strategic":false,"lonlat":[102.712,24.879],"neighbors":["yi"]},
+    {"id":"nanzhong","name":"Nam Trung","city":"Điền Trì","terrain":"jungle","fertility":5,"population":22,"defense":1.2,"river":false,"north":false,"strategic":false,"lonlat":[102.698,24.711],"neighbors":["yi"]},
     {"id":"jiao","name":"Giao","city":"Phiên Ngung","terrain":"jungle","fertility":6,"population":30,"defense":1.15,"river":true,"north":false,"strategic":false,"lonlat":[113.27,23.128],"neighbors":["jing_nan","yang"]}
   ],
   "neutral": {

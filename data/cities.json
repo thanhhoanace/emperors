@@ -1,9 +1,8 @@
 {
-  "_doc": "Layout of each city as it stood in autumn 219 CE (docs/product/scenario.md), for the renderer. Facts and sources: docs/design/history.md. Coordinates are kilometres relative to the city centre, x east, z south. The centre is data/world.json lonlat, or the entry's own lonlat for the 219 seats the year-200 world.json does not have yet. alias: 219 province id -> key of the same city here (guan is Chang'an, still keyed liang while the engine runs the year-200 world). houses < 1: only part of the walled area re-settled. The renderer scales each city uniformly so its longest side becomes 2.8 * km^0.8 world units.",
-  "alias": {"guan": "liang"},
+  "_doc": "Layout of each city as it stood in autumn 219 CE (docs/product/scenario.md), for the renderer, keyed by province id of data/world.json. Facts and sources: docs/design/history.md. Coordinates are kilometres relative to the city centre (data/world.json lonlat), x east, z south. houses < 1: only part of the walled area re-settled. The renderer scales each city uniformly so its longest side becomes 2.8 * km^0.8 world units.",
   "cities": {
     "si_li": {
-      "name": "Lạc Dương", "rank": "capital", "state": "intact", "era": "Hồi sinh một phần: tường, cổng đã vá; Nam cung, Bắc cung vẫn là nền cháy từ năm 190; tháng 10/219 Tào Tháo về đóng, khởi công điện Kiến Thủy",
+      "name": "Lạc Dương", "rank": "capital", "state": "intact", "era": "Hồi sinh một phần: tường, cổng đã vá; Nam cung, Bắc cung vẫn là nền cháy từ năm 190; đang dọn nền điện Kiến Thủy trong Bắc cung",
       "outline": [[-1.3, -1.95], [-0.2, -1.95], [0.1, -1.85], [1.3, -1.85], [1.3, 1.95], [-1.3, 1.95]],
       "gates": {"n": 2, "s": 4, "e": 3, "w": 3},
       "passages": 3, "que": "imperial",
@@ -26,7 +25,7 @@
       ],
       "houses": 0.3
     },
-    "liang": {
+    "guan": {
       "name": "Trường An", "rank": "capital", "state": "intact", "era": "Hành dinh của Tào Tháo (9/218 – 10/219) sau trận Hán Trung; cung Hán vẫn là phế tích từ năm 195, dân ở phía bắc và đông bắc",
       "outline": [[-3.0, -1.5], [-2.15, -2.1], [-1.0, -2.1], [-1.0, -2.45], [-0.3, -2.45], [0.85, -3.2], [1.0, -3.45], [3.25, -3.5], [3.25, 2.5], [0.65, 2.5], [0.65, 3.5], [-0.35, 3.5], [-0.35, 3.3], [-3.25, 3.3], [-3.25, 0.95], [-3.0, 0.95]],
       "gates": {"n": 3, "s": 3, "e": 3, "w": 3},
@@ -159,12 +158,12 @@
       "river": {"sides": "s"}
     },
     "jiao": {
-      "name": "Phiên Ngung", "rank": "provincial", "state": "intact", "era": "Châu trị Giao Châu từ 217: Bộ Chất dời châu về, đắp lại tường cũ của Triệu Đà",
+      "name": "Phiên Ngung", "rank": "provincial", "state": "intact", "era": "Quận trị Nam Hải; Giao Châu trong tay nhà Sĩ (Sĩ Nhiếp giữ Giao Chỉ, anh em họ Sĩ giữ các quận)",
       "outline": [[-0.25, -0.4], [0.25, -0.4], [0.25, 0.4], [-0.25, 0.4]],
       "gates": {"n": 1, "s": 1, "e": 1, "w": 1},
       "passages": 1, "que": "official",
       "palaces": [
-        {"name": "Châu phủ Giao Châu", "at": [0, -0.2], "size": [0.35, 0.3], "platform": 1.5}
+        {"name": "Phủ quận Nam Hải", "at": [0, -0.2], "size": [0.35, 0.3], "platform": 1.5}
       ],
       "features": [
         {"type": "garden", "at": [-0.12, 0.2], "size": [0.2, 0.15]},
@@ -225,7 +224,6 @@
     },
     "longxi": {
       "name": "Thiên Thủy", "rank": "provincial", "state": "intact", "era": "Thành Ký, quận trị Hán Dương (Thiên Thủy) của Tào; châu trị Lương Châu 168–213; Mã Siêu vây tám tháng năm 213; quê Khương Duy",
-      "lonlat": [105.333, 34.742],
       "outline": [[-0.65, -0.5], [0.65, -0.5], [0.65, 0.5], [-0.65, 0.5]],
       "gates": {"n": 1, "s": 1, "e": 1, "w": 1},
       "passages": 1, "que": "official",
@@ -238,7 +236,6 @@
     },
     "hexi": {
       "name": "Cô Tang", "rank": "provincial", "state": "intact", "era": "Quận trị Vũ Uy; hào tộc Nhan Tuấn chiếm quận, tự xưng tướng quân, gửi con tin cho Tào Tháo; thành Ngọa Long của Hung Nô, chưa có bốn thành Tiền Lương",
-      "lonlat": [102.637, 37.927],
       "outline": [[-0.3, -1.45], [0.3, -1.45], [0.55, -1.1], [0.6, -0.45], [0.72, -0.1], [0.62, 0.35], [0.58, 0.95], [0.35, 1.45], [-0.35, 1.45], [-0.58, 0.95], [-0.62, 0.35], [-0.72, -0.1], [-0.6, -0.45], [-0.55, -1.1]],
       "gates": {"n": 1, "s": 1, "e": 2, "w": 2},
       "passages": 1, "que": "official",
@@ -252,7 +249,6 @@
     },
     "huai": {
       "name": "Chung Ly", "rank": "provincial", "state": "intact", "era": "Huyện (hầu quốc) Chung Ly của Tào; đất Giang–Hoài bỏ trống từ năm 213, đồn nhỏ canh sông Hoài",
-      "lonlat": [117.674, 32.909],
       "outline": [[-0.13, -0.2], [0.17, -0.16], [0.18, 0.18], [-0.18, 0.18]],
       "gates": {"n": 1, "s": 1, "e": 1, "w": 1},
       "passages": 1, "que": "none",
@@ -269,7 +265,6 @@
     },
     "han_zhong": {
       "name": "Nam Trịnh", "rank": "provincial", "state": "intact", "era": "Quận trị Hán Trung; Lưu Bị chiếm từ tháng 5/219, xưng Hán Trung vương ở Miện Dương, Ngụy Diên trấn giữ; Tào Tháo đã dời hơn tám vạn dân đi",
-      "lonlat": [107.034, 33.072],
       "outline": [[-0.85, -0.53], [0.85, -0.53], [0.85, 0.53], [-0.85, 0.53]],
       "gates": {"n": 1, "s": 1, "e": 1, "w": 1},
       "passages": 1, "que": "official",
@@ -287,7 +282,6 @@
     },
     "jing_nan": {
       "name": "Giang Lăng", "rank": "provincial", "state": "intact", "era": "Nam quận của Quan Vũ; thu 219 Vũ vây Phàn Thành, Mi Phương giữ thành, ba vạn hàng binh Vu Cấm giải về đây; cựu thành Hán ở bắc, nam thành do Quan Vũ đắp thêm",
-      "lonlat": [112.19, 30.354],
       "outline": [[-1.97, 0.08], [-1.76, -0.55], [-0.8, -1.05], [-0.33, -0.81], [0.5, -0.86], [0.8, -0.69], [0.93, -0.37], [1.97, -0.23], [1.92, 0.83], [1.83, 1.05], [0.94, 0.56], [-1.92, 0.43]],
       "gates": {"n": 2, "s": 1, "e": 2, "w": 1},
       "passages": 1, "que": "official",
@@ -309,7 +303,6 @@
     },
     "nanzhong": {
       "name": "Điền Trì", "rank": "provincial", "state": "intact", "era": "Quận trị Ích Châu (Nam Trung), danh nghĩa thuộc Lưu Bị từ 214, hào tộc Ung Khải lộng quyền; cạnh đô ấp cũ của nước Điền; từ 225 quận trị dời về Vị huyện",
-      "lonlat": [102.698, 24.711],
       "outline": [[-0.245, -0.185], [0.245, -0.185], [0.245, 0.185], [-0.245, 0.185]],
       "gates": {"n": 1, "s": 1, "e": 1, "w": 1},
       "passages": 1, "que": "official",

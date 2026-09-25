@@ -138,14 +138,11 @@ const demLakes = DEM_LAKES.map((L) => {
 // ---------------------------------------------------------------- rivers
 console.log('rivers…');
 const world = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'world.json'), 'utf8'));
-const cityJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'cities.json'), 'utf8')), cityDefs = cityJson.cities;
+const cityDefs = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'cities.json'), 'utf8')).cities;
 // Each city is drawn larger than life (like every strategy map): longest side L km → 2.8·L^0.8 units.
 const cityScale = (L) => (2.8 * Math.pow(L, 0.8)) / L;
-// Seats: the provinces of data/world.json (year 200, what the engine runs), plus the 219 seats that carry their
-// own lonlat in data/cities.json until the engine imports the 219 scenario. Aliases (a 219 id for a city already
-// listed, e.g. guan → Chang'an) share that city's pad in meta.json.
-const seats = [...world.provinces, ...Object.entries(cityDefs).filter(([id, d]) => d.lonlat && !world.provinces.some((p) => p.id === id)).map(([id, d]) => ({ id, lonlat: d.lonlat }))];
-const cities = seats.map((p) => {
+// Seats: the provinces of data/world.json (autumn 219, what the engine runs; the year-200 world in data/archive is never loaded).
+const cities = world.provinces.map((p) => {
   const def = cityDefs[p.id];
   // footprint: walls, inner cities and the features that stand on the city's own ground (not twin towns or forts)
   const near = (def.features || []).filter((f) => f.at && ['platform', 'mound', 'hill', 'granary', 'garden', 'market', 'ironworks', 'watchtower'].includes(f.type)).map((f) => f.at);
@@ -374,7 +371,6 @@ fs.writeFileSync(path.join(OUT, 'meta.json'), JSON.stringify({
   height: { step: Q, encoding: 'delta2d-zigzag-planes-gzip', landFormula: 'h = 0.1 + metres * 0.003; sea = metres * 0.008', fine: FINE, coarse: COARSE },
   sources: ['AWS Terrain Tiles (terrarium, z7) — Mapzen/Tilezen: SRTM, ETOPO1, GMTED2010 and others; attribution per tilezen/joerd', 'Natural Earth 10m rivers and lakes (public domain)'],
   history: ['Huai river routed to the Yellow Sea (pre-1128 course); Hongze Lake removed', 'Only Dongting, Poyang, Tai and Chao lakes kept (plus Dian lake traced from the DEM)', 'Huai pieces (Natural Earth "Hudi" is its middle course) chained into one river; the 1851 outlet dropped', 'Added Luo, Zi, Si, Bian, He canal, Chengdu Pi/Jian, Guangzhou Pearl channel, Shiyang (Wuwei); Daye marsh, Ji West Lake'],
-  cities: Object.fromEntries([...cities.map((c) => [c.id, { x: +c.x.toFixed(2), z: +c.z.toFixed(2), y: +c.y.toFixed(3), r: c.r, scale: c.scale }]),
-    ...Object.entries(cityJson.alias || {}).map(([a, b]) => { const c = cities.find((q) => q.id === b); return [a, { x: +c.x.toFixed(2), z: +c.z.toFixed(2), y: +c.y.toFixed(3), r: c.r, scale: c.scale, alias: b }]; })]),
+  cities: Object.fromEntries(cities.map((c) => [c.id, { x: +c.x.toFixed(2), z: +c.z.toFixed(2), y: +c.y.toFixed(3), r: c.r, scale: c.scale }])),
 }, null, 1));
 console.log('fine', FINE.nx, 'x', FINE.nz, 'coarse', COARSE.nx, 'x', COARSE.nz, 'rivers', rivers.length, 'lakes', lakes.length);
