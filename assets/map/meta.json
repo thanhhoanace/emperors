@@ -1,0 +1,142 @@
+{
+ "projection": {
+  "lon0": 112,
+  "lat0": 32,
+  "kmPerUnit": 3,
+  "unitsPerDegLon": 31.46824,
+  "unitsPerDegLat": 36.85667,
+  "note": "x = (lon - lon0) * unitsPerDegLon, z = (lat0 - lat) * unitsPerDegLat"
+ },
+ "height": {
+  "step": 0.005,
+  "encoding": "delta2d-zigzag-planes-gzip",
+  "landFormula": "h = 0.1 + metres * 0.003; sea = metres * 0.008",
+  "fine": {
+   "x0": -345,
+   "z0": -375,
+   "w": 675,
+   "d": 780,
+   "step": 0.5,
+   "nx": 1351,
+   "nz": 1561
+  },
+  "coarse": {
+   "x0": -540,
+   "z0": -520,
+   "w": 1060,
+   "d": 1120,
+   "step": 2,
+   "nx": 531,
+   "nz": 561
+  }
+ },
+ "sources": [
+  "AWS Terrain Tiles (terrarium, z7) — Mapzen/Tilezen: SRTM, ETOPO1, GMTED2010 and others; attribution per tilezen/joerd",
+  "Natural Earth 10m rivers and lakes (public domain)"
+ ],
+ "history": [
+  "Huai river routed to the Yellow Sea (pre-1128 course); Hongze Lake removed",
+  "Only Dongting, Poyang, Tai and Chao lakes kept",
+  "Added Luo, Zi, Si, Bian, He canal, Chengdu Pi/Jian, Guangzhou Pearl channel; Daye marsh, Ji West Lake"
+ ],
+ "cities": {
+  "si_li": {
+   "x": 19.6,
+   "z": -100.58,
+   "y": 0.578,
+   "r": 7.29,
+   "scale": 2.0418
+  },
+  "ji": {
+   "x": 75.52,
+   "z": -157.56,
+   "y": 0.35,
+   "r": 4.66,
+   "scale": 2.3503
+  },
+  "qing": {
+   "x": 199.98,
+   "z": -179.97,
+   "y": 0.35,
+   "r": 8.47,
+   "scale": 1.9984
+  },
+  "xu": {
+   "x": 163.32,
+   "z": -83.3,
+   "y": 0.35,
+   "r": 4.47,
+   "scale": 2.4139
+  },
+  "yan": {
+   "x": 130.59,
+   "z": -116.1,
+   "y": 0.35,
+   "r": 4.23,
+   "scale": 2.5151
+  },
+  "yu": {
+   "x": 60.73,
+   "z": -73.71,
+   "y": 0.35,
+   "r": 4.51,
+   "scale": 2.4627
+  },
+  "jing": {
+   "x": 4.44,
+   "z": -0.92,
+   "y": 0.35,
+   "r": 3.71,
+   "scale": 2.5819
+  },
+  "yang": {
+   "x": 212.73,
+   "z": -1.84,
+   "y": 0.35,
+   "r": 4.68,
+   "scale": 2.3915
+  },
+  "yi": {
+   "x": -249.86,
+   "z": 49.39,
+   "y": 1.602,
+   "r": 4.17,
+   "scale": 2.4499
+  },
+  "liang": {
+   "x": -98.9,
+   "z": -84.92,
+   "y": 1.321,
+   "r": 9.34,
+   "scale": 1.9503
+  },
+  "bing": {
+   "x": 14.95,
+   "z": -211.37,
+   "y": 2.458,
+   "r": 5.58,
+   "scale": 2.2955
+  },
+  "you": {
+   "x": 136.89,
+   "z": -290.43,
+   "y": 0.35,
+   "r": 6.27,
+   "scale": 2.1553
+  },
+  "jiang": {
+   "x": 71.75,
+   "z": 52.89,
+   "y": 0.35,
+   "r": 2.59,
+   "scale": 2.9278
+  },
+  "jiao": {
+   "x": 39.96,
+   "z": 326.99,
+   "y": 0.35,
+   "r": 2.58,
+   "scale": 2.9278
+  }
+ }
+}

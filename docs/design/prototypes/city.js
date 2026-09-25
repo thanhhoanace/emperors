@@ -120,6 +120,7 @@
     return m;
   }
   CK.ground = 1.2;
+  CK.tex = { pixels, toTex, normalMap, grain, triplanar }; // shared with hancity.js
   const roofMat = (img, rough = 0.62) => new THREE.MeshStandardMaterial({ map: toTex(img.canvas, true), normalMap: normalMap(img, 3), normalScale: new THREE.Vector2(1.2, 1.2), roughness: rough, side: THREE.DoubleSide });
   const M = (CK.mats = {
     roof: roofMat(tilesGray),

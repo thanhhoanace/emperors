@@ -19,7 +19,9 @@
   // data/world.json geo is in map units; the renderer spreads it so land dominates the cities (TW3K ratio)
   const S = 1.45;
   const PROV = {}, NEI = {}, CITY = {};
-  for (const p of world.provinces) { PROV[p.id] = [p.geo[0] * S, p.geo[1] * S]; NEI[p.id] = p.neighbors; CITY[p.id] = p.city; }
+  // round 4 used hand-placed "map units" (kept here so this prototype still renders); round 5 uses data lonlat
+  const LEGACY_GEO = { si_li: [-24, -11], ji: [18, -38], qing: [68, -30], xu: [72, 2], yan: [40, -12], yu: [12, 6], jing: [-16, 25], yang: [66, 40], yi: [-72, 30], liang: [-62, -14], bing: [-18, -48], you: [48, -60], jiang: [26, 52], jiao: [16, 76] };
+  for (const p of world.provinces) { PROV[p.id] = [LEGACY_GEO[p.id][0] * S, LEGACY_GEO[p.id][1] * S]; NEI[p.id] = p.neighbors; CITY[p.id] = p.city; }
   const J = PROV.jing;
   const ownerOf = {}, seatOf = {}, FCOL = {};
   for (const f of world.factions) { FCOL[f.id] = new THREE.Color(f.color); seatOf[f.id] = f.start.seat; for (const p of f.start.provinces) ownerOf[p] = f.id; }

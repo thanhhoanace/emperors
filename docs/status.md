@@ -7,9 +7,32 @@
 
 ## Đang chờ
 
-- **Chủ dự án duyệt bản đồ chiến dịch vòng 4** trên canvas https://claude.ai/artifact/958ZoQxAFcGPKTUNGVdWeV (trang "Vòng 4 · Bản đồ TW3K + nhẹ cho web") và ngân sách hiệu năng `decisions/0005` (Đề xuất). Hướng design đã chốt: A + cắt cảnh trận của C (`decisions/0004`). Thành trì vòng 3 đã được duyệt.
+- **Chủ dự án duyệt vòng 5** trên canvas https://claude.ai/artifact/958ZoQxAFcGPKTUNGVdWeV (trang "Vòng 5 · Địa hình thật + thành Đông Hán"):
+  - bản đồ theo địa hình thật và thành trì theo khảo cổ (`decisions/0006`);
+  - ngân sách hiệu năng đã sửa (`decisions/0005`).
+- **Bốn chỗ kịch bản lệch lịch sử cần chủ dự án quyết** (`docs/design/history.md`, mục cuối):
+  - Kiến Nghiệp năm 200 chưa có;
+  - Trường An thuộc Tư Lệ;
+  - Hạ Khẩu là của Hoàng Tổ;
+  - Nghiệp Thành là của Viên Thiệu.
+- **Mạng của môi trường cloud** đang chặn dat.city, x.com, twdb.io, totalwar.fandom.com, static.wikia.nocookie.net, wikipedia.org, upload.wikimedia.org. Vì vậy chưa đọc được cách dat.city render và chưa xem được ảnh bản đồ TW3K. Chủ dự án mở các host này trong cài đặt môi trường (Network access), hoặc gửi ảnh chụp.
 
 ## Đã xong
+
+- 2026-09-25 (vòng 5):
+  - Phản hồi vòng 4: bản đồ chưa chuẩn và nhỏ hơn thực tế; thành chưa đúng lịch sử.
+  - Bản đồ mới theo địa hình thật, 1 đơn vị = 3 km:
+    - `tools/bake-map.mjs` nướng độ cao (AWS Terrain Tiles) và sông, hồ (Natural Earth) ra `assets/map/`;
+    - địa lý sửa về năm 200 (Hoài Hà ra biển, thêm các sông nhỏ cạnh thành);
+    - `data/world.json` đổi `geo` → `lonlat`.
+  - Tra khảo cổ 14 thành, ghi vào `docs/design/history.md` (có nguồn) và `data/cities.json` (bố cục).
+  - Dựng thành Đông Hán bằng `docs/design/prototypes/hancity.js`: tường đất nện, cổng đỉnh bằng, khuyết, mái thẳng, cung trên đài; Lạc Dương và Trường An là phế tích.
+  - Cảnh `world.html` với 5 góc máy. Các cải tiến:
+    - châu chia theo núi sông (Dijkstra);
+    - sông né thành bằng cách uốn sang bên;
+    - rìa bản đồ chìm vào mây;
+    - dữ liệu độ cao nén còn khoảng 2 MB.
+  - Thêm test dữ liệu cho `cities.json`. Ghi ADR 0006 và đưa ảnh lên canvas.
 
 - 2026-09-25 (vòng 4):
   - Chủ dự án duyệt thành trì vòng 3, hỏi về độ nặng khi lên web, và cho rằng bản đồ chưa tới TW3K.
@@ -23,18 +46,22 @@
 
 ## Việc tiếp theo (theo thứ tự)
 
-1. Nhận phản hồi về bản đồ vòng 4; sửa tiếp nếu cần (`node docs/design/prototypes/render.mjs map campaign`).
-2. Dựng app thật theo A (`docs/architecture.md`, phần "Dự kiến"):
-   - tách `prototypes/map.html`, `terrain.js`, `flora.js`, `city.js` thành `src/world/*`;
-   - thêm `tools/bake-map.mjs` để nướng địa hình lúc build;
-   - `quality.js` với 3 mức chất lượng;
-   - `src/ui/*` theo UI thủy mặc;
-   - `src/main.js` diễn lượt từ event của engine;
-   - `battle.js` cho cảnh cắt trận;
+1. Nhận phản hồi vòng 5 và quyết định về bốn chỗ lệch lịch sử. Sửa tiếp nếu cần:
+   - chạy `node docs/design/prototypes/render.mjs world <góc máy> 1 "c=<id>"`;
+   - khi đổi `lonlat`, `cities.json` hay danh sách sông thì chạy `node tools/bake-map.mjs`.
+2. Khi mạng được mở: đọc cách dat.city render; so ảnh bản đồ TW3K với vòng 5 (tỉ lệ, màu, rừng, cách vẽ thành xa).
+3. Nướng luôn mặt nạ (rừng, ruộng, đường, biên, bóng) vào `tools/bake-map.mjs`, để lúc mở trang không phải tính khoảng 12 giây. Chia lưới mịn thành ô, tải dần.
+4. Dựng app thật theo A trên thế giới vòng 5 (`docs/architecture.md`, phần "Dự kiến"):
+   - `src/world/*` lấy từ `terrain.js`, `terrain-real.js`, `flora.js`, `hancity.js`;
+   - thêm `quality.js`, `src/ui/*`, `src/main.js`, `battle.js`;
    - thay `index.html`.
-3. Quân trên bản đồ: một tướng cưỡi ngựa cỡ lớn kèm cờ (như TW3K). Cảnh cắt trận: mô hình người, ngựa có hoạt ảnh.
-4. Viết lại `tests/e2e/` cho luồng mới.
-5. Cân bằng lại; tuỳ chọn agent LLM qua `server/`; chân dung nhân vật.
+5. Quân trên bản đồ: một tướng cưỡi ngựa cỡ lớn kèm cờ (như TW3K).
+6. Việc sau:
+   - bờ biển năm 200 và Vân Mộng Trạch;
+   - viết lại `tests/e2e/`;
+   - cân bằng lại;
+   - agent LLM;
+   - chân dung nhân vật.
 
 ## Vấn đề đã biết
 
@@ -42,7 +69,11 @@
 - `index.html` vẫn là Phase 1 slice cũ (click Tương Dương → Thành Đô → End Turn); chưa dùng engine mới.
 - Prototype tải texture từ `raw.githubusercontent.com` (repo three.js, MIT); cần asset có giấy phép riêng trước khi phát hành.
 - Asset Kenney trong `assets/` là của bản đồ cũ, frontend mới chưa dùng.
-- Hiệu năng: đã nằm trong ngân sách về lệnh vẽ và tam giác (`decisions/0005`), nhưng chưa đo FPS trên máy có GPU hay điện thoại. Dựng địa hình lúc mở trang mất 5–8 giây trong container, cần nướng sẵn.
+- Hiệu năng vòng 5 (số đo ở `decisions/0005`):
+  - Lệnh vẽ trong ngân sách. Tam giác ở cận cảnh còn sát trần.
+  - Tải về khoảng 2,4 MB, vượt ngân sách lần đầu; cần chia ô và tải dần.
+  - Dựng mặt nạ lúc mở trang mất khoảng 12 giây trong container.
+  - Chưa đo FPS trên máy có GPU hay điện thoại.
 - Prototype còn giữ chỗ: lính là khối hộp, huy hiệu là chữ Hán thay cho chân dung, rìa thảo nguyên phía bắc còn trống.
 - `real.html` (vòng 2–3) tải texture từ raw.githubusercontent.com. Chromium headless trong container chặn chứng chỉ nguồn này, nên các ảnh cũ thiếu vân cỏ và vân nước. `map.html` không bị ảnh hưởng.
 - Luồng thread Codex cũ (`codex://threads/…`) và bản phân tích Boris/Thariq không truy cập được từ môi trường cloud; cấu trúc SOT dựa trên hướng dẫn công khai của họ (xem `decisions/0001`).

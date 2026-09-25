@@ -1,7 +1,8 @@
 // Renders a design prototype shot to test-results/design/<page>-<shot>.jpg.
 // Needs `npm start` running. Usage:
 //   PUPPETEER_EXECUTABLE_PATH=/path/to/chrome xvfb-run -a node docs/design/prototypes/render.mjs real campaign [dpr]
-// Shots: map → overview, strategic, campaign, autumn, city (round 4) · real → campaign, city, far, board, boardclose, strategy, battle · a/b/c → main, overview
+// Shots: world → overview, strategic, region, campaign, city (round 5; 4th arg "c=si_li" picks the city) · map → overview, strategic, campaign, autumn, city (round 4)
+//        real → campaign, city, far, board, boardclose, strategy, battle · a/b/c → main, overview
 import puppeteer from 'puppeteer';
 import fs from 'node:fs';
 import path from 'node:path';

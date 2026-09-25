@@ -63,7 +63,7 @@
       "river": true,
       "north": true,
       "strategic": true,
-      "geo": [-24, -11],
+      "lonlat": [112.623, 34.729],
       "neighbors": [
         "ji",
         "yu",
@@ -84,10 +84,7 @@
       "river": true,
       "north": true,
       "strategic": true,
-      "geo": [
-        18,
-        -38
-      ],
+      "lonlat": [114.4, 36.275],
       "neighbors": [
         "si_li",
         "qing",
@@ -107,10 +104,7 @@
       "river": false,
       "north": true,
       "strategic": false,
-      "geo": [
-        68,
-        -30
-      ],
+      "lonlat": [118.355, 36.883],
       "neighbors": [
         "ji",
         "xu"
@@ -127,10 +121,7 @@
       "river": true,
       "north": false,
       "strategic": true,
-      "geo": [
-        72,
-        2
-      ],
+      "lonlat": [117.19, 34.26],
       "neighbors": [
         "qing",
         "yu",
@@ -148,10 +139,7 @@
       "river": true,
       "north": true,
       "strategic": false,
-      "geo": [
-        40,
-        -12
-      ],
+      "lonlat": [116.15, 35.15],
       "neighbors": [
         "xu",
         "yu",
@@ -169,10 +157,7 @@
       "river": false,
       "north": false,
       "strategic": true,
-      "geo": [
-        12,
-        6
-      ],
+      "lonlat": [113.93, 34.0],
       "neighbors": [
         "si_li",
         "xu",
@@ -192,7 +177,7 @@
       "river": true,
       "north": false,
       "strategic": true,
-      "geo": [-16, 25],
+      "lonlat": [112.141, 32.025],
       "neighbors": [
         "si_li",
         "yu",
@@ -213,7 +198,7 @@
       "river": true,
       "north": false,
       "strategic": true,
-      "geo": [66, 40],
+      "lonlat": [118.76, 32.05],
       "neighbors": [
         "yu",
         "jing",
@@ -232,7 +217,7 @@
       "river": true,
       "north": false,
       "strategic": true,
-      "geo": [-72, 30],
+      "lonlat": [104.06, 30.66],
       "neighbors": [
         "si_li",
         "jing",
@@ -250,10 +235,7 @@
       "river": true,
       "north": true,
       "strategic": false,
-      "geo": [
-        -62,
-        -14
-      ],
+      "lonlat": [108.857, 34.304],
       "neighbors": [
         "yi",
         "si_li",
@@ -271,10 +253,7 @@
       "river": false,
       "north": true,
       "strategic": false,
-      "geo": [
-        -18,
-        -48
-      ],
+      "lonlat": [112.475, 37.735],
       "neighbors": [
         "ji",
         "liang",
@@ -293,10 +272,7 @@
       "river": false,
       "north": true,
       "strategic": false,
-      "geo": [
-        48,
-        -60
-      ],
+      "lonlat": [116.35, 39.88],
       "neighbors": [
         "ji",
         "bing"
@@ -313,7 +289,7 @@
       "river": true,
       "north": false,
       "strategic": false,
-      "geo": [26, 52],
+      "lonlat": [114.28, 30.565],
       "neighbors": [
         "jing",
         "yang"
@@ -330,10 +306,7 @@
       "river": false,
       "north": false,
       "strategic": false,
-      "geo": [
-        16,
-        76
-      ],
+      "lonlat": [113.27, 23.128],
       "neighbors": [
         "jing",
         "yang"

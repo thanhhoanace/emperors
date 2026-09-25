@@ -43,7 +43,9 @@ Phản hồi của chủ dự án: thành trong mock vòng 2 còn "đồ chơi",
 - Ánh sáng tạo khối: bóng đổ, bóng tiếp xúc (AO) ở chân tường và khe mái, nắng xiên giờ vàng.
 - Không một khối hộp trơn nào nhìn thấy được ở tầm camera chiến dịch.
 
-Hiện trạng: `prototypes/city.js` dựng thành theo đủ các tiêu chí trên và **đã được duyệt** (2026-09-25). Có hai mức chi tiết: `full` cho thành camera đang nhìn, `lite` cho các thành xa (`decisions/0005`).
+Hiện trạng: `prototypes/city.js` dựng thành theo đủ các tiêu chí trên và đã được duyệt (2026-09-25). Có hai mức chi tiết: `full` cho thành camera đang nhìn, `lite` cho các thành xa (`decisions/0005`).
+
+> **Vòng 5 đề xuất thay mục này.** Chủ dự án yêu cầu thành "đúng theo lịch sử". Mái cong góc vênh, tường gạch, ủng thành là kiểu Minh–Thanh, sai với năm 200. Tiêu chuẩn mới ở mục "Vòng 5" bên dưới (`decisions/0006`, chờ duyệt).
 
 ## Bản đồ chiến dịch — tiêu chuẩn TW3K (vòng 4)
 
@@ -79,6 +81,57 @@ Hiện trạng (2026-09-25): `prototypes/map.html` + `terrain.js` + `flora.js` d
 - rìa thảo nguyên phía bắc còn trống;
 - chân dung nhân vật.
 
+## Vòng 5 — địa hình thật và thành Đông Hán (chờ duyệt)
+
+Phản hồi về vòng 4:
+- Bản đồ chưa chuẩn và "bé hơn thực tế nhiều lắm".
+- Thành chưa đúng lịch sử.
+- Hình ảnh đẹp nhưng chưa thật.
+
+Quyết định đề xuất: `decisions/0006`.
+
+**Bản đồ:**
+- Độ cao thật (DEM) và sông, hồ thật, ở tỉ lệ 1 đơn vị = 3 km. Cả vùng chơi rộng khoảng 2.000 × 2.300 km.
+- Thành đặt đúng kinh độ, vĩ độ (`data/world.json` → `lonlat`).
+- Địa lý sửa về năm 200: Hoài Hà ra biển, không có hồ Hồng Trạch (`history.md`).
+- Châu chia theo chi phí đi lại, nên biên đi theo sống núi và sông lớn.
+- Góc máy:
+  - toàn cảnh (thấy cả Trung Hoa);
+  - chế độ chiến lược;
+  - vùng (Trung Nguyên);
+  - chiến dịch (thung lũng Hán Thủy);
+  - cận thành.
+- Rìa bản đồ chìm vào mây mù, không để lộ mép cắt.
+
+**Thành trì — tiêu chuẩn mới:**
+- Hình dạng, số cổng, vị trí cung, trạng thái năm 200 lấy theo khảo cổ. Mỗi thành một bản ghi trong `data/cities.json`, nguồn ở `history.md`.
+- Kiến trúc Đông Hán:
+  - tường đất nện có lớp, thân vát, tường chắn thấp;
+  - cổng đỉnh bằng (xà gỗ), lầu gỗ trên cổng; kinh đô mỗi cổng 3 lối;
+  - cặp khuyết trước cổng chính: khuyết mẹ–con cho quan, khuyết ba cho thiên tử;
+  - mái thẳng ngói xám, cột son, tường trắng;
+  - cung trên đài đất nện;
+  - nhà sân tường, cổng hướng nam, có tháp canh;
+  - kho tròn.
+- Không có mái cong góc vênh, tường gạch, ủng thành.
+- Lạc Dương và Trường An là phế tích: lầu cổng cháy, cung chỉ còn nền, nhà thưa, cỏ mọc.
+- Có nét riêng từng thành, theo `cities.json`:
+  - Phàn Thành bên kia sông Hán;
+  - đồn trăng khuyết Hạ Khẩu, có chiến thuyền chặn sông;
+  - Thạch Đầu Thành trên đồi;
+  - tiểu thành và đài Hoàn Công ở Lâm Truy;
+  - Thành Đô thành đôi, lệch hướng;
+  - nội thành và đài Dục Tú ở Hứa Xương;
+  - Linh Đài, Minh Đường, Tích Ung ở Lạc Dương.
+- Tỉ lệ:
+  - Thành phóng to `2,8·L^0,8` đơn vị (L là cạnh dài, tính bằng km). Chiều cao phóng đại hơn nữa để đọc được từ camera chiến dịch.
+  - Cây, làng, tường Trường Thành thu nhỏ theo, nên cây luôn thấp hơn tường thành.
+
+Hiện trạng: `prototypes/world.html`, `terrain-real.js`, `hancity.js`. Ảnh ở trang "Vòng 5" của canvas. Còn giữ chỗ:
+- Quân vẫn là khối lính hộp.
+- Chưa đối chiếu với ảnh bản đồ TW3K, vì mạng của môi trường chặn các trang có ảnh.
+- Bờ biển năm 200 (Thượng Hải, Thiên Tân lùi vào trong) và Vân Mộng Trạch chưa dựng.
+
 ## Vòng 1 — stylized (đã bị thay)
 
 Ba hướng đồ chơi/voxel bám sát Ryan: sa bàn khối (`prototypes/a.html`), đại lộ bảy phủ xếp theo Uy tín kiểu Token Town (`b.html`), đảo anh hùng chibi với "lăng kính" chỉ số kiểu airace.lol (`c.html`). Không chọn vì chủ dự án ưu tiên độ hiện thực. Ý tưởng còn dùng lại được: xếp vị trí theo thứ hạng (B) và đổi lăng kính chỉ số (C).
@@ -94,12 +147,20 @@ Ba hướng đồ chơi/voxel bám sát Ryan: sa bàn khối (`prototypes/a.html
 ## Prototype
 
 `docs/design/prototypes/` chứa các cảnh three.js dùng để render ảnh duyệt. Đây là mã nháp, không phải code sản phẩm, nhưng là điểm xuất phát khi dựng app.
-- Hướng đang dùng: `map.html` + `terrain.js` + `flora.js` + `city.js`.
-- Để so sánh: `real.html` (vòng 2–3) và `a/b/c.html` (vòng 1).
+- Hướng đang dùng (vòng 5):
+  - `world.html`;
+  - `terrain-real.js` đọc `assets/map/`;
+  - `hancity.js` đọc `data/cities.json`;
+  - dùng chung shader và dụng cụ của `terrain.js`, `flora.js`, `city.js`, `kit.js`.
+- Để so sánh:
+  - `map.html` (vòng 4);
+  - `real.html` (vòng 2–3);
+  - `a/b/c.html` (vòng 1).
 
 ```bash
 npm start
-PUPPETEER_EXECUTABLE_PATH=/path/to/chrome xvfb-run -a node docs/design/prototypes/render.mjs map campaign
+PUPPETEER_EXECUTABLE_PATH=/path/to/chrome xvfb-run -a node docs/design/prototypes/render.mjs world campaign
+# vòng 5: overview, strategic, region, campaign, city (thêm "c=<id châu>" để chọn thành, ví dụ "c=si_li")
 # → test-results/design/map-campaign.jpg + .json (stats: lệnh vẽ, tam giác, MB, thời gian dựng; anchors: toạ độ màn hình để đặt nhãn UI)
 # góc máy: overview, strategic, campaign, autumn, city. Tham số thứ 3 là dpr, thứ 4 là query gỡ lỗi:
 #   "hide=water,canopy,clouds"  "off=shadow,ao,dof,atmos"  "dbg=masks|flat|albedo"

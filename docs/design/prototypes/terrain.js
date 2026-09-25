@@ -499,12 +499,32 @@
         if (d < d1) { d2 = d1; d1 = d; id = th21(ip + g + 17.0); } else if (d < d2) d2 = d; }
       return vec3(sqrt(d1), sqrt(d2), id); }
   `;
+
+  // Realm and province borders: crisp anti-aliased line (width uBorderW) in the owner's colour + a soft inner
+  // wash. Shared by the ground and the canopy so borders stay visible over forests.
+  const GLSL_BORDER = `
+    // beyond the baked grid (round 5): fade into a haze so the map ends in cloud, not in a cut edge
+    float edgeFog(vec2 wp){ vec2 ex = max(uGrid.xy - wp, wp - uGrid.xy - uGrid.zw); return uEdgeFog * smoothstep(-10.0, 45.0, max(ex.x, ex.y)); }
+    const vec3 EDGE_HAZE = vec3(0.74, 0.79, 0.81);
+    vec3 applyBorders(vec3 col, vec4 own, vec4 bd, float land, vec2 wp){
+      float dR = (1.0 - bd.r) * 1.5, feR = max(fwidth(dR), 1e-4), wR = max(uBorderW, feR * 0.9);
+      float lineR = (1.0 - smoothstep(wR - feR, wR + feR, dR)) * step(0.004, bd.r) * land;
+      float dP = (1.0 - bd.g) * 1.5, feP = max(fwidth(dP), 1e-4), wP = max(uBorderW * 0.5, feP * 0.7);
+      float lineP = (1.0 - smoothstep(wP - feP, wP + feP, dP)) * step(0.004, bd.g) * land;
+      float outline = (1.0 - smoothstep(wR * 1.6 - feR, wR * 1.6 + feR, dR)) * step(0.004, bd.r) * land;
+      float dash = own.a > 0.5 ? 1.0 : step(0.5, fract((wp.x + wp.y) * 0.4));
+      vec3 lc = own.a > 0.5 ? mix(own.rgb * 1.35 + 0.02, mix(own.rgb, vec3(0.92, 0.88, 0.78), 0.3), uSoft) : vec3(0.62, 0.60, 0.55);
+      col = mix(col, col * 0.62, lineP * uBorder * 0.5);
+      col = mix(col, col * 0.35, outline * uBorder * 0.6 * dash);
+      col = mix(col, lc, lineR * uBorder * dash);
+      return mix(col, own.rgb, (1.0 - smoothstep(0.0, 1.4, dR)) * step(0.004, bd.r) * own.a * uBorder * 0.2 * land);
+    }`;
   T.GLSL_NOISE = GLSL_NOISE;
   // Shared uniforms: grid → uv, baked light, owner colours, view mode.
   T.uniforms = (terr, extra = {}) => ({
     tMaskA: { value: terr.tex.A }, tMaskB: { value: terr.tex.B }, tMaskD: { value: terr.tex.D }, tOwn: { value: terr.tex.own }, tBord: { value: terr.tex.bord },
     uGrid: { value: new THREE.Vector4(terr.G.x0, terr.G.z0, terr.G.w, terr.G.d) },
-    uTint: { value: 0.06 }, uBorder: { value: 0.75 }, uBorderW: { value: 0.22 }, uSeason: { value: 0 }, uFocus: { value: new THREE.Vector3(0, 0, 0) },
+    uTint: { value: 0.06 }, uBorder: { value: 0.75 }, uBorderW: { value: 0.22 }, uSnowLine: { value: 13 }, uSnowWest: { value: 1 }, uWaterLine: { value: 0.12 }, uFieldK: { value: 1 }, uDetailK: { value: 1 }, uSoft: { value: 0 }, uEdgeFog: { value: 0 }, uCrownK: { value: 1 }, uOutArid: { value: new THREE.Vector4(-150, -175, -170, -190) }, uSeason: { value: 0 }, uFocus: { value: new THREE.Vector3(0, 0, 0) },
     ...extra,
   });
   // Patch any MeshStandardMaterial so it receives the baked terrain shadow + cavity AO by world position.
@@ -553,8 +573,9 @@
       sh.fragmentShader = sh.fragmentShader
         .replace('#include <common>', `#include <common>
           varying vec3 vWP; varying vec3 vWN;
-          uniform sampler2D tMaskA, tMaskB, tMaskD, tOwn, tBord, tGrass; uniform vec4 uGrid; uniform float uTint, uBorder, uBorderW, uSeason;
+          uniform sampler2D tMaskA, tMaskB, tMaskD, tOwn, tBord, tGrass; uniform vec4 uGrid; uniform float uTint, uBorder, uBorderW, uSeason, uSnowLine, uSnowWest, uWaterLine, uFieldK, uDetailK, uSoft, uEdgeFog; uniform vec4 uOutArid;
           ${GLSL_NOISE}
+          ${GLSL_BORDER}
           vec3 fieldColor(vec2 wp, float lush, out float bump){
             float ang = (tnoise(wp * 0.009) - 0.5) * 3.0;
             vec2 q = mat2(cos(ang), -sin(ang), sin(ang), cos(ang)) * wp;
@@ -563,20 +584,25 @@
             vec2 c = floor(q / sz), f = fract(q / sz);
             float r = th21(c);
             vec3 col = r < 0.3 ? vec3(0.33, 0.40, 0.17) : r < 0.55 ? vec3(0.40, 0.45, 0.19) : r < 0.72 ? vec3(0.48, 0.48, 0.22) : r < 0.84 ? vec3(0.56, 0.52, 0.29) : r < 0.93 ? vec3(0.45, 0.38, 0.27) : vec3(0.36, 0.42, 0.20);
-            col = mix(col, vec3(0.30, 0.41, 0.37), lush * step(0.86, th21(c + 3.1)) * 0.7); // flooded paddies in the wet south
+            col = mix(col, vec3(0.30, 0.41, 0.37), lush * step(mix(0.86, 0.94, uSoft), th21(c + 3.1)) * mix(0.7, 0.4, uSoft)); // flooded paddies in the wet south
+            col = mix(col, vec3(0.42, 0.45, 0.21), 0.35 * uSoft); // round 5: calmer patchwork
             float fw = length(fwidth(q / sz));
             float fur = 0.5 + 0.5 * sin((r > 0.5 ? f.x : f.y) * 30.0);
             float furFade = 1.0 - smoothstep(0.006, 0.014, fw); // furrows vanish before they alias
             fur = mix(0.5, fur, furFade);
             col *= 0.95 + 0.06 * fur;
             float e = min(min(f.x, 1.0 - f.x) * sz.x, min(f.y, 1.0 - f.y) * sz.y);
-            float fe = max(fwidth(e), 1e-4), dw = max(0.035, fe * 0.8);
-            float dyke = (1.0 - smoothstep(dw - fe * 0.5, dw + fe * 0.5, e)) * (0.035 / dw) * (1.0 - smoothstep(0.06, 0.15, fe)); // >= 1px, fainter far away
-            col = mix(col, vec3(0.30, 0.34, 0.18), dyke * 0.5);
+            float fe = max(fwidth(e), 1e-4), dw = max(0.035, fe * mix(0.8, 1.6, uSoft)); // round 5: bunds never thinner than ~1.5 px (no dotted lines)
+            float dyke = (1.0 - smoothstep(dw - fe * 0.5, dw + fe * 0.5, e)) * (0.035 / dw) * (1.0 - smoothstep(mix(0.06, 0.02, uSoft), mix(0.15, 0.06, uSoft), fe)); // >= 1px, fainter far away
+            col = mix(col, mix(vec3(0.30, 0.34, 0.18), vec3(0.47, 0.46, 0.30), uSoft), dyke * mix(0.5, 0.35, uSoft)); // round 5: pale earth bunds
             bump = fur * 0.08 + dyke * 0.35;
             // fade the pattern out where cells shrink below a few pixels (no shimmering at the overview)
             float px = length(fwidth(q / sz));
-            return mix(col, vec3(0.41, 0.44, 0.20), smoothstep(0.08, 0.3, px));
+            // round 5: blocks of 4×4 parcels share a crop colour, so the patchwork still reads from the campaign camera
+            vec2 cB = floor(q / (sz * 4.0)); float rB = th21(cB + 17.0);
+            vec3 blockC = rB < 0.35 ? vec3(0.40, 0.45, 0.20) : rB < 0.6 ? vec3(0.47, 0.47, 0.24) : rB < 0.8 ? vec3(0.53, 0.49, 0.28) : vec3(0.36, 0.41, 0.19);
+            vec3 farC = mix(vec3(0.41, 0.44, 0.20), mix(blockC, vec3(0.44, 0.45, 0.22), smoothstep(0.1, 0.35, px / 4.0)), uSoft);
+            return mix(col, farC, smoothstep(0.08, 0.3, px));
           }`)
         .replace('#include <color_fragment>', `#include <color_fragment>
           vec2 uvG = (vWP.xz - uGrid.xy) / uGrid.zw;
@@ -584,7 +610,7 @@
           { // beyond the playable grid: steppe/plateau defaults, no farms, no borders, unshadowed
             vec2 ex = max(uGrid.xy - vWP.xz, vWP.xz - uGrid.xy - uGrid.zw);
             float out_ = smoothstep(0.0, 4.0, max(ex.x, ex.y));
-            float aridOut = clamp(smoothstep(-150.0, -175.0, vWP.z) + smoothstep(-170.0, -190.0, vWP.x), 0.0, 1.0) * (0.35 + 0.35 * tnoise(vWP.xz * 0.01));
+            float aridOut = clamp(smoothstep(uOutArid.x, uOutArid.y, vWP.z) + smoothstep(uOutArid.z, uOutArid.w, vWP.x), 0.0, 1.0) * (0.35 + 0.35 * tnoise(vWP.xz * 0.01));
             mA = mix(mA, vec4(0.0), out_); mB = mix(mB, vec4(aridOut, 0.0, 0.0, 0.0), out_);
             mD = mix(mD, vec4(mD.r, 1.0, 0.5, 0.0), out_); own = mix(own, vec4(0.0), out_); bd = mix(bd, vec4(0.0), out_);
           }
@@ -593,8 +619,8 @@
           float fwp = length(fwidth(vWP.xz)); // world units per pixel
           float n1 = mix(tfbm(vWP.xz * 0.22), 0.5, smoothstep(0.25, 0.6, fwp * 0.22 * 4.0));
           float n2 = mix(tnoise(vWP.xz * 1.3), 0.5, smoothstep(0.25, 0.6, fwp * 1.3));
-          float n3 = mix(tnoise(vWP.xz * 5.0), 0.5, smoothstep(0.25, 0.6, fwp * 5.0));
-          float gA = mix(texture2D(tGrass, vWP.xz * 0.19).g, 0.5, smoothstep(0.05, 0.2, fwp));
+          float n3 = mix(tnoise(vWP.xz * 5.0 * uDetailK), 0.5, smoothstep(0.25, 0.6, fwp * 5.0 * uDetailK));
+          float gA = mix(texture2D(tGrass, vWP.xz * 0.19 * uDetailK).g, 0.5, smoothstep(0.05, 0.2, fwp * uDetailK));
           float gB = mix(texture2D(tGrass, vWP.xz * 0.033 + 0.3).g, 0.5, smoothstep(0.4, 1.5, fwp));
           float tBump = (gA - 0.5) * 0.3;
           vec3 lush = mix(vec3(0.20, 0.30, 0.10), vec3(0.34, 0.41, 0.15), n1);
@@ -603,7 +629,7 @@
           vec3 col = mix(lush, dry, mB.r);
           col = mix(col, vec3(0.80, 0.69, 0.47) * (0.9 + 0.2 * n2), mB.g);
           col = mix(col, vec3(0.52, 0.33, 0.22) * (0.85 + 0.3 * n1), mB.b * 0.55);
-          float fb; vec3 fc = fieldColor(vWP.xz, 1.0 - mB.r, fb);
+          float fb; vec3 fc = fieldColor(vWP.xz * uFieldK, 1.0 - mB.r, fb); // uFieldK > 1: smaller parcels (round 5 scale)
           float fm = smoothstep(0.1, 0.5, mA.g + (n2 - 0.5) * 0.2);
           col = mix(col, fc, fm); tBump += fb * fm;
           col = mix(col, vec3(0.12, 0.17, 0.07), smoothstep(0.15, 0.6, mA.r));
@@ -615,33 +641,20 @@
           vec3 rk = mix(vec3(0.42, 0.39, 0.34), vec3(0.58, 0.54, 0.48), n2);
           rk *= 0.86 + 0.18 * tnoise(vec2((vWP.x + vWP.z) * 0.15, hgt * 2.2)) + 0.1 * (n3 - 0.5);
           col = mix(col, rk, clamp(rock, 0.0, 1.0)); tBump += rock * (n3 - 0.5) * 0.6;
-          float snowLine = 13.0 + 5.0 * smoothstep(-130.0, -175.0, vWP.x);
+          float snowLine = uSnowLine + 5.0 * smoothstep(-130.0, -175.0, vWP.x) * uSnowWest;
           float snow = smoothstep(snowLine, snowLine + 2.5, hgt + (n1 - 0.5) * 3.0) * (1.0 - smoothstep(0.5, 0.78, slope));
           col = mix(col, vec3(0.90, 0.91, 0.93), snow);
-          if (hgt < 0.12) {
+          if (hgt < uWaterLine) {
             float dep = clamp(-hgt / 2.2, 0.0, 1.0);
             vec3 shallow = mix(vec3(0.19, 0.34, 0.32), vec3(0.50, 0.42, 0.25), mD.a);
             vec3 deep = mix(vec3(0.05, 0.16, 0.22), vec3(0.34, 0.27, 0.15), mD.a);
-            col = mix(col, mix(shallow, deep, dep), smoothstep(0.12, -0.25, hgt));
+            col = mix(col, mix(shallow, deep, dep), smoothstep(uWaterLine, uWaterLine - 0.37, hgt));
           }
-          col *= 0.74 + 0.5 * gA * 0.75 + 0.25 * (gB - 0.5);
+          col *= mix(0.74 + 0.5 * gA * 0.75, 0.86 + 0.28 * gA * 0.75, uSoft) + 0.25 * (gB - 0.5);
           col = pow(col, vec3(2.2)); // authored in sRGB, lit in linear
           col = mix(col, own.rgb, uTint * own.a * step(0.1, hgt));
-          { // borders: crisp anti-aliased line (width uBorderW) in the owner's colour + a soft inner wash
-            float land = step(0.2, hgt);
-            float dR = (1.0 - bd.r) * 1.5, feR = max(fwidth(dR), 1e-4), wR = max(uBorderW, feR * 0.9);
-            float lineR = (1.0 - smoothstep(wR - feR, wR + feR, dR)) * step(0.004, bd.r) * land;
-            float dP = (1.0 - bd.g) * 1.5, feP = max(fwidth(dP), 1e-4), wP = max(uBorderW * 0.5, feP * 0.7);
-            float lineP = (1.0 - smoothstep(wP - feP, wP + feP, dP)) * step(0.004, bd.g) * land;
-            float outline = (1.0 - smoothstep(wR * 1.6 - feR, wR * 1.6 + feR, dR)) * step(0.004, bd.r) * land;
-            float dash = own.a > 0.5 ? 1.0 : step(0.5, fract((vWP.x + vWP.z) * 0.4));
-            vec3 lc = own.a > 0.5 ? own.rgb * 1.35 + 0.02 : vec3(0.62, 0.60, 0.55);
-            col = mix(col, col * 0.62, lineP * uBorder * 0.5);
-            col = mix(col, col * 0.35, outline * uBorder * 0.6 * dash);
-            col = mix(col, lc, lineR * uBorder * dash);
-            col = mix(col, own.rgb, (1.0 - smoothstep(0.0, 1.4, dR)) * step(0.004, bd.r) * own.a * uBorder * 0.2 * land);
-          }
-          diffuseColor.rgb = col;
+          col = applyBorders(col, own, bd, step(0.2, hgt), vWP.xz);
+          diffuseColor.rgb = mix(col, pow(EDGE_HAZE, vec3(2.2)), edgeFog(vWP.xz));
           #ifdef DEBUG_MASKS
             diffuseColor.rgb = vec3(mA.b, step(hgt, 0.12), mA.a);
           #endif`)
@@ -664,7 +677,7 @@
     if (debug) mat.defines = debug === 'albedo' ? { DEBUG_ALBEDO: 1 } : { DEBUG_FLAT: 1 };
     mat.extensions = { derivatives: true };
     // no territory tint on the canopy by default: dark greens in linear space are tiny, 5% of an owner colour turns them brown
-    const U = T.uniforms(terr, { uNear: { value: new THREE.Vector4(0, 0, 0, 0) }, uTint: { value: 0 } });
+    const U = T.uniforms(terr, { uNear: { value: new THREE.Vector4(0, 0, 0, 0) }, uTint: { value: 0 }, uCanopyBorder: { value: 0 } });
     mat.userData.uniforms = U;
     mat.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, U);
@@ -676,19 +689,20 @@
             transformed.y -= uNear.w * (1.0 - smoothstep(uNear.z - 6.0, uNear.z, dn)); }`);
       sh.fragmentShader = sh.fragmentShader
         .replace('#include <common>', `#include <common>
-          varying vec3 vWP; varying vec3 vWN; uniform sampler2D tMaskA, tMaskB, tMaskD, tOwn; uniform vec4 uGrid; uniform float uSeason, uTint;
-          ${GLSL_NOISE}`)
+          varying vec3 vWP; varying vec3 vWN; uniform sampler2D tMaskA, tMaskB, tMaskD, tOwn, tBord; uniform vec4 uGrid; uniform float uSeason, uTint, uBorder, uBorderW, uCanopyBorder, uSoft, uEdgeFog, uCrownK;
+          ${GLSL_NOISE}
+          ${GLSL_BORDER}`)
         .replace('#include <color_fragment>', `#include <color_fragment>
           vec2 uvG = (vWP.xz - uGrid.xy) / uGrid.zw;
           vec4 mA = texture2D(tMaskA, uvG), mB = texture2D(tMaskB, uvG), mD = texture2D(tMaskD, uvG);
           vec3 wn = normalize(vWN);
           float steep = smoothstep(0.12, 0.4, 1.0 - wn.y);
-          vec3 wA = tworley(vWP.xz * 2.1);
+          vec3 wA = tworley(vWP.xz * 2.1 * uCrownK); // uCrownK > 1: smaller crowns (round-5 scale)
           float d1 = wA.x, d2 = wA.y, id = wA.z;
           float crown = 1.0 - smoothstep(0.0, 0.55, d1);
           float gap = smoothstep(0.0, 0.16, d2 - d1);
           float conifer = clamp(smoothstep(5.0, 9.0, vWP.y) + mB.r * 0.8, 0.0, 1.0);
-          float fwc0 = length(fwidth(vWP.xz)) * 2.1;
+          float fwc0 = length(fwidth(vWP.xz)) * 2.1 * uCrownK;
           float det0 = (1.0 - smoothstep(0.15, 0.45, fwc0)) * (1.0 - steep);
           id = mix(tnoise(vWP.xz * 0.9 + vec2(vWP.y * 0.7)), id, det0); // smooth colour where crowns fade out
           vec3 broad = mix(vec3(0.13, 0.21, 0.07), vec3(0.24, 0.33, 0.11), id);
@@ -698,7 +712,7 @@
           col = mix(col, vec3(0.62, 0.35, 0.40), step(0.985, id) * (1.0 - conifer) * 0.8 * (1.0 - smoothstep(0.1, 0.3, length(fwidth(vWP.xz)) * 2.1)));
           vec3 autumn = id < 0.4 ? vec3(0.55, 0.30, 0.10) : id < 0.7 ? vec3(0.62, 0.48, 0.14) : col;
           col = mix(col, autumn, uSeason * (1.0 - conifer * 0.8));
-          float fwc = length(fwidth(vWP.xz)) * 2.1; // crowns per pixel: fade the pattern before it aliases
+          float fwc = length(fwidth(vWP.xz)) * 2.1 * uCrownK; // crowns per pixel: fade the pattern before it aliases
           float detail = (1.0 - smoothstep(0.15, 0.45, fwc)) * (1.0 - steep); // crowns stretch on slopes: drop them there
           col *= mix(0.9, 0.72 + 0.42 * crown, detail); col *= mix(1.0, mix(0.62, 1.0, gap), detail);
           col *= 0.85 + 0.3 * tnoise(vWP.xz * 0.35);
@@ -707,7 +721,8 @@
           // organic forest edge: keep whole crowns where the density is high enough
           if (mA.r < 0.13 + 0.14 * (1.0 - crown * detail) + 0.08 * (tnoise(vWP.xz * 0.8) - 0.5)) discard;
           diffuseColor.rgb = pow(col, vec3(2.2));
-          { vec4 own = texture2D(tOwn, uvG); diffuseColor.rgb = mix(diffuseColor.rgb, own.rgb, uTint * own.a * 0.8); }
+          { vec4 own = texture2D(tOwn, uvG); diffuseColor.rgb = mix(diffuseColor.rgb, own.rgb, uTint * own.a * 0.8);
+            if (uCanopyBorder > 0.0) diffuseColor.rgb = mix(diffuseColor.rgb, applyBorders(diffuseColor.rgb, own, texture2D(tBord, uvG), 1.0, vWP.xz), uCanopyBorder); }
           #ifdef DEBUG_FLAT
             diffuseColor.rgb = vec3(0.1, 0.2, 0.08); tBump = 0.0;
           #endif
@@ -730,15 +745,17 @@
   T.waterMaterial = function (terr, normals, env) {
     const mat = new THREE.MeshStandardMaterial({ color: 0x1d4a5a, roughness: 0.06, metalness: 0.0, normalMap: normals, normalScale: new THREE.Vector2(0.35, 0.35), envMap: env, envMapIntensity: 0.85, transparent: true, depthWrite: false });
     const U = T.uniforms(terr);
+    mat.userData.uniforms = U;
     mat.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, U);
       VS_WP(sh, false);
       sh.fragmentShader = sh.fragmentShader
         .replace('#include <common>', `#include <common>
-          varying vec3 vWP; uniform sampler2D tMaskD; uniform vec4 uGrid;
+          varying vec3 vWP; uniform sampler2D tMaskD; uniform vec4 uGrid; uniform float uEdgeFog;
           ${GLSL_NOISE}`)
         .replace('#include <color_fragment>', `#include <color_fragment>
           vec2 uvG = (vWP.xz - uGrid.xy) / uGrid.zw;
+          vec2 exG = max(uGrid.xy - vWP.xz, vWP.xz - uGrid.xy - uGrid.zw); float fogE = uEdgeFog * smoothstep(-10.0, 45.0, max(exG.x, exG.y));
           bool inside = all(greaterThan(uvG, vec2(0.0))) && all(lessThan(uvG, vec2(1.0)));
           vec4 mD = texture2D(tMaskD, clamp(uvG, 0.0, 1.0));
           float tH = inside ? mD.r * 8.0 - 4.0 : -3.0;
@@ -750,6 +767,7 @@
           diffuseColor.rgb = pow(mix(wc, vec3(0.80, 0.83, 0.80), foam * 0.45), vec3(2.2));
           diffuseColor.a = clamp(0.55 + dep * 0.3 + silt * 0.3, 0.0, 0.94);
           diffuseColor.a = max(diffuseColor.a, foam * 0.7);
+          diffuseColor.rgb = mix(diffuseColor.rgb, pow(vec3(0.74, 0.79, 0.81), vec3(2.2)), fogE); diffuseColor.a = mix(diffuseColor.a, 1.0, fogE);
           if (tH > 0.08) discard;`);
     };
     mat.customProgramCacheKey = () => 'water4';
@@ -792,7 +810,10 @@
         for (let t = 0; t < list.length - 1; t++) { const a = list[t], b = list[t + 1], c = sb + t, d = sb + t + 1; ind.push(a, b, c, b, d, c, a, c, b, b, c, d); }
       };
       const row = (j) => Array.from({ length: nx + 1 }, (_, i) => base + j * (nx + 1) + i), col = (i) => Array.from({ length: nz + 1 }, (_, j) => base + j * (nx + 1) + i);
-      edge(row(0)); edge(row(nz)); edge(col(0)); edge(col(nx));
+      // a skirt only where the neighbour chunk has another step (or at the map edge): with a uniform step the
+      // skirts cost more triangles than the surface itself
+      const diff = (di, dj) => { const ci2 = ci + di, cj2 = cj + dj; if (ci2 < 0 || cj2 < 0 || ci2 >= nx0 || cj2 >= nz0) return true; const cx = G.x0 + (ci2 + 0.5) * CS, cz = G.z0 + (cj2 + 0.5) * CS; return Math.max(o.minStep ?? 0, stepFor(cx, cz)) !== st; };
+      if (diff(0, -1)) edge(row(0)); if (diff(0, 1)) edge(row(nz)); if (diff(-1, 0)) edge(col(0)); if (diff(1, 0)) edge(col(nx));
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -820,11 +841,13 @@
       const u = op.getX(i), v = op.getZ(i);
       const x = Math.sign(u) * Math.pow(Math.abs(u), 2.6) * R, z = Math.sign(v) * Math.pow(Math.abs(v), 2.6) * R;
       const inside = x > G.x0 + 1 && x < G.x0 + G.w - 1 && z > G.z0 + 1 && z < G.z0 + G.d - 1;
+      const sp = Math.max(2.6 * Math.pow(Math.abs(u), 1.6), 2.6 * Math.pow(Math.abs(v), 1.6)) * R * (2 / n); // vertex spacing here
+      const edge = Math.min(x - G.x0, G.x0 + G.w - x, z - G.z0, G.z0 + G.d - z);
       let y;
-      if (inside) y = terr.h(x, z) - 3;
+      // hidden under the map inside, but flush with it along the edge (else the last ring cell is a trench)
+      if (inside) y = terr.h(x, z) - (edge < sp * 1.5 ? 0.06 : 3);
       else {
         // average over the vertex footprint (spacing grows toward the horizon) so the noise cannot alias
-        const sp = Math.max(2.6 * Math.pow(Math.abs(u), 1.6), 2.6 * Math.pow(Math.abs(v), 1.6)) * R * (2 / n);
         const r = Math.max(1, sp * 0.6);
         let acc = 0, wsum = 0;
         for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const w = a || b ? 1 : 2; acc += w * terr.H(x + a * r, z + b * r); wsum += w; }
