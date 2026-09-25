@@ -25,6 +25,8 @@
     border-bottom:2px solid var(--c,#cdbb95)}
   .hud .place{position:absolute;transform:translate(-50%,-100%);white-space:nowrap;font-size:13px;padding:1px 7px;color:#fbf6ea;background:rgba(18,15,12,.55);border-left:3px solid var(--c,#999)}
   .hud .place.seat{font-size:15px;font-weight:600;background:rgba(18,15,12,.72)}
+  .hud .place.pick{outline:2px solid #f2d27a;background:rgba(60,44,20,.9)}
+  .hud .place.via{outline:1px dashed #cdbb95}
   .hud .log{position:absolute;right:24px;top:24px;width:300px;max-height:46vh;overflow:hidden;font-size:13px;line-height:1.4}
   .hud .log div{padding:5px 10px;margin-bottom:4px;background:rgba(18,15,12,.62);border-left:3px solid var(--c,#8a7a5a)}
   .hud .log div.now{background:rgba(40,32,22,.85)}
@@ -80,9 +82,17 @@
       placesEl.style.display = on ? '' : 'none';
       if (!on) return;
       const own = rt.owners();
-      places.forEach((it, i) => { const d = placesEl.children[i], p = rt.project(it.at); d.style.display = p.visible ? '' : 'none'; d.style.left = p.x + 'px'; d.style.top = p.y + 'px'; d.style.setProperty('--c', own[it.pid] ? col(own[it.pid]) : '#9a9486'); });
+      places.forEach((it, i) => {
+        const d = placesEl.children[i], p = rt.project(it.at);
+        d.style.display = p.visible ? '' : 'none'; d.style.left = p.x + 'px'; d.style.top = p.y + 'px'; d.style.setProperty('--c', own[it.pid] ? col(own[it.pid]) : '#9a9486');
+        d.classList.toggle('pick', marks.pick === it.pid); d.classList.toggle('via', (marks.via || []).includes(it.pid));
+      });
     };
+    // the player's pending choice on the campaign map: the target city, and the provinces the army can come from
+    let marks = {};
+    hud.markPlaces = (m) => { marks = m || {}; };
     hud.clear = () => { lastKey = ''; cardEl.classList.remove('on'); actorsEl.innerHTML = ''; badgeEl.className = 'badge'; labelsEl.innerHTML = ''; };
+    hud.clearLog = () => { logEl.innerHTML = ''; };
     hud.log = (ev, title) => {
       [...logEl.children].forEach((d) => d.classList.remove('now'));
       const d = document.createElement('div'); d.className = 'now'; d.style.setProperty('--c', ev.fid ? col(ev.fid) : '#b8a27a');
@@ -90,10 +100,10 @@
       while (logEl.children.length > 6) logEl.lastChild.remove();
     };
     // speed 1×/2×/4× (march.md) and a way back to the campaign view
-    hud.controls = (onSpeed, onCampaign) => {
+    hud.controls = (onSpeed, onCampaign, initial = 1) => {
       ctlEl.innerHTML = '';
-      for (const s of [1, 2, 4]) { const b = document.createElement('button'); b.textContent = s + '×'; b.dataset.speed = s; b.onclick = () => { onSpeed(s); [...ctlEl.children].forEach((x) => x.classList.toggle('on', x === b)); }; if (s === 1) b.classList.add('on'); ctlEl.appendChild(b); }
-      if (onCampaign) { const b = document.createElement('button'); b.textContent = 'Toàn cảnh'; b.onclick = onCampaign; ctlEl.appendChild(b); }
+      for (const s of [1, 2, 4]) { const b = document.createElement('button'); b.textContent = s + '×'; b.dataset.speed = s; b.onclick = () => { onSpeed(s); [...ctlEl.querySelectorAll('[data-speed]')].forEach((x) => x.classList.toggle('on', x === b)); }; if (s === initial) b.classList.add('on'); ctlEl.appendChild(b); }
+      if (onCampaign) { const b = document.createElement('button'); b.textContent = 'Toàn cảnh'; b.dataset.role = 'campaign'; b.onclick = onCampaign; ctlEl.appendChild(b); }
     };
     return hud;
   };
