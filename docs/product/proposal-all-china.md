@@ -12,7 +12,7 @@ Mọi con số dưới đây chỉ là ví dụ, phải đo lại bằng `npm ru
 
 ## 2. Tra cứu làm nền
 
-Chi tiết và nguồn nằm ở báo cáo tra cứu; phần dưới chỉ tóm tắt.
+Chi tiết và nguồn nằm ở `docs/research/` (`tw3k.md`, `periphery.md`); phần dưới chỉ tóm tắt.
 
 **TW3K:**
 - Phần chơi được rộng khoảng 98,5–124°E × 18–42,5°N, xấp xỉ khung bản đồ vòng 5.
@@ -140,7 +140,18 @@ Mỗi hoàng đế có ba lợi thế, gắn với một vùng trên bản đồ
 
 ## 9. Học từ dat.city
 
-(Bổ sung sau khi phân tích xong mã nguồn.)
+Đã đọc toàn bộ mã của dat.city (`docs/research/datcity.md`). Những điều nên làm theo, xếp theo thứ tự ưu tiên:
+
+1. **Gộp theo khối hình:** thành, làng, quân dựng từ 10–20 khối dùng chung (tường, cổng, mái, tháp…). Mỗi khối là một InstancedMesh có màu riêng từng bản sao. Làm vậy thì giữ được chi tiết ở mọi thành mà vẫn ít lệnh vẽ.
+2. **Chi tiết đưa vào shader:** ngói, lớp đất nện, AO ở chân tường, đèn lồng ban đêm.
+3. **Bốn mức chất lượng, tự hạ mức** khi máy chậm. Điện thoại mặc định mức vừa.
+4. **Dựng dần theo từng khung,** tối đa khoảng 5 ms mỗi khung, vùng gần camera trước. Trang không bao giờ đứng hình.
+5. **Hiện dần theo tiến độ dựng:** vòng hiện hoặc sương chiến tranh lan ra.
+6. **Bóng chỉ quanh tiêu điểm,** vẽ lại cách một khung; ở góc toàn cảnh thì tắt bóng.
+7. **DOF theo độ zoom:** toàn cảnh nét, cận cảnh mềm.
+8. **Camera kiểu ống kính dài** (FOV khoảng 25°): góc nghiêng thay đổi theo độ xa; có bay tới, xoay chậm khi rảnh, bám theo đạo quân. Hợp để quay clip.
+9. **Sương theo khoảng cách camera,** bầu trời đi theo camera, **chu kỳ ngày đêm** theo bảng khoá. Một lượt có thể ứng với một thời điểm trong ngày.
+10. **Nước dùng một shader duy nhất,** đọc mặt nạ khoảng cách tới bờ vẽ sẵn.
 
 ## 10. Thứ tự làm nếu được duyệt
 

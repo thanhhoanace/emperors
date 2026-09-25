@@ -35,7 +35,7 @@ data/                    world.json + cities.json + personas/*.json
 tools/bake-map.mjs       nướng địa hình thật (DEM + sông) → assets/map/ (chạy tay, commit kết quả)
 server/server.js         static + POST /api/turn (agent MOCK dùng chung engine)
 tests/                   engine.test.mjs (node:test), sim.mjs (báo cáo cân bằng), e2e/ (Puppeteer)
-docs/                    product/, design/ (+ prototypes/ three.js), architecture.md, status.md, decisions/
+docs/                    product/, design/ (+ prototypes/ three.js), research/ (tra cứu thô có nguồn), architecture.md, status.md, decisions/
 assets/                  map/ (địa hình đã nướng), asset CC0 cũ (Kenney) + giấy phép
 .claude/                 skills và settings dùng chung (Claude Code)
 .github/workflows/       test + deploy Pages

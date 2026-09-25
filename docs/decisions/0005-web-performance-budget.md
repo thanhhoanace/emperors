@@ -20,12 +20,19 @@ Kết quả: GPU phần mềm sập ở góc toàn cảnh, còn máy thật sẽ
 - hơn 1.000 mesh cầu gỗ riêng lẻ;
 - InstancedMesh của three r146 không loại theo khung nhìn, nên cả ngoài màn hình vẫn phải vẽ.
 
-Về dat.city: môi trường làm việc chặn trang và mã nguồn của nó, nên phần dưới là suy ra từ cách trang hiển thị và cách làm chuẩn với three.js, không phải đọc code của Ryan. Trang nhẹ vì:
-- hình khối đơn giản, tô màu phẳng, gần như không dùng texture;
-- rất nhiều nhà nhưng chỉ vài lệnh vẽ (instancing, gộp hình);
-- thành phố được sinh trong trình duyệt từ một file số liệu nhỏ;
-- camera đi theo các điểm dừng định sẵn, và vùng ngoài tiêu điểm bị làm xám, mờ, nên không bao giờ phải vẽ cả thế giới ở độ chi tiết cao;
-- host tĩnh qua CDN.
+Về dat.city: lúc viết ADR này, môi trường chặn trang nên phần giải thích chỉ là suy đoán. Ngày 25/9 mạng đã mở và đã đọc toàn bộ mã của trang. Ba điều đoán sai:
+- dat.city **không** giấu hay làm xám thế giới để đỡ tốn: nó vẽ tất cả mọi khung. Vùng "xám" là một bảng màu tối kèm DOF.
+- Tải JS không nhỏ: khoảng 580 KB gzip. Chỉ dữ liệu thế giới là nhỏ (32 KB JSON nhúng trong HTML).
+- Nó nặng hơn ta tưởng: khoảng 800 lệnh vẽ, 2,8–3,1 triệu tam giác mỗi khung (khoảng 4,5–4,9 triệu ở khung có vẽ bóng), đo bằng GPU phần mềm.
+
+Cái thật sự làm nó mượt:
+- **Gộp theo khối hình, không theo vật:** mỗi loại khối là một InstancedMesh có màu từng bản sao. 63.000 vật nhỏ chỉ tốn 35 lệnh vẽ.
+- **Chi tiết nằm trong shader** (cửa sổ, AO giả ở chân tường, đèn đêm) chứ không nằm trong tam giác.
+- **Texture sinh bằng code**, không tải ảnh.
+- **Dựng dần:** mỗi khung dựng tối đa 5 ms, gần trước xa sau; màn khởi động nhẹ chạy trong lúc tải.
+- **Bốn mức chất lượng, tự hạ một mức** khi hai cửa sổ 100 khung liên tiếp trung bình quá 31 ms.
+- **Bóng chỉ quanh tiêu điểm,** vẽ lại cách một khung.
+- Tổng hợp đầy đủ ở `docs/research/datcity.md`.
 
 ## Quyết định
 
