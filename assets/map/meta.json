@@ -1,182 +1,225 @@
 {
  "projection": {
-  "lon0": 112,
-  "lat0": 32,
+  "type": "albers",
+  "lon0": 105,
+  "lat1": 25,
+  "lat2": 47,
+  "R": 6371,
+  "originLon": 112,
+  "originLat": 32,
   "kmPerUnit": 3,
-  "unitsPerDegLon": 31.46824,
-  "unitsPerDegLat": 36.85667,
-  "note": "x = (lon - lon0) * unitsPerDegLon, z = (lat0 - lat) * unitsPerDegLat"
+  "note": "Albers equal-area conic (spherical), x east, z south, world units of kmPerUnit km, origin at originLon/originLat; formulas in Terrain.albers"
  },
  "height": {
   "step": 0.005,
   "encoding": "delta2d-zigzag-planes-gzip",
   "landFormula": "h = 0.1 + metres * 0.003; sea = metres * 0.008",
   "fine": {
-   "x0": -345,
-   "z0": -375,
-   "w": 675,
-   "d": 780,
+   "x0": -384,
+   "z0": -384,
+   "w": 768,
+   "d": 896,
    "step": 0.5,
-   "nx": 1351,
-   "nz": 1561
+   "nx": 1537,
+   "nz": 1793,
+   "tile": 128,
+   "tilesX": 6,
+   "tilesZ": 7,
+   "tileN": 257,
+   "file": "height-fine-<row>-<col>.bin.gz"
   },
   "coarse": {
-   "x0": -540,
-   "z0": -520,
-   "w": 1060,
-   "d": 1120,
+   "x0": -1152,
+   "z0": -896,
+   "w": 1792,
+   "d": 1536,
    "step": 2,
-   "nx": 531,
-   "nz": 561
+   "nx": 897,
+   "nz": 769
   }
  },
+ "land": {
+  "x0": -1152,
+  "z0": -896,
+  "w": 1792,
+  "d": 1536,
+  "step": 4,
+  "nx": 449,
+  "nz": 385,
+  "file": "land.bin.gz",
+  "channels": "R arid, G sand, B forest, A inside present-day China"
+ },
+ "gates": [
+  {
+   "name": "Giao Chỉ",
+   "lon": 105.85,
+   "lat": 21.03,
+   "x": -186.7,
+   "z": 415.4
+  },
+  {
+   "name": "Lạc Lãng",
+   "lon": 125.75,
+   "lat": 39.02,
+   "x": 366.2,
+   "z": -318.3
+  },
+  {
+   "name": "Đại Uyển",
+   "lon": 74.2,
+   "lat": 39.8,
+   "x": -1065,
+   "z": -419.3
+  }
+ ],
  "sources": [
   "AWS Terrain Tiles (terrarium, z7) — Mapzen/Tilezen: SRTM, ETOPO1, GMTED2010 and others; attribution per tilezen/joerd",
-  "Natural Earth 10m rivers and lakes (public domain)"
+  "Natural Earth 10m rivers and lakes, 50m admin-0 countries (public domain)"
  ],
  "history": [
   "Huai river routed to the Yellow Sea (pre-1128 course); Hongze Lake removed",
   "Only Dongting, Poyang, Tai and Chao lakes kept (plus Dian lake traced from the DEM)",
   "Huai pieces (Natural Earth \"Hudi\" is its middle course) chained into one river; the 1851 outlet dropped",
-  "Added Luo, Zi, Si, Bian, He canal, Chengdu Pi/Jian, Guangzhou Pearl channel, Shiyang (Wuwei); Daye marsh, Ji West Lake"
+  "Added Luo, Zi, Si, Bian, He canal, Chengdu Pi/Jian, Guangzhou Pearl channel, Shiyang (Wuwei); Daye marsh, Ji West Lake, Lop Nur, Juyan",
+  "Outside the Han core: every natural lake of Natural Earth in China (no reservoirs)"
  ],
  "cities": {
   "si_li": {
-   "x": 19.6,
-   "z": -100.58,
-   "y": 0.608,
+   "x": 11.35,
+   "z": -103.98,
+   "y": 0.593,
    "r": 7.46,
    "scale": 2.0418
   },
   "guan": {
-   "x": -98.21,
-   "z": -85.58,
-   "y": 1.319,
+   "x": -99.88,
+   "z": -82.15,
+   "y": 1.325,
    "r": 10.26,
    "scale": 1.8973
   },
   "yu": {
-   "x": 63.53,
-   "z": -73.31,
+   "x": 55.5,
+   "z": -79.67,
    "y": 0.35,
    "r": 4.51,
    "scale": 2.4627
   },
   "ji": {
-   "x": 75.93,
-   "z": -157.41,
+   "x": 59.2,
+   "z": -166.51,
    "y": 0.35,
    "r": 4.66,
    "scale": 2.3503
   },
   "qing": {
-   "x": 199.98,
-   "z": -179.97,
+   "x": 170.97,
+   "z": -202.64,
    "y": 0.35,
    "r": 8.36,
    "scale": 2.0253
   },
   "yan": {
-   "x": 129.49,
-   "z": -115.73,
+   "x": 113.63,
+   "z": -129.23,
    "y": 0.35,
    "r": 4.38,
    "scale": 2.495
   },
   "xu": {
-   "x": 163.32,
-   "z": -83.3,
+   "x": 149.47,
+   "z": -100.02,
    "y": 0.35,
    "r": 4.47,
    "scale": 2.4139
   },
   "jing": {
-   "x": 4.44,
-   "z": -0.92,
+   "x": 4.29,
+   "z": -1.25,
    "y": 0.35,
    "r": 4.38,
    "scale": 2.4499
   },
   "jing_nan": {
-   "x": 5.98,
-   "z": 60.67,
+   "x": 10.34,
+   "z": 61.29,
    "y": 0.35,
    "r": 5.69,
    "scale": 2.1284
   },
   "yi": {
-   "x": -249.86,
-   "z": 49.39,
-   "y": 1.602,
+   "x": -246.1,
+   "z": 57.88,
+   "y": 1.603,
    "r": 3.81,
    "scale": 2.5301
   },
   "han_zhong": {
-   "x": -156.27,
-   "z": -39.51,
-   "y": 1.663,
+   "x": -154.38,
+   "z": -33.37,
+   "y": 1.662,
    "r": 3.72,
    "scale": 2.5181
   },
   "yang": {
-   "x": 213.45,
-   "z": -1.25,
+   "x": 208.61,
+   "z": -23.2,
    "y": 0.35,
    "r": 9.17,
    "scale": 2.0726
   },
   "jiang": {
-   "x": 71.75,
-   "z": 52.89,
+   "x": 75.38,
+   "z": 47.93,
    "y": 0.35,
    "r": 2.59,
    "scale": 2.9278
   },
   "bing": {
-   "x": 14.95,
-   "z": -211.37,
-   "y": 2.458,
+   "x": -1.6,
+   "z": -216.8,
+   "y": 2.453,
    "r": 5.58,
    "scale": 2.2955
   },
   "longxi": {
-   "x": -209.8,
-   "z": -101.06,
-   "y": 4.567,
+   "x": -206.56,
+   "z": -95.73,
+   "y": 4.624,
    "r": 3.38,
    "scale": 2.6569
   },
   "hexi": {
-   "x": -294.64,
-   "z": -218.45,
-   "y": 4.784,
+   "x": -284.34,
+   "z": -216.76,
+   "y": 4.778,
    "r": 4.58,
    "scale": 2.263
   },
   "huai": {
-   "x": 178.55,
-   "z": -33.5,
+   "x": 170.41,
+   "z": -51.32,
    "y": 0.35,
    "r": 2.06,
    "scale": 3.3978
   },
   "you": {
-   "x": 136.89,
-   "z": -290.43,
+   "x": 100.17,
+   "z": -307.76,
    "y": 0.35,
    "r": 6.27,
    "scale": 2.1553
   },
   "nanzhong": {
-   "x": -292.72,
-   "z": 268.65,
-   "y": 5.852,
+   "x": -294.09,
+   "z": 279.14,
+   "y": 5.843,
    "r": 3.49,
    "scale": 2.844
   },
   "jiao": {
-   "x": 39.96,
-   "z": 326.99,
+   "x": 66.72,
+   "z": 326.71,
    "y": 0.35,
    "r": 2.58,
    "scale": 2.9278

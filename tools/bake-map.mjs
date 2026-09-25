@@ -1,15 +1,16 @@
 // Bakes the real-geography campaign map into assets/map/ (run once; outputs are committed).
 //
-//   node tools/bake-map.mjs            downloads into .cache/ on first run (curl, ~25 MB), then bakes
+//   node tools/bake-map.mjs            downloads into .cache/ on first run (curl, ~45 MB), then bakes
 //
 // Sources (see assets/SOURCE.md):
 //   - elevation: AWS Terrain Tiles, "terrarium" PNG z7 (Mapzen/Tilezen; SRTM, ETOPO1, GMTED… open data)
 //   - rivers, lakes: Natural Earth 10 m (public domain), via github.com/nvkelso/natural-earth-vector
 //
 // Outputs:
-//   height-fine.bin.gz    playable map grid (0.5 world units), height in steps of 0.005 units (≈1.7 m),
-//                         2-D delta + zigzag, low bytes then high bytes, gzip (≈1.8 MB instead of 4.2 MB raw)
-//   height-coarse.bin.gz  same encoding, 2-unit grid out to the horizon
+//   height-fine-R-C.bin.gz  Han core, 0.5-unit grid in 128-unit tiles; height in steps of 0.005 units (≈1.7 m),
+//                           2-D delta + zigzag, low bytes then high bytes, gzip
+//   height-coarse.bin.gz    same encoding, 2-unit grid over present-day China and a margin
+//   land.bin.gz             4-unit RGBA land mask over China (arid, sand, forest, inside China)
 //   (decoder: Terrain.loadBaked in docs/design/prototypes/terrain-real.js)
 //   water.json         rivers (world polylines with water-surface height and half-width) and lakes
 //   meta.json          projection, grids, attribution
@@ -26,14 +27,26 @@ const OUT = path.join(ROOT, 'assets', 'map');
 fs.mkdirSync(CACHE, { recursive: true });
 fs.mkdirSync(OUT, { recursive: true });
 
-// ---------------------------------------------------------------- projection
-const LON0 = 112, LAT0 = 32, KM_PER_UNIT = 3;
-const KX = (111.32 * Math.cos((LAT0 * Math.PI) / 180)) / KM_PER_UNIT; // world units per degree of longitude
-const KZ = 110.57 / KM_PER_UNIT; // per degree of latitude
-const toWorld = (lon, lat) => [(lon - LON0) * KX, (LAT0 - lat) * KZ];
-const toLonLat = (x, z) => [LON0 + x / KX, LAT0 - z / KZ];
-const FINE = { x0: -345, z0: -375, w: 675, d: 780, step: 0.5 };
-const COARSE = { x0: -540, z0: -520, w: 1060, d: 1120, step: 2 };
+// ---------------------------------------------------------------- projection (decisions/0006, round 6)
+// Albers equal-area conic, standard parallels 25° and 47°, central meridian 105°E: the usual map of China.
+// World units: 3 km (true within ±5% from 18° to 54°N), x east, z south, origin at 112°E 32°N so the Han heartland
+// keeps its old coordinates. The same formulas live in terrain-real.js (Terrain.albers); meta.json carries the constants.
+const ALB = { type: 'albers', lon0: 105, lat1: 25, lat2: 47, R: 6371, originLon: 112, originLat: 32, kmPerUnit: 3 };
+const KM_PER_UNIT = ALB.kmPerUnit;
+const { toWorld, toLonLat } = (() => {
+  const r = Math.PI / 180, n = (Math.sin(ALB.lat1 * r) + Math.sin(ALB.lat2 * r)) / 2, C = Math.cos(ALB.lat1 * r) ** 2 + 2 * n * Math.sin(ALB.lat1 * r);
+  const fwd = (lon, lat) => { const t = n * (lon - ALB.lon0) * r, p = (ALB.R * Math.sqrt(C - 2 * n * Math.sin(lat * r))) / n; return [p * Math.sin(t), -p * Math.cos(t)]; };
+  const [ox, oy] = fwd(ALB.originLon, ALB.originLat), k = ALB.kmPerUnit;
+  return {
+    toWorld: (lon, lat) => { const [x, y] = fwd(lon, lat); return [(x - ox) / k, -(y - oy) / k]; },
+    toLonLat: (X, Z) => { const x = X * k + ox, y = -Z * k + oy, p = Math.hypot(x, y), t = Math.atan2(x, -y); return [ALB.lon0 + t / n / r, Math.asin((C - ((p * n) / ALB.R) ** 2) / (2 * n)) / r]; },
+  };
+})();
+// Scale C (docs/product/proposal-all-china.md): full detail (0.5-unit heights, masks) in the Han core round the 20
+// seats, in 128-unit tiles loaded near the camera; 2-unit heights and a 4-unit land mask over all of present-day China.
+const TILE = 128;
+const FINE = { x0: -384, z0: -384, w: 6 * TILE, d: 7 * TILE, step: 0.5 };
+const COARSE = { x0: -1152, z0: -896, w: 14 * TILE, d: 12 * TILE, step: 2 };
 for (const g of [FINE, COARSE]) { g.nx = Math.round(g.w / g.step) + 1; g.nz = Math.round(g.d / g.step) + 1; }
 // elevation (m) → world height; sea floor kept shallow so coasts read at map scale
 const heightOf = (m) => (m > 0 ? 0.1 + m * 0.003 : Math.max(-6, m * 0.008));
@@ -44,11 +57,13 @@ function download(url, file) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   execFileSync('curl', ['-sSf', '-m', '120', '-o', file, url]);
 }
-const Z = 7, TX0 = 97, TX1 = 109, TY0 = 45, TY1 = 58;
+// z7 tiles over present-day China and a margin (lon 72–136.3, lat 16.7–55.1); beyond them the mosaic edge repeats (hidden in haze)
+const Z = 7, tileX = (lon) => Math.floor(((lon + 180) / 360) * 2 ** Z), tileY = (lat) => { const s = Math.sin((lat * Math.PI) / 180); return Math.floor((0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * 2 ** Z); };
+const TX0 = tileX(72), TX1 = tileX(136.3), TY0 = tileY(55.1), TY1 = tileY(16.7);
 console.log('tiles…');
 for (let x = TX0; x <= TX1; x++) for (let y = TY0; y <= TY1; y++) download(`https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${Z}/${x}/${y}.png`, path.join(CACHE, 'terrarium', `${Z}_${x}_${y}.png`));
 const NE = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/';
-for (const f of ['ne_10m_rivers_lake_centerlines', 'ne_10m_lakes']) download(NE + f + '.geojson', path.join(CACHE, f + '.geojson'));
+for (const f of ['ne_10m_rivers_lake_centerlines', 'ne_10m_lakes', 'ne_50m_admin_0_countries']) download(NE + f + '.geojson', path.join(CACHE, f + '.geojson'));
 
 // ---------------------------------------------------------------- minimal PNG decoder (8-bit RGB/RGBA, no interlace)
 function decodePNG(buf) {
@@ -135,6 +150,22 @@ const demLakes = DEM_LAKES.map((L) => {
   return { name: L.name, ring };
 });
 
+// ---------------------------------------------------------------- present-day China (the map's extent, round 6)
+// Natural Earth 50m admin-0: CHN, TWN, HKG, MAC. Land beyond fades into haze; Han gateways beyond it are labels only.
+const countries = JSON.parse(fs.readFileSync(path.join(CACHE, 'ne_50m_admin_0_countries.geojson'), 'utf8'));
+const chinaRings = countries.features.filter((f) => ['CHN', 'TWN', 'HKG', 'MAC'].includes(f.properties.ADM0_A3))
+  .flatMap((f) => (f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates).map((poly) => poly[0]))
+  .map((ring) => { const lo = ring.map((p) => p[0]), la = ring.map((p) => p[1]); return { ring, bb: [Math.min(...lo), Math.max(...lo), Math.min(...la), Math.max(...la)] }; });
+const inChina = (lon, lat) => {
+  let inside = false;
+  for (const { ring, bb } of chinaRings) {
+    if (lon < bb[0] || lon > bb[1] || lat < bb[2] || lat > bb[3]) continue;
+    for (let a = 0, b = ring.length - 1; a < ring.length; b = a++) { const [xa, ya] = ring[a], [xb, yb] = ring[b]; if ((ya > lat) !== (yb > lat) && lon < ((xb - xa) * (lat - ya)) / (yb - ya) + xa) inside = !inside; }
+  }
+  return inside;
+};
+const nearChina = (lon, lat) => [[0, 0], [0.8, 0], [-0.8, 0], [0, 0.8], [0, -0.8]].some(([a, b]) => inChina(lon + a, lat + b));
+
 // ---------------------------------------------------------------- rivers
 console.log('rivers…');
 const world = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'world.json'), 'utf8'));
@@ -180,13 +211,13 @@ for (const f of rivGeo.features) {
     const w = part.map(([lon, lat]) => toWorld(lon, lat));
     const inside = w.filter(([x, z]) => x > COARSE.x0 && x < COARSE.x0 + COARSE.w && z > COARSE.z0 && z < COARSE.z0 + COARSE.d).length;
     if (inside < 2) continue;
-    const lon = part[Math.floor(part.length / 2)][0];
-    if (lon < 99 || lon > 126.5) continue; // Tibet/Myanmar/Korea rivers are beyond the play area
+    const [lon, lat] = part[Math.floor(part.length / 2)];
+    if (!nearChina(lon, lat)) continue; // rivers of Mongolia, Kazakhstan, Russia, Korea, Indochina: in the haze beyond the map
     let hw = HW[rank] ?? 0.4;
     if (name === 'Jinsha') hw = 0.9;
     if (name === 'Nanpan' && lon < 104.5) hw = 0.45; // headwaters on the Yunnan plateau, not the lower river
     if (name === 'Chang Jiang' || name === 'Yangtze') hw = lon > 111 ? 2.0 : 1.3;
-    if (rank >= 8 && !inFine(...w[Math.floor(w.length / 2)])) continue; // small rivers only on the playable map
+    if (rank >= 8 && !inFine(...w[Math.floor(w.length / 2)])) continue; // small rivers only in the Han core (scale C)
     lines.push({ name, rank, hw, silt: SILT.has(name), pts: w });
   }
 }
@@ -294,7 +325,7 @@ carve(FINE, fine);
 carve(COARSE, coarse);
 
 // ---------------------------------------------------------------- lakes (only those that existed around 200 CE, roughly)
-const KEEP_LAKES = /Dongting|Poyang|Boyang|Tai Hu|Taihu|^Tai$|Chao/i;
+const KEEP_LAKES = /Dongting|Poyang|Boyang|Tai Hu|Taihu|^Tai$|Chao|Qinghai/i; // Qinghai Hu: the Xihai of the Han
 const lakeGeo = JSON.parse(fs.readFileSync(path.join(CACHE, 'ne_10m_lakes.geojson'), 'utf8'));
 const lakes = [];
 function addLake(name, ring) {
@@ -317,17 +348,20 @@ function addLake(name, ring) {
 }
 for (const f of lakeGeo.features) {
   const name = f.properties.name || '';
-  if (!f.geometry || !KEEP_LAKES.test(name)) continue;
+  // Han core: only the lakes that existed around 200 CE (history.md); elsewhere every natural lake in China (not reservoirs)
+  if (!f.geometry || /Shuiku|Reservoir|Songhua Hu/i.test(name)) continue; // Songhua Hu is a 1937 dam lake
   const polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
   for (const poly of polys) {
     const ring = poly[0].map(([lon, lat]) => toWorld(lon, lat));
-    if (ring.every(([x, z]) => inFine(x, z))) addLake(name, ring);
+    const [cx, cz] = ring.reduce(([a, b], [x, z]) => [a + x / ring.length, b + z / ring.length], [0, 0]), [clon, clat] = toLonLat(cx, cz);
+    if (inFine(cx, cz) ? KEEP_LAKES.test(name) && ring.every(([x, z]) => inFine(x, z)) : inChina(clon, clat) && ring.every(([x, z]) => x > COARSE.x0 && x < COARSE.x0 + COARSE.w && z > COARSE.z0 && z < COARSE.z0 + COARSE.d)) addLake(name, ring);
   }
 }
 for (const l of demLakes) addLake(l.name, l.ring);
 
 // small historical lakes Natural Earth does not carry (ellipses in lon/lat)
-for (const e of [{ name: 'Đại Dã trạch', lon: 116.05, lat: 35.47, rx: 0.16, ry: 0.1 }, { name: 'Tây hồ (Kế)', lon: 116.27, lat: 39.88, rx: 0.035, ry: 0.025 }]) {
+for (const e of [{ name: 'Đại Dã trạch', lon: 116.05, lat: 35.47, rx: 0.16, ry: 0.1 }, { name: 'Tây hồ (Kế)', lon: 116.27, lat: 39.88, rx: 0.035, ry: 0.025 },
+  { name: 'La Bố Bạc (Bồ Xương hải)', lon: 90.35, lat: 40.35, rx: 0.5, ry: 0.35 }, { name: 'Cư Duyên trạch', lon: 101.25, lat: 42.25, rx: 0.2, ry: 0.12 }]) { // Lop Nur and Juyan were large lakes in the Han
   const ring = []; for (let a = 0; a <= 32; a++) { const t = (a / 32) * Math.PI * 2, w = 1 + 0.12 * Math.sin(t * 3 + 1) + 0.08 * Math.sin(t * 5); ring.push(toWorld(e.lon + Math.cos(t) * e.rx * w, e.lat + Math.sin(t) * e.ry * w)); }
   const level = Math.max(0.05, Math.min(...ring.map(([x, z]) => heightAtWorld(x, z))) - 0.05);
   lakes.push({ name: e.name, level: +level.toFixed(3), ring: ring.map(([x, z]) => [+x.toFixed(2), +z.toFixed(2)]) });
@@ -357,9 +391,68 @@ const encode = (h, g) => {
   }
   return zlib.gzipSync(out, { level: 9 });
 };
-for (const f of ['height-fine.bin', 'height-coarse.bin']) fs.rmSync(path.join(OUT, f), { force: true });
-fs.writeFileSync(path.join(OUT, 'height-fine.bin.gz'), encode(fine, FINE));
+// fine heights in 128-unit tiles (257 × 257 samples, shared edges): the page loads only those near the camera
+for (const f of fs.readdirSync(OUT)) if (/^height-(fine|coarse)(-\d+-\d+)?\.bin(\.gz)?$/.test(f)) fs.rmSync(path.join(OUT, f));
+const TN = TILE / FINE.step + 1, TX = FINE.w / TILE, TZ = FINE.d / TILE;
+for (let tj = 0; tj < TZ; tj++) for (let ti = 0; ti < TX; ti++) {
+  const sub = new Float32Array(TN * TN), i0 = ti * (TN - 1), j0 = tj * (TN - 1);
+  for (let j = 0; j < TN; j++) for (let i = 0; i < TN; i++) sub[j * TN + i] = fine[(j0 + j) * FINE.nx + i0 + i];
+  fs.writeFileSync(path.join(OUT, `height-fine-${tj}-${ti}.bin.gz`), encode(sub, { nx: TN, nz: TN }));
+}
 fs.writeFileSync(path.join(OUT, 'height-coarse.bin.gz'), encode(coarse, COARSE));
+
+// ---------------------------------------------------------------- land mask over all of China (4-unit grid, RGBA bytes)
+// R arid, G sand, B forest, A inside present-day China (soft edge). The Han core has its own masks (terrain-real.js);
+// this one colours the rest of the country at the scale-C detail: plateau, basins, deserts, steppe, forests, oases.
+console.log('land mask…');
+const OUTER = { x0: COARSE.x0, z0: COARSE.z0, w: COARSE.w, d: COARSE.d, step: 4 };
+OUTER.nx = Math.round(OUTER.w / OUTER.step) + 1; OUTER.nz = Math.round(OUTER.d / OUTER.step) + 1;
+const ell = (lon, lat, clon, clat, rx, ry) => Math.hypot((lon - clon) / rx, (lat - clat) / ry);
+const blob = (lon, lat, clon, clat, rx, ry) => { const d = ell(lon, lat, clon, clat, rx, ry); return d < 0.7 ? 1 : d > 1.1 ? 0 : (1.1 - d) / 0.4; };
+const ss = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const SANDS = [[83.5, 39.2, 6.3, 1.5], [87.6, 45.3, 2.1, 0.7], [91.8, 40.2, 2.0, 0.6], [102.2, 40.0, 2.3, 1.0], [104.2, 38.7, 1.3, 0.75], [106.0, 41.2, 1.2, 0.5], [109.0, 38.6, 1.4, 0.6], [109.4, 40.3, 1.3, 0.35], [122.0, 43.3, 2.3, 0.6], [115.8, 42.4, 1.8, 0.5]]; // Taklamakan, Gurbantünggüt, Kumtag, Badain Jaran, Tengger, Ulan Buh, Mu Us, Kubuqi, Horqin, Otindag
+const OASES = [[75.99, 39.47], [77.24, 38.4], [79.92, 37.11], [80.26, 41.17], [82.96, 41.72], [86.15, 41.76], [89.19, 42.95], [93.51, 42.83], [94.66, 40.14], [98.5, 39.74], [100.45, 38.93], [81.32, 43.92], [87.6, 43.8]]; // Kashgar … Zhangye, Yining, Urumqi
+// value noise so regions have ragged, natural edges (the rules below read domain-warped lon/lat)
+const hash = (i, j) => { let h = Math.imul(i, 374761393) + Math.imul(j, 668265263); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+const vnoise = (x, y) => { const i = Math.floor(x), j = Math.floor(y), u = x - i, v = y - j, su = u * u * (3 - 2 * u), sv = v * v * (3 - 2 * v); return (hash(i, j) * (1 - su) + hash(i + 1, j) * su) * (1 - sv) + (hash(i, j + 1) * (1 - su) + hash(i + 1, j + 1) * su) * sv; };
+const fbm2 = (x, y) => vnoise(x, y) * 0.55 + vnoise(x * 2.1 + 7.3, y * 2.1 + 3.1) * 0.3 + vnoise(x * 4.3 + 1.7, y * 4.3 + 9.2) * 0.15;
+const land = Buffer.alloc(OUTER.nx * OUTER.nz * 4), inside = new Float32Array(OUTER.nx * OUTER.nz);
+for (let j = 0; j < OUTER.nz; j++) for (let i = 0; i < OUTER.nx; i++) {
+  const n = j * OUTER.nx + i, [lon0, lat0] = toLonLat(OUTER.x0 + i * OUTER.step, OUTER.z0 + j * OUTER.step), m = elevAt(lon0, lat0);
+  inside[n] = inChina(lon0, lat0) ? 1 : 0;
+  const lon = lon0 + (fbm2(lon0 * 0.8, lat0 * 0.8) - 0.5) * 1.6, lat = lat0 + (fbm2(lon0 * 0.8 + 40, lat0 * 0.8 + 17) - 0.5) * 1.0;
+  const oasis = Math.max(...OASES.map(([a, b]) => blob(lon0 + (fbm2(lon0 * 4, lat0 * 4) - 0.5) * 0.4, lat0, a, b, 0.4, 0.28)));
+  const sand = Math.max(...SANDS.map(([a, b, rx, ry]) => blob(lon, lat, a, b, rx, ry))) * (1 - oasis) * (0.55 + 0.45 * fbm2(lon0 * 3, lat0 * 3)); // dune fields are patchy
+  let arid = Math.max(
+    ss(3200, 4200, m) * ss(104, 101, lon) * (1 - ss(31.5, 29.5, lat) * ss(91, 93, lon) * 0.7), // Tibet, drier north and west
+    ss(99.5, 97.5, lon) * ss(35.5, 36.5, lat) * ss(3400, 2600, m), // Qaidam, Tarim, Dzungaria, Gobi of Xinjiang
+    ss(106, 104, lon) * ss(37, 38.5, lat), // Hexi and Alxa
+    ss(40.5, 42.5, lat) * ss(121, 117, lon) * 0.85, // Mongolian steppe
+    ss(44, 47, lat) * ss(118, 116, lon) * ss(123, 121, lon) * 0.6, // Hulunbuir
+    sand);
+  arid *= 1 - 0.9 * oasis;
+  let forest = Math.max(
+    ss(41.5, 43, lat) * ss(118.5, 120.5, lon) * ss(250, 650, m) * (1 - arid) * 0.85, // Greater and Lesser Khingan, Changbai: the ranges, not the Songnen and Liao plains
+    ss(1300, 1700, m) * ss(3000, 2600, m) * ss(79, 81, lon) * ss(96, 93, lon) * ss(41.8, 42.5, lat) * ss(45, 44, lat) * 0.7, // Tianshan spruce
+    ss(1200, 1500, m) * ss(2600, 2300, m) * ss(46.5, 47.5, lat) * ss(85, 86.5, lon) * 0.6, // Altai
+    ss(92, 94, lon) * ss(32.5, 31.5, lat) * ss(26, 27, lat) * ss(4200, 3600, m) * 0.85, // south-east Tibet, Hengduan
+    ss(29.5, 28, lat) * ss(96, 98, lon) * 0.8, // Yunnan, Guizhou, Guangxi, Fujian hills
+    lon > 119.8 && lat < 25.5 ? 0.85 : 0); // Taiwan
+  forest *= 1 - sand;
+  land[n * 4] = Math.round(255 * Math.min(1, arid)); land[n * 4 + 1] = Math.round(255 * sand); land[n * 4 + 2] = Math.round(255 * Math.min(1, forest));
+}
+{ // soft China edge: blur the inside mask twice (±8 units) so the land fades into haze across the border
+  let a = inside;
+  for (let pass = 0; pass < 2; pass++) for (const [di, dj] of [[1, 0], [0, 1]]) {
+    const src = a.slice();
+    for (let j = 0; j < OUTER.nz; j++) for (let i = 0; i < OUTER.nx; i++) { let s = 0, c = 0; for (let k = -2; k <= 2; k++) { const ii = i + di * k, jj = j + dj * k; if (ii >= 0 && jj >= 0 && ii < OUTER.nx && jj < OUTER.nz) { s += src[jj * OUTER.nx + ii]; c++; } } a[j * OUTER.nx + i] = s / c; }
+  }
+  for (let n = 0; n < a.length; n++) land[n * 4 + 3] = Math.round(255 * a[n]);
+}
+fs.writeFileSync(path.join(OUT, 'land.bin.gz'), zlib.gzipSync(land, { level: 9 }));
+// Han gateways beyond the map (round 6): named, not played. Placed on the far side of the border, in the haze.
+const GATES = [{ name: 'Giao Chỉ', lon: 105.85, lat: 21.03 }, { name: 'Lạc Lãng', lon: 125.75, lat: 39.02 }, { name: 'Đại Uyển', lon: 74.2, lat: 39.8 }]
+  .map((g) => { const [x, z] = toWorld(g.lon, g.lat); return { ...g, x: +x.toFixed(1), z: +z.toFixed(1) }; });
 const r2 = (v) => +v.toFixed(2), r3 = (v) => +v.toFixed(3);
 const rivers = lines.map((l) => {
   const keep = l.pts.map((p, i) => [r2(p[0]), r2(p[1]), r3(l.surf[i])]).filter((_, i, a) => i % 3 === 0 || i === a.length - 1); // ~1 unit spacing
@@ -367,10 +460,12 @@ const rivers = lines.map((l) => {
 });
 fs.writeFileSync(path.join(OUT, 'water.json'), JSON.stringify({ rivers, lakes }));
 fs.writeFileSync(path.join(OUT, 'meta.json'), JSON.stringify({
-  projection: { lon0: LON0, lat0: LAT0, kmPerUnit: KM_PER_UNIT, unitsPerDegLon: +KX.toFixed(5), unitsPerDegLat: +KZ.toFixed(5), note: 'x = (lon - lon0) * unitsPerDegLon, z = (lat0 - lat) * unitsPerDegLat' },
-  height: { step: Q, encoding: 'delta2d-zigzag-planes-gzip', landFormula: 'h = 0.1 + metres * 0.003; sea = metres * 0.008', fine: FINE, coarse: COARSE },
-  sources: ['AWS Terrain Tiles (terrarium, z7) — Mapzen/Tilezen: SRTM, ETOPO1, GMTED2010 and others; attribution per tilezen/joerd', 'Natural Earth 10m rivers and lakes (public domain)'],
-  history: ['Huai river routed to the Yellow Sea (pre-1128 course); Hongze Lake removed', 'Only Dongting, Poyang, Tai and Chao lakes kept (plus Dian lake traced from the DEM)', 'Huai pieces (Natural Earth "Hudi" is its middle course) chained into one river; the 1851 outlet dropped', 'Added Luo, Zi, Si, Bian, He canal, Chengdu Pi/Jian, Guangzhou Pearl channel, Shiyang (Wuwei); Daye marsh, Ji West Lake'],
+  projection: { ...ALB, note: 'Albers equal-area conic (spherical), x east, z south, world units of kmPerUnit km, origin at originLon/originLat; formulas in Terrain.albers' },
+  height: { step: Q, encoding: 'delta2d-zigzag-planes-gzip', landFormula: 'h = 0.1 + metres * 0.003; sea = metres * 0.008', fine: { ...FINE, tile: TILE, tilesX: TX, tilesZ: TZ, tileN: TN, file: 'height-fine-<row>-<col>.bin.gz' }, coarse: COARSE },
+  land: { ...OUTER, file: 'land.bin.gz', channels: 'R arid, G sand, B forest, A inside present-day China' },
+  gates: GATES,
+  sources: ['AWS Terrain Tiles (terrarium, z7) — Mapzen/Tilezen: SRTM, ETOPO1, GMTED2010 and others; attribution per tilezen/joerd', 'Natural Earth 10m rivers and lakes, 50m admin-0 countries (public domain)'],
+  history: ['Huai river routed to the Yellow Sea (pre-1128 course); Hongze Lake removed', 'Only Dongting, Poyang, Tai and Chao lakes kept (plus Dian lake traced from the DEM)', 'Huai pieces (Natural Earth "Hudi" is its middle course) chained into one river; the 1851 outlet dropped', 'Added Luo, Zi, Si, Bian, He canal, Chengdu Pi/Jian, Guangzhou Pearl channel, Shiyang (Wuwei); Daye marsh, Ji West Lake, Lop Nur, Juyan', 'Outside the Han core: every natural lake of Natural Earth in China (no reservoirs)'],
   cities: Object.fromEntries(cities.map((c) => [c.id, { x: +c.x.toFixed(2), z: +c.z.toFixed(2), y: +c.y.toFixed(3), r: c.r, scale: c.scale }])),
 }, null, 1));
-console.log('fine', FINE.nx, 'x', FINE.nz, 'coarse', COARSE.nx, 'x', COARSE.nz, 'rivers', rivers.length, 'lakes', lakes.length);
+console.log('fine', FINE.nx, 'x', FINE.nz, `(${TX * TZ} tiles)`, 'coarse', COARSE.nx, 'x', COARSE.nz, 'land', OUTER.nx, 'x', OUTER.nz, 'rivers', rivers.length, 'lakes', lakes.length);

@@ -504,7 +504,12 @@
   // wash. Shared by the ground and the canopy so borders stay visible over forests.
   const GLSL_BORDER = `
     // beyond the baked grid (round 5): fade into a haze so the map ends in cloud, not in a cut edge
-    float edgeFog(vec2 wp){ vec2 ex = max(uGrid.xy - wp, wp - uGrid.xy - uGrid.zw); return uEdgeFog * smoothstep(-10.0, 45.0, max(ex.x, ex.y)); }
+    float edgeFog(vec2 wp){
+      if (uLandOn > 0.5) { // round 8, all of China: haze beyond present-day China (land mask A) and the edge of the bake
+        vec2 luv = (wp - uLandGrid.xy) / uLandGrid.zw, o = max(-luv, luv - 1.0) * uLandGrid.zw;
+        return uEdgeFog * max(1.0 - smoothstep(0.12, 0.6, texture2D(tLand, clamp(luv, 0.0, 1.0)).a), smoothstep(-60.0, 0.0, max(o.x, o.y)));
+      }
+      vec2 ex = max(uGrid.xy - wp, wp - uGrid.xy - uGrid.zw); return uEdgeFog * smoothstep(-10.0, 45.0, max(ex.x, ex.y)); }
     const vec3 EDGE_HAZE = vec3(0.74, 0.79, 0.81);
     vec3 applyBorders(vec3 col, vec4 own, vec4 bd, float land, vec2 wp){
       float dR = (1.0 - bd.r) * 1.5, feR = max(fwidth(dR), 1e-4), wR = max(uBorderW, feR * 0.9);
@@ -524,6 +529,8 @@
   T.uniforms = (terr, extra = {}) => ({
     tMaskA: { value: terr.tex.A }, tMaskB: { value: terr.tex.B }, tMaskD: { value: terr.tex.D }, tOwn: { value: terr.tex.own }, tBord: { value: terr.tex.bord },
     uGrid: { value: new THREE.Vector4(terr.G.x0, terr.G.z0, terr.G.w, terr.G.d) },
+    tLand: { value: terr.tex.land || terr.tex.D }, uLandOn: { value: terr.land ? 1 : 0 },
+    uLandGrid: { value: terr.land ? new THREE.Vector4(terr.land.x0, terr.land.z0, terr.land.w, terr.land.d) : new THREE.Vector4(0, 0, 1, 1) },
     uTint: { value: 0.06 }, uBorder: { value: 0.75 }, uBorderW: { value: 0.22 }, uSnowLine: { value: 13 }, uSnowWest: { value: 1 }, uWaterLine: { value: 0.12 }, uFieldK: { value: 1 }, uDetailK: { value: 1 }, uSoft: { value: 0 }, uEdgeFog: { value: 0 }, uCrownK: { value: 1 }, uOutArid: { value: new THREE.Vector4(-150, -175, -170, -190) }, uSeason: { value: 0 }, uFocus: { value: new THREE.Vector3(0, 0, 0) },
     ...extra,
   });
@@ -573,7 +580,7 @@
       sh.fragmentShader = sh.fragmentShader
         .replace('#include <common>', `#include <common>
           varying vec3 vWP; varying vec3 vWN;
-          uniform sampler2D tMaskA, tMaskB, tMaskD, tOwn, tBord, tGrass; uniform vec4 uGrid; uniform float uTint, uBorder, uBorderW, uSeason, uSnowLine, uSnowWest, uWaterLine, uFieldK, uDetailK, uSoft, uEdgeFog; uniform vec4 uOutArid;
+          uniform sampler2D tMaskA, tMaskB, tMaskD, tOwn, tBord, tGrass, tLand; uniform vec4 uGrid, uLandGrid; uniform float uLandOn; uniform float uTint, uBorder, uBorderW, uSeason, uSnowLine, uSnowWest, uWaterLine, uFieldK, uDetailK, uSoft, uEdgeFog; uniform vec4 uOutArid;
           ${GLSL_NOISE}
           ${GLSL_BORDER}
           vec3 fieldColor(vec2 wp, float lush, out float bump){
@@ -609,9 +616,10 @@
           vec4 mA = texture2D(tMaskA, uvG), mB = texture2D(tMaskB, uvG), mD = texture2D(tMaskD, uvG), own = texture2D(tOwn, uvG), bd = texture2D(tBord, uvG);
           { // beyond the playable grid: steppe/plateau defaults, no farms, no borders, unshadowed
             vec2 ex = max(uGrid.xy - vWP.xz, vWP.xz - uGrid.xy - uGrid.zw);
-            float out_ = smoothstep(0.0, 4.0, max(ex.x, ex.y));
+            float out_ = uLandOn > 0.5 ? smoothstep(-30.0, 0.0, max(ex.x, ex.y) + 12.0 * (tnoise(vWP.xz * 0.04) - 0.5)) : smoothstep(0.0, 4.0, max(ex.x, ex.y)); // all of China: a ragged 30-unit blend into the land mask
             float aridOut = clamp(smoothstep(uOutArid.x, uOutArid.y, vWP.z) + smoothstep(uOutArid.z, uOutArid.w, vWP.x), 0.0, 1.0) * (0.35 + 0.35 * tnoise(vWP.xz * 0.01));
-            mA = mix(mA, vec4(0.0), out_); mB = mix(mB, vec4(aridOut, 0.0, 0.0, 0.0), out_);
+            vec4 lm = uLandOn > 0.5 ? texture2D(tLand, clamp((vWP.xz - uLandGrid.xy) / uLandGrid.zw, 0.0, 1.0)) : vec4(aridOut, 0.0, 0.0, 1.0); // all of China: baked land mask
+            mA = mix(mA, vec4(lm.b * 0.5, 0.0, 0.0, 0.0), out_); mB = mix(mB, vec4(lm.r, lm.g, 0.0, 0.0), out_);
             mD = mix(mD, vec4(mD.r, 1.0, 0.5, 0.0), out_); own = mix(own, vec4(0.0), out_); bd = mix(bd, vec4(0.0), out_);
           }
           float slope = 1.0 - clamp(vWN.y, 0.0, 1.0);
@@ -627,7 +635,7 @@
           lush = mix(lush, vec3(0.42, 0.44, 0.18), smoothstep(0.62, 0.85, n2) * 0.35);
           vec3 dry = mix(vec3(0.50, 0.45, 0.28), vec3(0.64, 0.55, 0.35), n1);
           vec3 col = mix(lush, dry, mB.r);
-          col = mix(col, vec3(0.80, 0.69, 0.47) * (0.9 + 0.2 * n2), mB.g);
+          col = mix(col, vec3(0.74, 0.60, 0.38) * (0.9 + 0.2 * n2), mB.g); // sand: ochre, not white
           col = mix(col, vec3(0.52, 0.33, 0.22) * (0.85 + 0.3 * n1), mB.b * 0.55);
           float fb; vec3 fc = fieldColor(vWP.xz * uFieldK, 1.0 - mB.r, fb); // uFieldK > 1: smaller parcels (round 5 scale)
           float fm = smoothstep(0.1, 0.5, mA.g + (n2 - 0.5) * 0.2);
@@ -692,7 +700,7 @@
             transformed.y -= uNear.w * (1.0 - smoothstep(uNear.z - 6.0, uNear.z, dn)); }`);
       sh.fragmentShader = sh.fragmentShader
         .replace('#include <common>', `#include <common>
-          varying vec3 vWP; varying vec3 vWN; uniform sampler2D tMaskA, tMaskB, tMaskD, tOwn, tBord; uniform vec4 uGrid; uniform float uSeason, uTint, uBorder, uBorderW, uCanopyBorder, uSoft, uEdgeFog, uCrownK;
+          varying vec3 vWP; varying vec3 vWN; uniform sampler2D tMaskA, tMaskB, tMaskD, tOwn, tBord, tLand; uniform vec4 uGrid, uLandGrid; uniform float uLandOn; uniform float uSeason, uTint, uBorder, uBorderW, uCanopyBorder, uSoft, uEdgeFog, uCrownK;
           ${GLSL_NOISE}
           ${GLSL_BORDER}`)
         .replace('#include <color_fragment>', `#include <color_fragment>
@@ -723,10 +731,12 @@
           float tBump = (crown * 0.35 + gap * 0.1) * detail * (1.0 - steep);
           // organic forest edge: keep whole crowns where the density is high enough
           if (mA.r < 0.13 + 0.14 * (1.0 - crown * detail) + 0.08 * (tnoise(vWP.xz * 0.8) - 0.5)) discard;
+          if (uLandOn > 0.5) { vec2 exC = max(uGrid.xy - vWP.xz, vWP.xz - uGrid.xy - uGrid.zw); if (max(exC.x, exC.y) + 12.0 * (tnoise(vWP.xz * 0.04) - 0.5) > -18.0) discard; } // thins out where the core meets the land mask
           diffuseColor.rgb = pow(col, vec3(2.2));
           { vec4 own = texture2D(tOwn, uvG); diffuseColor.rgb = mix(diffuseColor.rgb, own.rgb, uTint * own.a * 0.8);
             float wild = (1.0 - own.a) * (1.0 - step(0.05, own.r + own.g + own.b)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(dot(diffuseColor.rgb, vec3(0.3, 0.55, 0.15))) * 0.9 + vec3(0.1, 0.09, 0.07), uTint * wild * 1.6);
-            if (uCanopyBorder > 0.0) diffuseColor.rgb = mix(diffuseColor.rgb, applyBorders(diffuseColor.rgb, own, texture2D(tBord, uvG), 1.0, vWP.xz), uCanopyBorder); }
+            if (uCanopyBorder > 0.0) diffuseColor.rgb = mix(diffuseColor.rgb, applyBorders(diffuseColor.rgb, own, texture2D(tBord, uvG), 1.0, vWP.xz), uCanopyBorder);
+            diffuseColor.rgb = mix(diffuseColor.rgb, pow(EDGE_HAZE, vec3(2.2)), edgeFog(vWP.xz)); }
           #ifdef DEBUG_FLAT
             diffuseColor.rgb = vec3(0.1, 0.2, 0.08); tBump = 0.0;
           #endif
@@ -755,11 +765,12 @@
       VS_WP(sh, false);
       sh.fragmentShader = sh.fragmentShader
         .replace('#include <common>', `#include <common>
-          varying vec3 vWP; uniform sampler2D tMaskD; uniform vec4 uGrid; uniform float uEdgeFog;
+          varying vec3 vWP; uniform sampler2D tMaskD, tLand; uniform vec4 uGrid, uLandGrid; uniform float uEdgeFog, uLandOn;
           ${GLSL_NOISE}`)
         .replace('#include <color_fragment>', `#include <color_fragment>
           vec2 uvG = (vWP.xz - uGrid.xy) / uGrid.zw;
           vec2 exG = max(uGrid.xy - vWP.xz, vWP.xz - uGrid.xy - uGrid.zw); float fogE = uEdgeFog * smoothstep(-10.0, 45.0, max(exG.x, exG.y));
+          if (uLandOn > 0.5) { vec2 luv = (vWP.xz - uLandGrid.xy) / uLandGrid.zw, o = max(-luv, luv - 1.0) * uLandGrid.zw; fogE = uEdgeFog * max(1.0 - smoothstep(0.12, 0.6, texture2D(tLand, clamp(luv, 0.0, 1.0)).a), smoothstep(-60.0, 0.0, max(o.x, o.y))); }
           bool inside = all(greaterThan(uvG, vec2(0.0))) && all(lessThan(uvG, vec2(1.0)));
           vec4 mD = texture2D(tMaskD, clamp(uvG, 0.0, 1.0));
           float tH = inside ? mD.r * 8.0 - 4.0 : -3.0;
@@ -836,27 +847,39 @@
     const canopyH = (x, z) => terr.h(x, z) + terr.canopyLift(x, z);
     out.canopy = new THREE.Mesh(chunkedSurface(terr, { ...o, minStep: 1 }, canopyH), mats.canopy); // edges are cut in the shader, 1 unit is enough
     out.canopy.receiveShadow = true;
+    // all of China (round 8, terr.CO = the coarse grid): a regular mesh at o.chinaStep units, in chunks so the camera
+    // culls what it cannot see, hidden under the detailed core (flush along its edge)
+    const avgH = (x, z, sp) => { const r = Math.max(1, sp * 0.6); let acc = 0, ws = 0; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const w = a || b ? 1 : 2; acc += w * terr.H(x + a * r, z + b * r); ws += w; } return acc / ws; };
+    if (terr.CO) {
+      const CO = terr.CO, st = o.chinaStep || 4, CH = 64, nx = Math.floor(CO.w / st), nz = Math.floor(CO.d / st), grp = new THREE.Group();
+      for (let cj = 0; cj < nz; cj += CH) for (let ci = 0; ci < nx; ci += CH) {
+        const cw = Math.min(CH, nx - ci), cd = Math.min(CH, nz - cj), x0 = CO.x0 + ci * st, z0 = CO.z0 + cj * st;
+        if (x0 > G.x0 + 2 * st && x0 + cw * st < G.x0 + G.w - 2 * st && z0 > G.z0 + 2 * st && z0 + cd * st < G.z0 + G.d - 2 * st) continue; // wholly under the core
+        const geo = new THREE.PlaneGeometry(cw * st, cd * st, cw, cd).rotateX(-Math.PI / 2).translate(x0 + (cw * st) / 2, 0, z0 + (cd * st) / 2), p = geo.attributes.position;
+        for (let i = 0; i < p.count; i++) {
+          const x = p.getX(i), z = p.getZ(i), inside = x > G.x0 + 1 && x < G.x0 + G.w - 1 && z > G.z0 + 1 && z < G.z0 + G.d - 1;
+          const edge = Math.min(x - G.x0, G.x0 + G.w - x, z - G.z0, G.z0 + G.d - z);
+          p.setY(i, inside ? terr.h(x, z) - (edge < st * 1.5 ? 0.06 : 3) : avgH(x, z, st) - 0.05);
+        }
+        geo.computeVertexNormals(); geo.computeBoundingSphere();
+        const m = new THREE.Mesh(geo, mats.ground); m.receiveShadow = true; grp.add(m);
+      }
+      out.china = grp;
+    }
     // outer ring: non-uniform grid, dense near the map, coarse at the horizon; hidden under the map inside.
     // Heights are averaged over the local cell size so coarse vertices do not alias the noise.
-    const R = 1400, n = 220;
+    const R = terr.CO ? 2600 : 1400, n = 220, IN = terr.CO || G; // round 8: hidden under the all-China mesh
     const og = new THREE.PlaneGeometry(2, 2, n, n).rotateX(-Math.PI / 2);
     const op = og.attributes.position;
     for (let i = 0; i < op.count; i++) {
       const u = op.getX(i), v = op.getZ(i);
       const x = Math.sign(u) * Math.pow(Math.abs(u), 2.6) * R, z = Math.sign(v) * Math.pow(Math.abs(v), 2.6) * R;
-      const inside = x > G.x0 + 1 && x < G.x0 + G.w - 1 && z > G.z0 + 1 && z < G.z0 + G.d - 1;
+      const inside = x > IN.x0 + 1 && x < IN.x0 + IN.w - 1 && z > IN.z0 + 1 && z < IN.z0 + IN.d - 1;
       const sp = Math.max(2.6 * Math.pow(Math.abs(u), 1.6), 2.6 * Math.pow(Math.abs(v), 1.6)) * R * (2 / n); // vertex spacing here
-      const edge = Math.min(x - G.x0, G.x0 + G.w - x, z - G.z0, G.z0 + G.d - z);
-      let y;
-      // hidden under the map inside, but flush with it along the edge (else the last ring cell is a trench)
-      if (inside) y = terr.h(x, z) - (edge < sp * 1.5 ? 0.06 : 3);
-      else {
-        // average over the vertex footprint (spacing grows toward the horizon) so the noise cannot alias
-        const r = Math.max(1, sp * 0.6);
-        let acc = 0, wsum = 0;
-        for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const w = a || b ? 1 : 2; acc += w * terr.H(x + a * r, z + b * r); wsum += w; }
-        y = acc / wsum - 0.05;
-      }
+      const edge = Math.min(x - IN.x0, IN.x0 + IN.w - x, z - IN.z0, IN.z0 + IN.d - z);
+      // hidden under the map inside, but flush with it along the edge (else the last ring cell is a trench);
+      // outside, heights averaged over the vertex footprint (spacing grows toward the horizon) so the noise cannot alias
+      const y = inside ? (IN === G ? terr.h(x, z) : avgH(x, z, sp)) - (edge < sp * 1.5 ? 0.06 : 3) : avgH(x, z, sp) - 0.05;
       op.setXYZ(i, x, y, z);
     }
     og.computeVertexNormals();

@@ -21,15 +21,49 @@
     }
     return out;
   };
-  T.loadBaked = async function (base = '/assets/map/') {
-    const [meta, fineZ, coarseZ, water] = await Promise.all([
-      fetch(base + 'meta.json').then((r) => r.json()),
-      fetch(base + 'height-fine.bin.gz').then(gunzip),
+  // Albers equal-area conic (round 8, meta.projection.type 'albers'; same formulas as tools/bake-map.mjs), or the
+  // round-5 equirectangular map. Returns { toWorld(lon, lat) → [x, z], toLonLat(x, z) → [lon, lat] } in world units.
+  T.projection = function (P) {
+    if (P.type !== 'albers') return { toWorld: (lon, lat) => [(lon - P.lon0) * P.unitsPerDegLon, (P.lat0 - lat) * P.unitsPerDegLat], toLonLat: (x, z) => [P.lon0 + x / P.unitsPerDegLon, P.lat0 - z / P.unitsPerDegLat] };
+    const r = Math.PI / 180, n = (Math.sin(P.lat1 * r) + Math.sin(P.lat2 * r)) / 2, C = Math.cos(P.lat1 * r) ** 2 + 2 * n * Math.sin(P.lat1 * r);
+    const fwd = (lon, lat) => { const t = n * (lon - P.lon0) * r, p = (P.R * Math.sqrt(C - 2 * n * Math.sin(lat * r))) / n; return [p * Math.sin(t), -p * Math.cos(t)]; };
+    const [ox, oy] = fwd(P.originLon, P.originLat), k = P.kmPerUnit;
+    return {
+      toWorld: (lon, lat) => { const [x, y] = fwd(lon, lat); return [(x - ox) / k, -(y - oy) / k]; },
+      toLonLat: (X, Z) => { const x = X * k + ox, y = -Z * k + oy, p = Math.hypot(x, y), t = Math.atan2(x, -y); return [P.lon0 + t / n / r, Math.asin(clamp((C - ((p * n) / P.R) ** 2) / (2 * n), -1, 1)) / r]; },
+    };
+  };
+
+  // opts.tiles(box) → true for the fine tiles to fetch ({x0, z0, x1, z1} in world units; default: all). Tiles left out are
+  // filled from the coarse grid, so the core still has heights (softer) and the page downloads only what the camera needs.
+  T.loadBaked = async function (base = '/assets/map/', opts = {}) {
+    const meta = await fetch(base + 'meta.json').then((r) => r.json());
+    const H = meta.height, F = H.fine, C = H.coarse;
+    const want = [];
+    if (F.tile) for (let tj = 0; tj < F.tilesZ; tj++) for (let ti = 0; ti < F.tilesX; ti++) {
+      const box = { x0: F.x0 + ti * F.tile, z0: F.z0 + tj * F.tile }; box.x1 = box.x0 + F.tile; box.z1 = box.z0 + F.tile;
+      if (!opts.tiles || opts.tiles(box, meta)) want.push({ ti, tj });
+    }
+    const [coarseZ, water, land, ...tiles] = await Promise.all([
       fetch(base + 'height-coarse.bin.gz').then(gunzip),
       fetch(base + 'water.json').then((r) => r.json()),
+      meta.land ? fetch(base + meta.land.file).then(gunzip) : null,
+      ...(F.tile ? want.map((t) => fetch(base + `height-fine-${t.tj}-${t.ti}.bin.gz`).then(gunzip)) : [fetch(base + 'height-fine.bin.gz').then(gunzip)]),
     ]);
-    const H = meta.height;
-    return { meta, fine: decode(fineZ, H.fine, H.step), coarse: decode(coarseZ, H.coarse, H.step), water };
+    const coarse = decode(coarseZ, C, H.step);
+    let fine;
+    if (!F.tile) fine = decode(tiles[0], F, H.step);
+    else {
+      fine = new Int16Array(F.nx * F.nz);
+      const cb = (x, z) => { const fx = clamp((x - C.x0) / C.step, 0, C.nx - 1.001), fz = clamp((z - C.z0) / C.step, 0, C.nz - 1.001), i = Math.floor(fx), j = Math.floor(fz), u = fx - i, v = fz - j, e = (a, b) => coarse[b * C.nx + a]; return (e(i, j) * (1 - u) + e(i + 1, j) * u) * (1 - v) + (e(i, j + 1) * (1 - u) + e(i + 1, j + 1) * u) * v; };
+      for (let j = 0; j < F.nz; j++) for (let i = 0; i < F.nx; i++) fine[j * F.nx + i] = cb(F.x0 + i * F.step, F.z0 + j * F.step);
+      const TN = F.tileN;
+      want.forEach((t, k) => {
+        const sub = decode(tiles[k], { nx: TN, nz: TN }, H.step), i0 = t.ti * (TN - 1), j0 = t.tj * (TN - 1);
+        for (let j = 0; j < TN; j++) fine.set(sub.subarray(j * TN, (j + 1) * TN), (j0 + j) * F.nx + i0);
+      });
+    }
+    return { meta, fine, coarse, water, land, tilesLoaded: want.length };
   };
 
   // opts: { baked, provinces: {id: [x, z]}, neighbors, cities: meta.cities, sun, wall: [[lon, lat]…] }
@@ -38,9 +72,12 @@
     const phase = {}; let tp = t0; const mark = (k) => { const n = performance.now(); phase[k] = Math.round(n - tp); tp = n; };
     const { meta, water } = opts.baked;
     const P = meta.projection, F = meta.height.fine, CO = meta.height.coarse;
-    const toWorld = (lon, lat) => [(lon - P.lon0) * P.unitsPerDegLon, (P.lat0 - lat) * P.unitsPerDegLat];
-    const toLonLat = (x, z) => [P.lon0 + x / P.unitsPerDegLon, P.lat0 - z / P.unitsPerDegLat];
+    const { toWorld, toLonLat } = T.projection(P);
     const PROV = opts.provinces, pads = Object.values(opts.cities);
+    // round 8: inside present-day China (land mask A); the core grid reaches into Vietnam, Laos, Korea, which stay bare and hazed
+    const LM = opts.baked.land ? meta.land : null, landB = opts.baked.land;
+    const landRaw = (x, z) => { const o = (clamp(Math.round((z - LM.z0) / LM.step), 0, LM.nz - 1) * LM.nx + clamp(Math.round((x - LM.x0) / LM.step), 0, LM.nx - 1)) * 4; return [landB[o], landB[o + 1], landB[o + 2], landB[o + 3]]; };
+    const chinaAt = (x, z) => (LM ? landRaw(x, z)[3] / 255 : 1);
     const cities = Object.values(PROV);
 
     // --- heights: fine grid inside the map, coarse grid to the horizon, sea beyond
@@ -205,9 +242,9 @@
         const x = PG.x0 + i * PG.st, z = PG.z0 + j * PG.st, e = lookup(height, x, z), rd = riverSD(x, z);
         const s = Math.hypot(lookup(height, x + 1, z) - lookup(height, x - 1, z), lookup(height, x, z + 1) - lookup(height, x, z - 1)) / 2;
         const hw = inGrid(x, z) ? riverHW[idx(Math.round((x - G.x0) / G.step), Math.round((z - G.z0) / G.step))] : 0;
-        // with opts.wild: steppe, sand, plateau (and Taiwan, beyond Han reach) are the wasteland of 219
+        // with opts.wild: steppe, sand, plateau (and Taiwan, Hainan: beyond Han reach) are the wasteland of 219
         let arid = 0;
-        if (WILD) { const R = region(x, z); arid = clamp(R.steppe + R.ordos + R.tibet + (R.lon > 119.8 && R.lat < 25.5 ? 1 : 0), 0, 1); }
+        if (WILD) { const R = region(x, z); arid = clamp(R.steppe + R.ordos + R.tibet + ((R.lon > 119.8 && R.lat < 25.5) || (R.lat < 20.3 && R.lon > 108.4 && R.lon < 111.3) ? 1 : 0), 0, 1); } // + Taiwan, Hainan (Zhuya given up in 46 BC)
         aridPG[j * PG.nx + i] = arid;
         pc[j * PG.nx + i] = e < 0.05 && rd > 0 ? 3 : 1 + 40 * s * s + Math.max(0, e - 2.5) * 0.5 + (rd < 0 ? 2 + hw * 5 : 0) + 0.8 * fbm(x * 0.03, z * 0.03, 2) + 2 * arid;
       }
@@ -318,14 +355,15 @@
       fm += sstep(1.6, 0.6, e) * sstep(0.12, 0.04, s) * 0.45 * (1 - arid); // lowland plains were farmed by 200
       fm *= sstep(0.4, 0.18, s) * Math.max(sstep(6, 3, e), sstep(30, 8, dc)) * (1 - R.ordos) * (1 - R.tibet) * (1 - 0.7 * R.steppe); // high basins round a city were farmed too (Dian, Guzang, Tianshui)
       fm = clamp(fm * 0.9 + (fbm(x * 0.05 + 40, z * 0.05, 3) - 0.5) * 1.1, 0, 1);
-      field[n] = sstep(0.4, 0.62, fm);
+      const cn = sstep(0.35, 0.65, chinaAt(x, z));
+      field[n] = sstep(0.4, 0.62, fm) * cn;
       let fd = (fbm(x * 0.03 + 9, z * 0.03 + 2) - 0.42) * 3 + sstep(1.3, 4.5, e) * 0.9 + R.south * 0.55 - R.northPlain * 0.6;
       const wx = x + 9 * (fbm(x * 0.05 + 1, z * 0.05, 2) - 0.5), wz = z + 9 * (fbm(z * 0.05 + 6, x * 0.05, 2) - 0.5); // warped: ragged, not round
       fd += sstep(0.6, 0.72, fbm(wx * 0.16 + 3, wz * 0.16 + 8, 3)) * 1.6 * (1 - arid); // woodlots and groves on the plains
       fd -= arid * 1.4 + field[n] * (1.2 + 1.6 * sstep(3.5, 5, e) * sstep(0.1, 0.04, s)) + // farmed high basins (Dian, Guzang) beat the upland forest bonus
          sstep(2.0, 0.6, rd) + sstep(1.4, 0.5, road0) + sstep(4, 0, dc) * 2 + sstep(10.5, 13, e) * 2 + (R.gobi + R.oasis) * 2 * sstep(8.5, 7, e); // Hexi: spruce only up on the Qilian slopes
       for (const [kx, kz, kr] of pillars) if (Math.abs(x - kx) < kr && Math.abs(z - kz) < kr && Math.hypot(x - kx, z - kz) < kr * 0.8) fd = Math.max(fd, 0.9);
-      forest[n] = clamp(fd, 0, 1);
+      forest[n] = clamp(fd, 0, 1) * cn;
     }
     { const tmp = new Float32Array(N), r = 1;
       for (let j = 0; j < G.nz; j++) for (let i = 0; i < G.nx; i++) { let a = 0; for (let k = -r; k <= r; k++) a += forest[idx(clamp(i + k, 0, G.nx - 1), j)]; tmp[idx(i, j)] = a / (2 * r + 1); }
@@ -341,6 +379,7 @@
       if (dc < 3 || rd < 1 || !(r0 < 2.5 || rd < 5 || rnd() < 0.12)) continue;
       const R = region(x, z); if (R.ordos > 0.3 || R.tibet > 0.3 || (R.steppe > 0.5 && rnd() < 0.85)) continue;
       if (lookup(forest, x, z) > 0.45 || hamlets.some((p) => Math.abs(p.x - x) < 7 && Math.abs(p.z - z) < 7)) continue;
+      if (chinaAt(x, z) < 0.6) continue;
       hamlets.push({ x, z, n: 3 + Math.floor(rnd() * 6), arid: R.loess + R.steppe });
     }
     for (const hm of hamlets) {
@@ -362,7 +401,9 @@
       const n = idx(i, j), x = gx(i), z = gz(j), R = region(x, z), o = n * 4;
       texA[o] = b8(forest[n]); texA[o + 1] = b8(field[n]); texA[o + 2] = b8(1 - road[n] / 1.4);
       texA[o + 3] = b8(sstep(0.9, 0.05, river[n]) * sstep(0.4, 1.0, riverHW[n]) + sstep(2.0, 0.2, land[n]) * 0.9);
-      texB[o] = b8(R.loess * 0.85 + R.steppe * 0.75 + R.tibet * 0.65 + 0.2 * R.northPlain); texB[o + 1] = b8(R.ordos); texB[o + 2] = b8(R.sichuan * sstep(0.45, 0.8, fbm(x * 0.1, z * 0.1, 3))); texB[o + 3] = b8(settle[n]);
+      // round 8: toward the edge of the core, agree with the all-China land mask so the two meet without a seam
+      const lmk = LM ? sstep(60, 10, Math.min(x - G.x0, G.x0 + G.w - x, z - G.z0, G.z0 + G.d - z)) : 0, lo = lmk ? landRaw(x, z) : null;
+      texB[o] = b8(lerp(R.loess * 0.85 + R.steppe * 0.75 + R.tibet * 0.65 + 0.2 * R.northPlain, lo ? lo[0] / 255 : 0, lmk)); texB[o + 1] = b8(lerp(R.ordos, lo ? lo[1] / 255 : 0, lmk)); texB[o + 2] = b8(R.sichuan * sstep(0.45, 0.8, fbm(x * 0.1, z * 0.1, 3))); texB[o + 3] = b8(settle[n]);
       texD[o] = b8((height[n] + 4) / 8); texD[o + 1] = b8(sh[n]); texD[o + 2] = b8(0.5 + (hc[n] - hb[n]) * 0.22); texD[o + 3] = b8(silt[n] * sstep(6, 1, river[n]));
     }
     const mkTex = (data) => { const t = new THREE.DataTexture(data, G.nx, G.nz, THREE.RGBAFormat); t.magFilter = t.minFilter = THREE.LinearFilter; t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; t.needsUpdate = true; return t; };
@@ -395,6 +436,13 @@
       sunAt: (x, z) => (inGrid(x, z) ? lookup(sh, x, z) : 1), provinceAt: (x, z) => provIds[provOf[idx(Math.round(clamp((x - G.x0) / G.step, 0, G.nx - 1)), Math.round(clamp((z - G.z0) / G.step, 0, G.nz - 1)))]],
       tex: { A: tA, B: tB, D: tD, own: tOwn, bord: tBord }, buildMs: 0, phase,
     };
+    // all of China (round 8): the coarse grid and its baked land mask (R arid, G sand, B forest, A inside China)
+    if (opts.baked.land) {
+      const L = meta.land, t = new THREE.DataTexture(opts.baked.land, L.nx, L.nz, THREE.RGBAFormat);
+      t.magFilter = t.minFilter = THREE.LinearFilter; t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; t.needsUpdate = true;
+      out.tex.land = t; out.land = L; out.CO = CO;
+      out.landAt = (x, z) => { const i = clamp(Math.round((x - L.x0) / L.step), 0, L.nx - 1), j = clamp(Math.round((z - L.z0) / L.step), 0, L.nz - 1), o = (j * L.nx + i) * 4, a = opts.baked.land; return { arid: a[o] / 255, sand: a[o + 1] / 255, forest: a[o + 2] / 255, china: a[o + 3] / 255 }; };
+    }
     out.buildMs = performance.now() - t0;
     return out;
   };

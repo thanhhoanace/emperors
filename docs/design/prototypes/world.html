@@ -20,10 +20,18 @@
   const W = 1440, H = 900;
   // The world of autumn 219: seats, neighbours and owners from data/world.json (the engine's world; the year-200 world in
   // data/archive is never loaded), city layouts from data/cities.json.
+  // Scale C (round 8): the whole-country views need no fine tiles; closer views fetch the 128-unit tiles near the target.
+  const wholeCountry = SHOT === 'overview' || SHOT === 'strategic';
+  const tileFilter = (box, meta) => {
+    if (wholeCountry) return false;
+    const c = meta.cities, id = params.get('c') || 'jing', t = SHOT === 'region' ? [40, -60] : SHOT === 'campaign' ? [c.jing.x + 12, c.jing.z - 13] : [c[id].x, c[id].z];
+    const R = SHOT === 'region' ? 190 : SHOT === 'campaign' ? 110 : 90, dx = Math.max(box.x0 - t[0], 0, t[0] - box.x1), dz = Math.max(box.z0 - t[1], 0, t[1] - box.z1);
+    return Math.hypot(dx, dz) < R;
+  };
   const [world, cityDefs, baked] = await Promise.all([
     fetch('/data/world.json').then((r) => r.json()),
     fetch('/data/cities.json').then((r) => r.json()).then((j) => j.cities),
-    Terrain.loadBaked('/assets/map/'),
+    Terrain.loadBaked('/assets/map/', { tiles: tileFilter }),
   ]);
   const loadMs = performance.now() - T0;
   const MC = baked.meta.cities, PROV = {}, NEI = {}, CITY = {};
@@ -37,8 +45,8 @@
   const CID = params.get('c') || 'jing', J = MC.jing;
   const cityView = (id) => { const c = MC[id], t = [c.x, c.y + 0.25, c.z], D = Number(params.get('d')) || 3 + c.r * 2.5; return { target: t, cam: orbit(t, D, Number(params.get('az') ?? 0.55), Number(params.get('el') ?? 0.6)), fov: 30, sun: [-0.62, 0.5, 0.4], focus: id, D }; };
   const view = {
-    overview: { target: [-22, 0, 22], cam: [-8, 800, 560], fov: 36, sun: [-0.5, 0.5, -0.3] }, // 219: the rim (Hexi, Longxi, Nanzhong) in frame
-    strategic: { target: [-12, 0, 22], cam: [-4, 1080, 330], fov: 36, sun: [-0.5, 0.6, -0.3] },
+    overview: { target: [-330, 0, -150], cam: [-310, 1300, 1030], fov: 36, sun: [-0.5, 0.5, -0.3] }, // round 8: all of present-day China
+    strategic: { target: [-300, 0, -170], cam: [-296, 1720, 300], fov: 36, sun: [-0.5, 0.6, -0.3] },
     region: { target: [40, 0, -60], cam: [95, 165, 105], fov: 34, sun: [-0.5, 0.45, -0.3] },
     campaign: { target: [J.x + 12, J.y, J.z - 13], cam: [J.x + 44, 25, J.z + 34], fov: 32, sun: [0.55, 0.4, -0.35], focus: 'jing' },
     city: cityView(CID),
@@ -52,7 +60,7 @@
 
   // ---------------------------------------------------------------- terrain
   // Han Great Wall (rammed loess), approximate line from Liaodong to Hexi
-  const WALL = [[122.5, 41.8], [120.0, 41.9], [117.5, 41.5], [115.0, 41.2], [113.0, 40.9], [111.0, 41.0], [109.0, 41.2], [107.5, 41.3], [106.5, 40.2], [105.8, 38.9], [104.5, 37.5], [103.4, 37.35], [103.15, 37.85], [102.95, 38.25], [102.3, 38.45], [101.0, 38.75], [99.0, 39.6]];
+  const WALL = [[122.5, 41.8], [120.0, 41.9], [117.5, 41.5], [115.0, 41.2], [113.0, 40.9], [111.0, 41.0], [109.0, 41.2], [107.5, 41.3], [106.5, 40.2], [105.8, 38.9], [104.5, 37.5], [103.4, 37.35], [103.15, 37.85], [102.95, 38.25], [102.3, 38.45], [101.0, 38.75], [99.0, 39.6], [97.5, 40.1], [95.5, 40.35], [93.8, 40.35], [92.6, 40.3]]; // to the Yumen pass and beyond
   const terr = Terrain.createReal({ baked, provinces: PROV, neighbors: NEI, wild: Number(params.get('wild') || 40), cities: MC, sun: sunDir, wall: WALL, canopy: 0.42 });
   terr.setOwners((pid) => (ownerOf[pid] ? FCOL[ownerOf[pid]] : null), (pid) => ownerOf[pid]);
   const grass = Terrain.detailTexture(512);
@@ -71,9 +79,10 @@
   if (close) { gu.uTint.value = 0.0; gu.uBorder.value = 0.8; gu.uBorderW.value = 0.08; }
   const tgt = new THREE.Vector3(...view.target);
   const lod = close ? { focus: [[view.target[0], view.target[2]], [view.cam[0], view.cam[2]]], near: SHOT === 'city' ? 20 : 40, mid: 120 }
-    : SHOT === 'region' ? { focus: [[view.target[0], view.target[2]]], near: 0, mid: 160, fine: 1 } : { step: 2 }; // whole-map views: 2-unit mesh (≈3 px per cell) keeps them under 1.5 M triangles
+    : SHOT === 'region' ? { focus: [[view.target[0], view.target[2]]], near: 0, mid: 160, fine: 1, chinaStep: 6 } : { step: 3, chinaStep: 6 }; // whole-country views: the core is a third of the frame, 3-unit core and 6-unit China mesh stay under 1.5 M triangles
   const M = Terrain.meshes(terr, { ground, canopy }, lod);
   scene.add(M.ground, M.canopy, M.outer);
+  if (M.china) scene.add(M.china); // round 8: the rest of China on the coarse grid
 
   // ---------------------------------------------------------------- sky, env, water
   const skyMat = new THREE.ShaderMaterial({
@@ -162,11 +171,11 @@
     const R = SHOT === 'city' ? Math.min(22, view.D * 1.4) : SHOT === 'campaign' ? 34 : 0;
     const avoid = (x, z) => Object.values(MC).some((c) => Math.hypot(x - c.x, z - c.z) < c.r * 0.9);
     // lone trees only up close: from the campaign camera they read as specks, the canopy shell carries the woods
-    // tree budget (decisions/0005: ≤ 3 M triangles up close): in deep forest (Nanzhong, Qinling) widen the spacing
+    // tree budget (decisions/0005: ≤ 3 M triangles up close): in deep forest (Nanzhong, Qinling) widen the spacing past ~14,000 trees
     let sp = SHOT === 'city' ? 0.19 : 0.22, cover = 0, nS = 0;
     for (let a = -R; a <= R; a += 1) for (let b = -R; b <= R; b += 1) if (a * a + b * b < R * R) { nS++; cover += terr.forestAt(view.target[0] + a, view.target[2] + b) > 0.3 ? 1 : 0; }
     const est = (cover / Math.max(1, nS)) * Math.PI * R * R / (sp * sp);
-    if (est > 16000) sp *= Math.sqrt(est / 16000);
+    if (est > 14000) sp *= Math.sqrt(est / 14000);
     scene.add(...Flora.trees(terr, { cx: view.target[0], cz: view.target[2], R, scale: PS, spacing: sp, minForest: 0.3, lone: SHOT === 'city' ? 1500 : 0, loneR: R, minH: 0.2, avoid, extra: extraTrees }));
   }
   scene.add(...Flora.hamlets(terr, { scale: 0.38 }), Flora.greatWall(terr, { scale: 0.45, color: 0xa08e70, towerEvery: 12 }));
@@ -216,11 +225,14 @@
     const cloth = new THREE.Mesh(BGU.mergeBufferGeometries(L.cloth), flagMat(fid));
     cloth.castShadow = pole.castShadow = close; scene.add(pole, cloth);
   }
-  // clouds over the Tibetan plateau, the Mongolian steppe and the sea edge
-  if (!close) {
-    const cl = [];
-    for (let i = 0; i < 14; i++) cl.push([K.rr(-520, -300), K.rr(40, 60), K.rr(-250, 300), K.rr(140, 240), 0.5]);
-    for (let i = 0; i < 10; i++) cl.push([K.rr(-300, 250), K.rr(40, 55), K.rr(-470, -380), K.rr(140, 240), 0.5]);
+  // clouds just beyond the border of China (round 8: the land mask), where the land fades into haze
+  if (!close && terr.land) {
+    const cl = [], CO = terr.CO;
+    for (let k = 0; k < 4000 && cl.length < 26; k++) {
+      const x = K.rr(CO.x0, CO.x0 + CO.w), z = K.rr(CO.z0, CO.z0 + CO.d);
+      if (terr.landAt(x, z).china > 0.2 || ![[70, 0], [-70, 0], [0, 70], [0, -70]].some(([a, b]) => terr.landAt(x + a, z + b).china > 0.6)) continue;
+      cl.push([x, K.rr(45, 70), z, K.rr(160, 280), 0.5]);
+    }
     scene.add(Flora.clouds(cl));
   }
 
@@ -274,6 +286,10 @@
   for (const [pid, ci] of Object.entries(cityInfo)) out['city:' + pid] = { ...K.project(camera, W, H, ci.x, ci.y, ci.z), name: CITY[pid], fid: ci.fid || null, seat: ci.seat };
   for (const l of labels) { const p = proj(l.x, l.y, l.z); if (inView(p)) out['lbl:' + l.name] = { ...p, name: l.name }; }
   for (const [k, a] of Object.entries(armyAnchors)) out[k] = K.project(camera, W, H, a.x, a.y, a.z);
+  // round 8: Han gateways beyond the map (named, not played) and the great wastes, for the whole-country views
+  for (const g of baked.meta.gates || []) { const p = proj(g.x, 1, g.z); if (inView(p)) out['gate:' + g.name] = { ...p, name: g.name }; }
+  const WASTES = [['Cao nguyên Tây Tạng', 88, 33], ['Sa mạc Taklamakan', 83, 39], ['Tây Vực', 86, 42.2], ['Thảo nguyên Mạc Nam', 111, 42.6], ['Liêu Đông', 123.5, 41.3], ['Nam Hải', 114, 19.8]];
+  if (wholeCountry) for (const [name, lon, lat] of WASTES) { const [x, z] = terr.toWorld(lon, lat), p = proj(x, Math.max(0.5, terr.h(x, z)), z); if (inView(p)) out['waste:' + name] = { ...p, name }; }
   const VN = { Huang: 'Hoàng Hà', 'Chang Jiang': 'Trường Giang', Yangtze: 'Trường Giang', Han: 'Hán Thủy', Huai: 'Hoài Thủy', Wei: 'Vị Thủy', Xiang: 'Tương Giang', Gan: 'Cán Giang', Jialing: 'Gia Lăng Giang', Min: 'Mân Giang', Fen: 'Phần Thủy', Xi: 'Tây Giang', Liao: 'Liêu Hà' };
   const want = far ? ['Hoàng Hà', 'Trường Giang', 'Hoài Thủy', 'Hán Thủy'] : SHOT === 'region' ? ['Hoàng Hà', 'Hán Thủy', 'Hoài Thủy', 'Vị Thủy'] : ['Hán Thủy', 'Trường Giang'];
   for (const vn of want) {
