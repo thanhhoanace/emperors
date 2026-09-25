@@ -24,8 +24,8 @@
   const wholeCountry = SHOT === 'overview' || SHOT === 'strategic';
   const tileFilter = (box, meta) => {
     if (wholeCountry) return false;
-    const c = meta.cities, id = params.get('c') || 'jing', t = SHOT === 'region' ? [40, -60] : SHOT === 'campaign' ? [c.jing.x + 12, c.jing.z - 13] : [c[id].x, c[id].z];
-    const R = SHOT === 'region' ? 190 : SHOT === 'campaign' ? 110 : 90, dx = Math.max(box.x0 - t[0], 0, t[0] - box.x1), dz = Math.max(box.z0 - t[1], 0, t[1] - box.z1);
+    const c = meta.cities, id = params.get('c') || 'jing', t = SHOT === 'region' ? [40, -60] : SHOT === 'west' ? [c.hexi.x - 60, c.hexi.z - 20] : SHOT === 'campaign' ? [c.jing.x + 12, c.jing.z - 13] : [c[id].x, c[id].z];
+    const R = SHOT === 'region' || SHOT === 'west' ? 190 : SHOT === 'campaign' ? 110 : 90, dx = Math.max(box.x0 - t[0], 0, t[0] - box.x1), dz = Math.max(box.z0 - t[1], 0, t[1] - box.z1);
     return Math.hypot(dx, dz) < R;
   };
   const [world, cityDefs, baked] = await Promise.all([
@@ -48,6 +48,8 @@
     overview: { target: [-330, 0, -150], cam: [-310, 1300, 1030], fov: 36, sun: [-0.5, 0.5, -0.3] }, // round 8: all of present-day China
     strategic: { target: [-300, 0, -170], cam: [-296, 1720, 300], fov: 36, sun: [-0.5, 0.6, -0.3] },
     region: { target: [40, 0, -60], cam: [95, 165, 105], fov: 34, sun: [-0.5, 0.45, -0.3] },
+    // round 8: the Hexi corridor to Dunhuang and the Western Regions, beyond the detailed core (scale C)
+    west: { target: [MC.hexi.x - 190, 0, MC.hexi.z - 70], cam: [MC.hexi.x + 40, 150, MC.hexi.z + 70], fov: 34, sun: [-0.4, 0.45, 0.3] },
     campaign: { target: [J.x + 12, J.y, J.z - 13], cam: [J.x + 44, 25, J.z + 34], fov: 32, sun: [0.55, 0.4, -0.35], focus: 'jing' },
     city: cityView(CID),
   }[SHOT];
@@ -79,7 +81,7 @@
   if (close) { gu.uTint.value = 0.0; gu.uBorder.value = 0.8; gu.uBorderW.value = 0.08; }
   const tgt = new THREE.Vector3(...view.target);
   const lod = close ? { focus: [[view.target[0], view.target[2]], [view.cam[0], view.cam[2]]], near: SHOT === 'city' ? 20 : 40, mid: 120 }
-    : SHOT === 'region' ? { focus: [[view.target[0], view.target[2]]], near: 0, mid: 160, fine: 1, chinaStep: 6 } : { step: 3, chinaStep: 6 }; // whole-country views: the core is a third of the frame, 3-unit core and 6-unit China mesh stay under 1.5 M triangles
+    : SHOT === 'region' || SHOT === 'west' ? { focus: [[view.target[0], view.target[2]]], near: 0, mid: 160, fine: 1, chinaStep: SHOT === 'west' ? 2 : 6 } : { step: 3, chinaStep: 6 }; // whole-country views: the core is a third of the frame, 3-unit core and 6-unit China mesh stay under 1.5 M triangles
   const M = Terrain.meshes(terr, { ground, canopy }, lod);
   scene.add(M.ground, M.canopy, M.outer);
   if (M.china) scene.add(M.china); // round 8: the rest of China on the coarse grid
@@ -257,11 +259,12 @@
     M.ground.receiveShadow = true;
   }
   scene.add(sun, sun.target);
-  const atmos = { density: close ? 0.012 : SHOT === 'region' ? 0.003 : 0.0012, falloff: close ? 0.3 : 0.05, color: 0xbac8cf, sunColor: 0xf6d7a0, sunDir };
+  const atmos = { density: close ? 0.012 : SHOT === 'region' || SHOT === 'west' ? 0.003 : 0.0012, falloff: close ? 0.3 : 0.05, color: 0xbac8cf, sunColor: 0xf6d7a0, sunDir };
   const lensOpts = {
     overview: { range: 500, maxBlur: 1.5, bandCenter: 0.5, bandWidth: 0.5, tilt: 0, vignette: 0.2, contrast: 1.06, saturation: 1.0 },
     strategic: { range: 600, maxBlur: 1, bandCenter: 0.5, bandWidth: 0.5, tilt: 0, vignette: 0.2, contrast: 1.05, saturation: 0.95 },
     region: { range: 220, maxBlur: 2, bandCenter: 0.5, bandWidth: 0.5, tilt: 0, vignette: 0.22, contrast: 1.06, saturation: 1.0 },
+    west: { range: 240, maxBlur: 0.6, bandCenter: 0.5, bandWidth: 0.5, tilt: 0, vignette: 0.22, contrast: 1.06, saturation: 1.0 },
     campaign: { range: 50, maxBlur: 3, bandCenter: 0.5, bandWidth: 0.5, tilt: 0, vignette: 0.22, ao: 0.7, aoRadius: 0.25, contrast: 1.07, saturation: 1.0, focusXZ: [J.x + 6, J.z - 6], focusR: 30, gray: 0.25 },
     city: { range: view.D * 1.6, maxBlur: 3.5, bandCenter: 0.5, bandWidth: 0.3, tilt: 0, vignette: 0.24, ao: 1.0, aoRadius: 0.12, saturation: 0.95, contrast: 1.08 },
   }[SHOT];

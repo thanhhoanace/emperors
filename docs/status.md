@@ -7,11 +7,14 @@
 
 ## Đang chờ
 
-- **Visual vòng 7, thế giới thu 219** (Claude): canvas trang "Vòng 7" (https://claude.ai/artifact/958ZoQxAFcGPKTUNGVdWeV) chờ chủ dự án xem: sáu thành mới, Lạc Dương – Trường An hồi sinh một phần, Tam Đài ở Nghiệp, Quan Vũ vây Tương Dương, đất hoang không chủ.
+- **Visual vòng 8, bản đồ toàn Trung Quốc** (Claude): canvas trang "Vòng 8" (https://claude.ai/artifact/958ZoQxAFcGPKTUNGVdWeV) chờ chủ dự án xem: Albers, tỉ lệ C, sương ngoài biên giới, nhãn cửa Hán, vùng biên là đất hoang.
 - **Nhập engine** (kịch bản đã OK): `219.json` + đình chiến khách + cải cách + gates + **menu ngoại giao** (`docs/product/diplomacy.md`) + event `attack` đủ `from`/`to` cho hành quân (`docs/product/march.md`).
 
 ## Đã xong
 
+- 2026-09-25 đêm (Claude, vòng 8):
+  - Khớp engine 219: bake và `world.html` đọc thủ phủ, láng giềng, chủ đất từ `data/world.json`; `cities.json` khoá `guan`, bỏ alias; Giao theo nhà Sĩ; sửa `lonlat` Điền Trì (đang nằm giữa hồ) về di chỉ Hà Bạc Sở.
+  - Bake toàn quốc Albers, tỉ lệ C: lõi Hán 42 ô (tải theo camera), lưới thô toàn quốc, mặt nạ đất toàn quốc, sương ngoài biên giới, nhãn cửa Hán. `tests/map.test.mjs` kiểm bake khớp `world.json`.
 - 2026-09-25 tối (Claude, vòng 7):
   - Chủ dự án chốt phần hình vòng 6 (Trung Quốc ngày nay + nhãn cửa Hán, tỉ lệ C, Albers): ghi vào ADR 0006 (chuyển Chấp nhận) và `proposal-all-china.md`.
   - `world.html` dựng thu 219: 20 thủ phủ, chủ đất đọc từ `data/scenario/219.json`; thảo nguyên, sa mạc, Tây Tạng, Đài Loan là đất hoang không chủ.
@@ -34,20 +37,19 @@
 
 1. Nhập engine: snapshot 219 + diplomacy deals + guestTruce + reforms + gates. Cùng commit: `rules.md`, test, `npm run sim -- 500`.
 2. Chế độ người chơi = 1 đế, 6 phe MOCK.
-3. Khi nhập 219 vào `world.json` (luồng luật): `lonlat` của sáu thủ phủ mới đang nằm trong `data/cities.json` (Claude giữ tạm vì chưa có chỗ khác). Chép sang `world.json`, rồi báo Claude xoá bản trong `cities.json` và đổi khoá `liang` thành `guan` (Trường An; hiện `alias` trỏ `guan` về `liang` để test năm 200 vẫn qua).
-4. Claude: bản đồ toàn quốc theo phương án đã chốt (bake Albers, chia ô, mặt nạ nướng sẵn, nhãn cửa Hán, bản đồ tranh khi thu nhỏ).
-5. Claude: tướng đi đường theo event `attack` (`march.md`).
-6. Persona thoại cho deal và cửa Trường An / Nghiệp / Hoài.
+3. Claude: nướng sẵn mặt nạ lõi lúc bake (bớt khoảng 13 giây dựng lúc mở trang, đổi lấy khoảng 2–3 MB tải theo ô); bản đồ tranh khi thu nhỏ hết cỡ; hoa văn chi tiết cho vùng biên nếu chủ dự án muốn.
+4. Claude: tướng đi đường theo event `attack` (`march.md`).
+5. Persona thoại cho deal và cửa Trường An / Nghiệp / Hoài.
 
 ## Vấn đề đã biết
 
 - Engine vẫn năm 200 / 14 châu. Sim cũ không dùng cho 219.
 - `219.json` trên repo đang là bản rút; bảng châu đầy đủ nằm ở `scenario.md`.
-- `world.html` đã là thế giới 219 nhưng vẫn trên bản đồ vòng 5 (phép chiếu phẳng, lưới mịn tới 101°E): toàn cảnh lộ mép bản đồ; Hà Tây, Điền Trì sát mép.
+- Vùng biên (ngoài lõi Hán) chỉ có lưới 6 km và mặt nạ đất 12 km: nhìn tầm trung thấy phẳng màu (trang "Vòng 8", ảnh Hà Tây – Tây Vực).
 - Chưa dựng được: nước lụt sông Hán quanh Phàn Thành (thu 219), doanh trại vây. Cần kiểu đối tượng mới.
 - Hình dạng Thiên Thủy, Nam Trịnh, Cô Tang là đoán (chưa có số đo khảo cổ); Điền Trì, Chung Ly, Giang Lăng có di chỉ.
 - Hiệu năng vòng 5 (`decisions/0005`):
-  - tải về khoảng 3 MB chưa nén HTTP (độ cao 2 MB), vượt trần lần đầu, cần chia ô tải dần;
+  - toàn cảnh tải khoảng 2 MB (độ cao 0,7 MB); cảnh gần tải thêm các ô lõi quanh camera;
   - dựng mặt nạ lúc mở trang mất khoảng 13 giây trong container;
   - chưa đo FPS trên máy thật.
 - `index.html` vẫn là Phase 1 slice cũ.

@@ -51,7 +51,7 @@ src/engine/engine.js     luật thuần, tất định theo seed
 data/                    world.json + cities.json + personas/ + scenario/
 tools/bake-map.mjs       nướng địa hình → assets/map/
 server/server.js         static + POST /api/turn
-tests/                   engine.test.mjs, sim.mjs, e2e/
+tests/                   engine.test.mjs, sim.mjs, map.test.mjs (bake khớp world.json), e2e/
 docs/                    product/ (kể cả lanes.md), design/, research/, architecture.md, status.md, decisions/
 assets/                  map/ + asset CC0
 .claude/                 skills Claude Code
@@ -104,6 +104,7 @@ Trong container không có GPU: đặt `PUPPETEER_EXECUTABLE_PATH` tới Chromiu
 - Sông nội địa là dải nước riêng, nâng trên lưới thô khi nhìn xa.
 - Toạ độ thành = tâm di chỉ thời Hán, không phải tâm đô thị nay.
 - DEM: lượng tử + delta 2 chiều + gzip.
+- `render.mjs` có tham số thứ 4 (query) thì ghi ảnh ra tên khác (`world-city-c_jing.jpg`): mở đúng file, đừng xem ảnh cũ.
 - Chờ tiến trình nền: không dùng `until ! pgrep -f "<lệnh>"`. `pgrep -f` khớp cả shell đang chờ (dòng lệnh chứa chuỗi đó), vòng lặp không bao giờ dừng. Chờ theo PID hoặc file kết quả.
 
 ## Workflow

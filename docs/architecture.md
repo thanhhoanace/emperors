@@ -19,13 +19,15 @@ docs/design/prototypes/ ── cảnh three.js để render ảnh duyệt design
                            map.html (vòng 4) = terrain.js + flora.js + city.js + kit.js (lens)
 
 tools/bake-map.mjs ──► assets/map/  (chạy tay, commit kết quả)
-  nguồn: AWS Terrain Tiles z7 + Natural Earth 10 m (tải vào .cache/, không commit)
-         + data/world.json (lonlat 14 châu năm 200) + data/cities.json (kích thước thành; lonlat của thủ phủ mới năm 219;
-           alias guan → liang: cùng một thành Trường An)
-  ra:    height-fine.bin.gz   lưới 0,5 đơn vị trên vùng chơi (delta 2 chiều + gzip, ~1,8 MB)
-         height-coarse.bin.gz lưới 2 đơn vị tới chân trời (~0,3 MB)
-         water.json           sông (đường, mực nước, bề rộng, phù sa) + hồ
-         meta.json            phép chiếu, lưới, nguồn, toạ độ và tỉ lệ từng thành
+  nguồn: AWS Terrain Tiles z7 + Natural Earth 10 m (sông, hồ) + 50 m (biên giới nước) (tải vào .cache/, không commit)
+         + data/world.json (lonlat 20 thủ phủ năm 219) + data/cities.json (kích thước thành)
+  phép chiếu: Albers nón (25°/47°, 105°E), gốc 112°E 32°N, 1 đơn vị = 3 km (decisions/0006)
+  ra:    height-fine-R-C.bin.gz  lõi Hán, lưới 0,5 đơn vị, 42 ô 128 đơn vị (delta 2 chiều + gzip, tổng ~2,2 MB);
+                                 trang chỉ tải ô gần camera, ô khác lấy từ lưới thô
+         height-coarse.bin.gz    lưới 2 đơn vị trên toàn Trung Quốc ngày nay và một lề (~0,6 MB)
+         land.bin.gz             mặt nạ đất 4 đơn vị: khô, cát, rừng, trong biên giới Trung Quốc (~80 KB)
+         water.json              sông (đường, mực nước, bề rộng, phù sa) + hồ
+         meta.json               phép chiếu, lưới, ô, nguồn, toạ độ và tỉ lệ từng thành, cửa Hán
 ```
 
 ### Engine (`src/engine/engine.js`)

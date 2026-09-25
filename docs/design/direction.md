@@ -81,6 +81,16 @@ Hiện trạng (2026-09-25): `prototypes/map.html` + `terrain.js` + `flora.js` d
 - rìa thảo nguyên phía bắc còn trống;
 - chân dung nhân vật.
 
+## Vòng 8 — bản đồ toàn Trung Quốc (Albers, tỉ lệ C)
+
+- Bake theo phép chiếu Albers; cả Trung Quốc ngày nay ở tỉ lệ thật 3 km/đơn vị. Ngoài biên giới là sương, có ba nhãn cửa Hán (Giao Chỉ, Lạc Lãng, Đại Uyển).
+- Chi tiết theo tỉ lệ C:
+  - Lõi Hán quanh 20 thủ phủ: như vòng 5–7 (lưới 1,5 km, rừng, ruộng, đường, biên châu), chia ô, tải ô gần camera.
+  - Phần còn lại: lưới 6 km và mặt nạ đất 12 km: cao nguyên, bồn địa, sa mạc cát, thảo nguyên, rừng núi Đông Bắc, Tây Nam, ốc đảo Con đường tơ lụa. Là đất hoang, không chủ.
+  - Lõi và vùng biên hoà vào nhau qua dải 30 đơn vị, không để lộ mép ô.
+- Chế độ chiến lược: 20 châu tô màu trong một Trung Quốc bạc màu; thấy ngay tứ đế ở rìa so với cả nước.
+- Chưa làm: bản đồ tranh khi thu nhỏ hết cỡ; nướng sẵn mặt nạ lõi (trang vẫn mất khoảng 16 giây dựng trong container); hoa văn chi tiết cho vùng biên khi nhìn ở tầm trung.
+
 ## Vòng 6–7 — bản đồ toàn quốc (đã chốt) và thế giới thu 219
 
 **Vòng 6, chủ dự án chốt 2026-09-25** (`decisions/0006`, mục "Bổ sung vòng 6"):

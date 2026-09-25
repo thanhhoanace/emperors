@@ -160,8 +160,8 @@ Mỗi hoàng đế có ba lợi thế, gắn với một vùng trên bản đồ
 
 1. ~~Chủ dự án chốt phần hình: phạm vi và tỉ lệ.~~ Xong (mục 11).
 2. Luật 219 nhập engine theo `scenario.md` (việc của luồng luật, không thuộc đề xuất này).
-3. Thành năm 219: Lạc Dương, Trường An đã dựng lại sau loạn; thêm Thiên Thủy, Cô Tang, Chung Ly, Nam Trịnh, Giang Lăng, Điền Trì. Render lại, đưa lên canvas duyệt.
-4. Bake toàn quốc theo phép chiếu Albers, có ô và mặt nạ nướng sẵn; bản đồ tranh cho chế độ thu nhỏ.
+3. ~~Thành năm 219: Lạc Dương, Trường An đã dựng lại sau loạn; thêm Thiên Thủy, Cô Tang, Chung Ly, Nam Trịnh, Giang Lăng, Điền Trì.~~ Xong (vòng 7).
+4. Bake toàn quốc theo phép chiếu Albers: **xong phần độ cao, ô, mặt nạ đất toàn quốc, sương ngoài biên giới** (vòng 8). Còn: nướng sẵn mặt nạ lõi; bản đồ tranh cho chế độ thu nhỏ.
 
 ## 11. Chủ dự án đã quyết (2026-09-25)
 
