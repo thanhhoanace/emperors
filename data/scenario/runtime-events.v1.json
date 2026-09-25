@@ -1,0 +1,43 @@
+{
+  "v": 1,
+  "note": "Canonical RuntimeEvent v1 fixtures for Claude. Not a live log.",
+  "events": [
+    {
+      "v": 1, "kind": "attack", "fid": "sun_quan", "from": "jiang", "to": "jing_nan", "win": true,
+      "actorChar": "lu_meng", "defenderFid": "liu_bei", "defenderChar": "guan_yu", "other": "liu_bei",
+      "tone": "good", "text": "Tôn Quyền xuất quân đánh Giang Lăng. Quan Vũ thất thủ — Giang Lăng về tay Tôn."
+    },
+    {
+      "v": 1, "kind": "attack", "fid": "qin_shihuang", "from": "longxi", "to": "guan", "win": false,
+      "actorChar": "qin_shihuang", "defenderFid": "cao_cao", "defenderChar": "zhang_he", "other": "cao_cao",
+      "tone": "bad", "text": "Tần Thủy Hoàng đánh Trường An nhưng bị Trương Hợp đẩy lui."
+    },
+    {
+      "v": 1, "kind": "gate", "id": "opening", "actors": ["cao_cao", "liu_bei", "sun_quan", "guan_yu"],
+      "shot": { "camera": "overview_rim", "then": "jing_south_walls", "seconds": 8 },
+      "tone": "neutral", "text": "Thu Kiến An 24. Tào–Thục–Ngô giằng Kinh và Hán Trung. Bốn cờ lạ ở rìa."
+    },
+    {
+      "v": 1, "kind": "gate", "id": "fan_xiang_stalemate", "actors": ["guan_yu", "cao_ren"],
+      "shot": { "camera": "xiangyang_south", "seconds": 6 },
+      "tone": "neutral", "text": "Quan Vũ vây Phàn và Tương Dương. Tào Nhân giữ thành. Chưa ai chết."
+    },
+    {
+      "v": 1, "kind": "deal_accept", "fid": "li_shimin", "other": "cao_cao", "clauses": ["truce"], "ok": true,
+      "tone": "good", "text": "Lý Thế Dân và Tào Tháo kết minh 6 lượt."
+    },
+    {
+      "v": 1, "kind": "fortify", "fid": "zhu_yuanzhang", "prov": "huai", "level": 1,
+      "tone": "neutral", "text": "Chu Nguyên Chương củng cố Chung Ly — thành lũy cấp 1."
+    },
+    {
+      "v": 1, "kind": "succession", "fid": "cao_cao", "from": "cao_cao", "to": "cao_pi",
+      "tone": "bad", "text": "Tào Tháo mất. cao_pi kế vị, triều còn nhưng lòng người nao núng."
+    },
+    {
+      "v": 1, "kind": "realm_fall", "fid": "qin_shihuang", "killers": ["cao_cao"],
+      "shares": [{ "fid": "cao_cao", "troops": 14000 }],
+      "tone": "bad", "text": "Tần Thủy Hoàng tuyệt tự. Đất và nửa quân về tay kẻ diệt."
+    }
+  ]
+}
