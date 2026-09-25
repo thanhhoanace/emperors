@@ -7,8 +7,16 @@ import { fileURLToPath } from 'node:url';
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
 export const Engine = require(path.join(ROOT, 'src/engine/engine.js'));
-export const world = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/world.json'), 'utf8'));
+
+function readJson(rel) {
+  return JSON.parse(fs.readFileSync(path.join(ROOT, rel), 'utf8'));
+}
+
+export const world = readJson('data/world.json');
+world.gatesPack = readJson('data/scenario/gates.json');
+world.charactersPack = readJson('data/scenario/characters.json');
+
 export const personas = Object.fromEntries(
-  world.factions.map((f) => [f.id, JSON.parse(fs.readFileSync(path.join(ROOT, `data/personas/${f.id}.json`), 'utf8'))])
+  world.factions.map((f) => [f.id, readJson(`data/personas/${f.id}.json`)])
 );
 export const newGame = (seed) => Engine.createGame(world, personas, seed);
