@@ -8,6 +8,8 @@ const ACTIONS = Object.keys(Engine.ACTIONS);
 
 test('world data: neighbors are symmetric and ids resolve', () => {
   const ids = new Set(world.provinces.map((p) => p.id));
+  assert.equal(world.provinces.length, 20);
+  assert.equal(world.meta.startYear, 219);
   for (const p of world.provinces) {
     for (const n of p.neighbors) {
       assert.ok(ids.has(n), `${p.id} → unknown neighbor ${n}`);
@@ -31,18 +33,21 @@ test('world data: every province starts with exactly one owner or neutral garris
 });
 
 test('world data: every province has a real position and a city layout (data/cities.json)', () => {
-  const cities = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/cities.json'), 'utf8')).cities;
+  const raw = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/cities.json'), 'utf8'));
+  const cities = raw.cities;
+  const alias = raw.alias || {};
+  const layout = (id) => cities[id] || cities[alias[id]];
   const meta = JSON.parse(fs.readFileSync(path.join(ROOT, 'assets/map/meta.json'), 'utf8'));
   for (const p of world.provinces) {
     const [lon, lat] = p.lonlat || [];
     assert.ok(lon > 100 && lon < 123 && lat > 21 && lat < 42, `${p.id} lonlat outside the baked map`);
-    const c = cities[p.id];
+    const c = layout(p.id);
     assert.ok(c, `${p.id} has no layout in data/cities.json`);
     assert.ok(Array.isArray(c.outline) && c.outline.length >= 3, `${p.id} outline is not a polygon`);
     assert.ok(['capital', 'provincial', 'fort'].includes(c.rank), `${p.id} rank ${c.rank}`);
     assert.ok(['intact', 'ruined'].includes(c.state), `${p.id} state ${c.state}`);
     assert.ok(Object.values(c.gates).reduce((a, n) => a + n, 0) > 0, `${p.id} has no gate`);
-    assert.ok(meta.cities[p.id], `${p.id} missing from assets/map/meta.json: re-run node tools/bake-map.mjs`);
+    assert.ok(meta.cities[p.id] || meta.cities[alias[p.id]], `${p.id} missing from assets/map/meta.json: re-run node tools/bake-map.mjs`);
   }
 });
 
@@ -84,13 +89,14 @@ test('same seed replays the same game', () => {
 
 test('referee: 1.000 quân không thể hạ thành 10.000 quân', () => {
   const g = newGame(1);
-  g.state.factions.qin_shihuang.troops = 1000;
-  g.state.provinces.si_li.garrison = 10000;
+  g.state.factions.li_shimin.troops = 1000;
+  g.state.provinces.you.owner = 'neutral';
+  g.state.provinces.you.garrison = 10000;
   let wins = 0;
   for (let i = 0; i < 200; i++) {
     const trial = Engine.restoreGame(world, personas, g.state);
     trial.state.seed = i + 1;
-    const r = Engine.resolveTurn(trial, [{ fid: 'qin_shihuang', action: 'attack', target: 'si_li', targetKind: 'province' }]);
+    const r = Engine.resolveTurn(trial, [{ fid: 'li_shimin', action: 'attack', target: 'you', targetKind: 'province' }]);
     if (r.events.some((e) => e.kind === 'attack' && e.win)) wins++;
   }
   assert.equal(wins, 0);
