@@ -41,3 +41,13 @@
 `pact` AI = `clauses: ["truce"]`.
 
 Fixture: `data/scenario/runtime-events.v1.json`.
+
+## Diplomacy model (canonical)
+
+Locked in `docs/product/diplomacy.md`:
+
+- **kind** = outcome: `pact` (AI minh đơn), `deal_accept`, `deal_counter`, `deal_refuse`, `deal_break`, `annex`
+- **clauses[]** = type: `truce` `alliance` `joint_war` `grain` `passage` `withdraw` `recognize` `break`
+
+Do not use `deal_alliance` / `deal_grain` as event kinds.
+`deal_counter` is reserved; MOCK AI does not emit it yet.

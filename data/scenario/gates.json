@@ -1,122 +1,20 @@
 {
-  "status": "spec_not_wired",
+  "status": "wired",
   "seeDocs": "docs/product/events.md",
   "onceDefault": true,
-  "kinds": ["attack", "pact", "deal_pact", "deal_alliance", "deal_joint_war", "deal_grain", "deal_passage", "deal_withdraw", "deal_recognize", "deal_break", "annex", "internal", "fortify", "stratagem", "revolt", "event", "gate", "succession", "realm_fall", "fall", "win"],
+  "kinds": ["attack", "pact", "deal_accept", "deal_counter", "deal_refuse", "deal_break", "annex", "internal", "fortify", "stratagem", "revolt", "event", "gate", "succession", "realm_fall", "fall", "win"],
+  "clauseTypes": ["truce", "alliance", "joint_war", "grain", "passage", "withdraw", "recognize", "break"],
+  "kindModel": "kind = outcome; clauses[] = deal type. See docs/product/diplomacy.md",
+  "maxTensionGatesPerTurn": 1,
   "gates": [
-    {
-      "id": "opening",
-      "when": { "turn": 0 },
-      "emit": { "kind": "gate", "text": "Thu Kiến An 24. Tào–Thục–Ngô giằng Kinh và Hán Trung. Bốn cờ lạ ở rìa." },
-      "actors": ["cao_cao", "liu_bei", "sun_quan", "guan_yu"],
-      "shot": {
-        "camera": "overview_rim",
-        "then": "jing_south_walls",
-        "props": ["three_colors", "guan_yu_fleet_optional"],
-        "seconds": 8
-      }
-    },
-    {
-      "id": "guest_arrival",
-      "when": { "turnLte": 1 },
-      "emit": { "kind": "gate", "text": "Tần, Đường, Hán Vũ, Minh đứng Lũng Tây, Tịnh, Hà Tây, Hoài. Tám mùa đình chiến khách." },
-      "actors": ["qin_shihuang", "li_shimin", "liu_che", "zhu_yuanzhang"],
-      "shot": {
-        "camera": "four_rim_seats",
-        "props": ["guest_banners"],
-        "seconds": 10
-      }
-    },
-    {
-      "id": "fan_xiang_stalemate",
-      "when": {
-        "owner": { "jing_nan": "liu_bei", "jing": "cao_cao" },
-        "alive": ["guan_yu", "cao_ren"]
-      },
-      "until": { "or": [ { "ownerNot": { "jing_nan": "liu_bei" } }, { "ownerNot": { "jing": "cao_cao" } } ] },
-      "emit": { "kind": "gate", "text": "Quan Vũ vây Phàn và Tương Dương. Tào Nhân giữ thành. Chưa ai chết." },
-      "actors": ["guan_yu", "cao_ren"],
-      "shot": {
-        "camera": "xiangyang_south",
-        "props": ["fleet_han", "siege_south_wall"],
-        "doNot": ["kill_guan_yu", "flood_script_outcome"],
-        "seconds": 6
-      }
-    },
-    {
-      "id": "hanzhong_pressure",
-      "when": { "owner": { "han_zhong": "liu_bei", "guan": "cao_cao" } },
-      "emit": { "kind": "gate", "text": "Hán Trung vừa về Thục. Ngụy Diên trấn Nam Trịnh; Trương Hợp ở cửa Quan." },
-      "actors": ["wei_yan", "zhang_he"],
-      "shot": {
-        "camera": "hanzhong_pass",
-        "props": ["qinling_ridge"],
-        "seconds": 5
-      }
-    },
-    {
-      "id": "wu_looks_at_jing",
-      "when": { "owner": { "jing_nan": "liu_bei", "jiang": "sun_quan" } },
-      "emit": { "kind": "gate", "text": "Lã Mông ở Hạ Khẩu nhìn Giang Lăng. Tôn chưa ra lệnh." },
-      "actors": ["lu_meng", "guan_yu", "sun_quan"],
-      "shot": {
-        "camera": "xiakou_toward_jiangling",
-        "props": ["river_lookout"],
-        "doNot": ["wu_captures_jing"],
-        "seconds": 5
-      }
-    },
-    {
-      "id": "chang_an_gate",
-      "when": {
-        "owner": { "longxi": "qin_shihuang", "guan": "cao_cao" },
-        "or": [ { "turnGte": 8 }, { "qinAttackedCao": true } ]
-      },
-      "emit": { "kind": "gate", "text": "Tần đứng trên đường cũ vào Quan Trung. Trường An vẫn của Tào." },
-      "actors": ["qin_shihuang", "zhang_he"],
-      "shot": {
-        "camera": "tianshui_toward_changan",
-        "props": ["pass_gate"],
-        "seconds": 5
-      }
-    },
-    {
-      "id": "ye_exposed",
-      "when": { "owner": { "bing": "li_shimin", "ji": "cao_cao" } },
-      "emit": { "kind": "gate", "text": "Lý nhìn Tam Đài Nghiệp từ Tấn Dương." },
-      "actors": ["li_shimin", "cao_pi"],
-      "shot": {
-        "camera": "jinyang_toward_ye",
-        "props": ["three_terraces_distant"],
-        "seconds": 5
-      }
-    },
-    {
-      "id": "huai_scavenge",
-      "when": { "owner": { "huai": "zhu_yuanzhang" } },
-      "emit": { "kind": "gate", "text": "Chu ở Chung Ly, khe Hoài giữa Tào và Ngô." },
-      "actors": ["zhu_yuanzhang", "zhang_liao", "sun_quan"],
-      "shot": {
-        "camera": "zhongli_huai",
-        "props": ["river_fort"],
-        "seconds": 5
-      }
-    },
-    {
-      "id": "coalition_hegemon",
-      "when": {
-        "or": [
-          { "emperorProvincesGte": 4 },
-          { "emperorOwnsAny": ["guan", "ji", "yi"] }
-        ]
-      },
-      "emit": { "kind": "gate", "text": "Một khách đã thành bá. Tam Quốc có cớ liên minh." },
-      "actors": [],
-      "shot": {
-        "camera": "hegemon_seat",
-        "props": ["coalition_banners"],
-        "seconds": 6
-      }
-    }
+    {"id": "opening", "phase": "intro", "priority": 0, "once": true, "when": {"turnLte": 1}, "emit": {"kind": "gate", "text": "Thu Kiến An 24. Tào–Thục–Ngô giằng Kinh và Hán Trung. Bốn cờ lạ ở rìa."}, "actors": ["cao_cao", "liu_bei", "sun_quan", "guan_yu"], "shot": {"camera": "overview_rim", "then": "jing_south_walls", "seconds": 8}},
+    {"id": "guest_arrival", "phase": "intro", "priority": 1, "once": true, "when": {"turnLte": 1}, "emit": {"kind": "gate", "text": "Tần, Đường, Hán Vũ, Minh đứng Lũng Tây, Tịnh, Hà Tây, Hoài. Tám mùa đình chiến khách."}, "actors": ["qin_shihuang", "li_shimin", "liu_che", "zhu_yuanzhang"], "shot": {"camera": "four_rim_seats", "seconds": 10}},
+    {"id": "fan_xiang_stalemate", "phase": "post_turn", "priority": 10, "once": true, "when": {"owner": {"jing_nan": "liu_bei", "jing": "cao_cao"}, "alive": ["guan_yu", "cao_ren"]}, "emit": {"kind": "gate", "text": "Quan Vũ vây Phàn và Tương Dương. Tào Nhân giữ thành. Chưa ai chết."}, "actors": ["guan_yu", "cao_ren"], "shot": {"camera": "xiangyang_south", "seconds": 6}},
+    {"id": "hanzhong_pressure", "phase": "post_turn", "priority": 20, "once": true, "when": {"owner": {"han_zhong": "liu_bei", "guan": "cao_cao"}}, "emit": {"kind": "gate", "text": "Hán Trung vừa về Thục. Ngụy Diên trấn Nam Trịnh; Trương Hợp ở cửa Quan."}, "actors": ["wei_yan", "zhang_he"], "shot": {"camera": "hanzhong_pass", "seconds": 5}},
+    {"id": "wu_looks_at_jing", "phase": "post_turn", "priority": 30, "once": true, "when": {"owner": {"jing_nan": "liu_bei", "jiang": "sun_quan"}}, "emit": {"kind": "gate", "text": "Lã Mông ở Hạ Khẩu nhìn Giang Lăng. Tôn chưa ra lệnh."}, "actors": ["lu_meng", "guan_yu", "sun_quan"], "shot": {"camera": "xiakou_toward_jiangling", "seconds": 5}},
+    {"id": "huai_scavenge", "phase": "post_turn", "priority": 40, "once": true, "when": {"owner": {"huai": "zhu_yuanzhang"}}, "emit": {"kind": "gate", "text": "Chu ở Chung Ly, khe Hoài giữa Tào và Ngô."}, "actors": ["zhu_yuanzhang", "zhang_liao", "sun_quan"], "shot": {"camera": "zhongli_huai", "seconds": 5}},
+    {"id": "ye_exposed", "phase": "post_turn", "priority": 50, "once": true, "when": {"owner": {"bing": "li_shimin", "ji": "cao_cao"}}, "emit": {"kind": "gate", "text": "Lý nhìn Tam Đài Nghiệp từ Tấn Dương."}, "actors": ["li_shimin", "cao_pi"], "shot": {"camera": "jinyang_toward_ye", "seconds": 5}},
+    {"id": "chang_an_gate", "phase": "post_turn", "priority": 60, "once": true, "when": {"owner": {"longxi": "qin_shihuang", "guan": "cao_cao"}, "or": [{"turnGte": 8}, {"qinAttackedCao": true}]}, "emit": {"kind": "gate", "text": "Tần đứng trên đường cũ vào Quan Trung. Trường An vẫn của Tào."}, "actors": ["qin_shihuang", "zhang_he"], "shot": {"camera": "tianshui_toward_changan", "seconds": 5}},
+    {"id": "coalition_hegemon", "phase": "post_turn", "priority": 90, "once": true, "when": {"or": [{"emperorProvincesGte": 4}, {"emperorOwnsAny": ["guan", "ji", "yi"]}]}, "emit": {"kind": "gate", "text": "Một khách đã thành bá. Tam Quốc có cớ liên minh."}, "actors": [], "shot": {"camera": "hegemon_seat", "seconds": 6}}
   ]
 }

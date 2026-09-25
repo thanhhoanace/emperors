@@ -15,6 +15,8 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const Engine = require(path.join(ROOT, 'src/engine/engine.js'));
 const world = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/world.json'), 'utf8'));
+world.gatesPack = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/scenario/gates.json'), 'utf8'));
+world.charactersPack = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/scenario/characters.json'), 'utf8'));
 const personas = Object.fromEntries(
   world.factions.map((f) => [f.id, JSON.parse(fs.readFileSync(path.join(ROOT, `data/personas/${f.id}.json`), 'utf8'))])
 );
@@ -23,8 +25,6 @@ const app = express();
 app.use(express.json({ limit: '256kb' }));
 app.use(express.static(ROOT, { dotfiles: 'ignore', index: 'index.html' }));
 
-// Body: { seed } to start a game, or { state } to continue one.
-// Reply: { mode, decisions, result, state }
 app.post('/api/turn', (req, res) => {
   try {
     const { seed, state } = req.body || {};
