@@ -1,0 +1,59 @@
+{
+  "meta": {
+    "title": "Tam Quốc Loạn Nhập",
+    "startYear": 200,
+    "era": "Kiến An năm thứ 5 — cuối Đông Hán",
+    "seasons": ["Xuân", "Hạ", "Thu", "Đông"],
+    "description": "Archive. Engine không đọc file này. 14 châu, đế ngồi Lương/Ích/Từ/Tịnh."
+  },
+  "archivedFrom": "data/world.json before autumn-219 cutover",
+  "rules": {
+    "unifyProvinces": 9,
+    "maxTurns": 48,
+    "lateWarTurn": 24,
+    "coalitionAt": 6,
+    "economy": {
+      "incomePerFertilityPop": 10,
+      "incomeBasePerProvince": 6000,
+      "upkeepPerTroop": 0.3,
+      "recruitPerPop": 25,
+      "internalGrainShare": 0.8,
+      "internalRecruitMul": 1.2,
+      "troopsPerPop": 1200
+    },
+    "combat": {
+      "commitBase": 0.45,
+      "commitAggression": 0.2,
+      "randomSpread": 0.15,
+      "fortBonus": 0.12,
+      "fortMax": 3,
+      "seatBonus": 1.35,
+      "captureAbsorb": 0.3,
+      "surrender": 0.3,
+      "lateCommitBonus": 0.0
+    },
+    "loyalty": { "revoltBelow": 30, "famineLoss": 8 },
+    "pact": { "turns": 6, "max": 2 },
+    "emperorPrestigePerTurn": 1,
+    "neutralRevoltGarrison": 9000
+  },
+  "emperor": { "province": "yu", "name": "Hán Hiến Đế" },
+  "provinces": [
+    {"id":"si_li","name":"Tư Lệ","city":"Lạc Dương","terrain":"plains","fertility":9,"population":80,"defense":1.15,"river":true,"north":true,"strategic":true,"lonlat":[112.623,34.729],"neighbors":["ji","yu","jing","yi","liang","bing"]},
+    {"id":"ji","name":"Ký Châu","city":"Nghiệp Thành","terrain":"plains","fertility":8,"population":120,"defense":1.0,"river":true,"north":true,"strategic":true,"lonlat":[114.413,36.271],"neighbors":["si_li","qing","you","bing","yan"]},
+    {"id":"qing","name":"Thanh Châu","city":"Lâm Truy","terrain":"coast","fertility":7,"population":90,"defense":1.0,"river":false,"north":true,"strategic":false,"lonlat":[118.355,36.883],"neighbors":["ji","xu"]},
+    {"id":"xu","name":"Từ Châu","city":"Bành Thành","terrain":"plains","fertility":8,"population":70,"defense":1.05,"river":true,"north":false,"strategic":true,"lonlat":[117.19,34.26],"neighbors":["qing","yu","yan"]},
+    {"id":"yan","name":"Duyện Châu","city":"Xương Ấp","terrain":"plains","fertility":7,"population":60,"defense":1.0,"river":true,"north":true,"strategic":false,"lonlat":[116.115,35.14],"neighbors":["xu","yu","ji"]},
+    {"id":"yu","name":"Dự Châu","city":"Hứa Xương","terrain":"plains","fertility":9,"population":100,"defense":1.05,"river":false,"north":false,"strategic":true,"lonlat":[114.019,33.989],"neighbors":["si_li","xu","yan","jing","yang"]},
+    {"id":"jing","name":"Kinh Châu","city":"Tương Dương","terrain":"river","fertility":8,"population":110,"defense":1.2,"river":true,"north":false,"strategic":true,"lonlat":[112.141,32.025],"neighbors":["si_li","yu","yang","yi","jiao","jiang"]},
+    {"id":"yang","name":"Dương Châu","city":"Kiến Nghiệp","terrain":"river","fertility":8,"population":90,"defense":1.25,"river":true,"north":false,"strategic":true,"lonlat":[118.783,32.034],"neighbors":["yu","jing","jiao","jiang"]},
+    {"id":"yi","name":"Ích Châu","city":"Thành Đô","terrain":"mountains","fertility":9,"population":80,"defense":1.45,"river":true,"north":false,"strategic":true,"lonlat":[104.06,30.66],"neighbors":["si_li","jing","liang"]},
+    {"id":"liang","name":"Lương Châu","city":"Trường An","terrain":"hills","fertility":5,"population":50,"defense":1.2,"river":true,"north":true,"strategic":false,"lonlat":[108.879,34.322],"neighbors":["yi","si_li","bing"]},
+    {"id":"bing","name":"Tịnh Châu","city":"Tấn Dương","terrain":"hills","fertility":5,"population":40,"defense":1.2,"river":false,"north":true,"strategic":false,"lonlat":[112.475,37.735],"neighbors":["ji","liang","si_li","you"]},
+    {"id":"you","name":"U Châu","city":"Kế Thành","terrain":"plains","fertility":4,"population":30,"defense":1.05,"river":false,"north":true,"strategic":false,"lonlat":[116.35,39.88],"neighbors":["ji","bing"]},
+    {"id":"jiang","name":"Giang Hạ","city":"Hạ Khẩu","terrain":"river","fertility":6,"population":40,"defense":1.2,"river":true,"north":false,"strategic":false,"lonlat":[114.28,30.565],"neighbors":["jing","yang"]},
+    {"id":"jiao","name":"Giao Châu","city":"Phiên Ngung","terrain":"jungle","fertility":6,"population":30,"defense":1.15,"river":false,"north":false,"strategic":false,"lonlat":[113.27,23.128],"neighbors":["jing","yang"]}
+  ],
+  "neutral": { "name": "Trung lập", "garrison": { "si_li": 30000, "you": 20000 } },
+  "note": "Faction starts and traits: see git history of data/world.json before 219 cutover if a field is missing here. Starts: qin=liang 55k, li=bing 50k, zhu=xu 36k, liu_che=yi 40k, cao=yu+ji+qing+yan 110k, bei=jing 42k, quan=yang+jiang+jiao 70k."
+}
