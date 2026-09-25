@@ -43,7 +43,7 @@ Phản hồi của chủ dự án: thành trong mock vòng 2 còn "đồ chơi",
 - Ánh sáng tạo khối: bóng đổ, bóng tiếp xúc (AO) ở chân tường và khe mái, nắng xiên giờ vàng.
 - Không một khối hộp trơn nào nhìn thấy được ở tầm camera chiến dịch.
 
-Hiện trạng: `prototypes/city.js` dựng thành theo đủ các tiêu chí trên và đã được duyệt (2026-09-25). Có hai mức chi tiết: `full` cho thành camera đang nhìn, `lite` cho các thành xa (`decisions/0005`).
+Hiện trạng: `src/world/city.js` (trước ở `prototypes/`) dựng thành theo đủ các tiêu chí trên và đã được duyệt (2026-09-25). Có hai mức chi tiết: `full` cho thành camera đang nhìn, `lite` cho các thành xa (`decisions/0005`).
 
 > **Vòng 5 đề xuất thay mục này.** Chủ dự án yêu cầu thành "đúng theo lịch sử". Mái cong góc vênh, tường gạch, ủng thành là kiểu Minh–Thanh, sai với năm 200. Tiêu chuẩn mới ở mục "Vòng 5" bên dưới (`decisions/0006`, chờ duyệt).
 

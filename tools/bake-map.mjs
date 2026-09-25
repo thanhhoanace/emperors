@@ -11,7 +11,7 @@
 //                           2-D delta + zigzag, low bytes then high bytes, gzip
 //   height-coarse.bin.gz    same encoding, 2-unit grid over present-day China and a margin
 //   land.bin.gz             4-unit RGBA land mask over China (arid, sand, forest, inside China)
-//   (decoder: Terrain.loadBaked in docs/design/prototypes/terrain-real.js)
+//   (decoder: Terrain.loadBaked in src/world/terrain-real.js)
 //   water.json         rivers (world polylines with water-surface height and half-width) and lakes
 //   meta.json          projection, grids, attribution
 //
