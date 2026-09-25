@@ -4,7 +4,7 @@ Hai luồng song song trên nhánh `claude/gracious-pasteur-6s8fmk`. Không sử
 
 ## Claude — hình và thế giới 3D
 
-Được sửa: `docs/design/**`, `docs/design/prototypes/**`, `assets/map/**`, `tools/bake-map.mjs`, `data/cities.json`, `data/world.json` chỉ cột `lonlat` của châu *đang vẽ*, `assets/SOURCE.md`, ADR 0004–0006, `docs/product/proposal-all-china.md` phần hình.
+Được sửa: `src/world/**` (runtime hình: thế giới, trình diễn event, HUD), `game.html`, `tests/runtime.test.mjs`, `tests/e2e/runtime-slice.mjs`, `docs/design/**`, `docs/design/prototypes/**`, `assets/map/**`, `tools/bake-map.mjs`, `data/cities.json`, `data/world.json` chỉ cột `lonlat` của châu *đang vẽ*, `assets/SOURCE.md`, ADR 0004–0006, `docs/product/proposal-all-china.md` phần hình.
 
 Việc: thành Đông Hán, DEM, LOD, canvas duyệt, map toàn quốc (phạm vi / tỉ lệ A-B-C), nướng mặt nạ, 6 thành mới năm 219, Lạc–Trường An không còn phế tích 190, tướng đi đường theo `march.md`.
 
@@ -16,7 +16,7 @@ Không sửa: `src/engine/**`, `tests/engine.test.mjs`, `tests/sim.mjs`, `docs/p
 
 Việc: nhập snapshot 219, menu ngoại giao, đình chiến khách, cải cách, gates, chế độ người chơi 1 đế, `npm run sim`.
 
-Không sửa: prototype three.js, `hancity.js`, `bake-map.mjs`, `assets/map`, `data/cities.json` (hình thành). Cần thành mới thì ghi id + `lonlat` vào `scenario.md` / `219.json`, để Claude dựng.
+Không sửa: `src/world/**`, `game.html`, prototype three.js, `hancity.js`, `bake-map.mjs`, `assets/map`, `data/cities.json` (hình thành). Cần thành mới thì ghi id + `lonlat` vào `scenario.md` / `219.json`, để Claude dựng.
 
 ## File chung — sửa tối thiểu
 

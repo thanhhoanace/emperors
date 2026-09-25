@@ -837,7 +837,7 @@
     geo.computeBoundingSphere();
     return geo;
   }
-  // o: { focus: [x, z] | null, near, mid }
+  // o: { focus: [x, z] | [[x, z]…] | null, near, mid, fine, step, chinaStep, surfaceOnly }
   T.meshes = function (terr, mats, o = {}) {
     const { G } = terr;
     const out = {};
@@ -847,6 +847,7 @@
     const canopyH = (x, z) => terr.h(x, z) + terr.canopyLift(x, z);
     out.canopy = new THREE.Mesh(chunkedSurface(terr, { ...o, minStep: 1 }, canopyH), mats.canopy); // edges are cut in the shader, 1 unit is enough
     out.canopy.receiveShadow = true;
+    if (o.surfaceOnly) return out; // runtime: extra LOD sets around a focus share one all-China mesh and horizon ring
     // all of China (round 8, terr.CO = the coarse grid): a regular mesh at o.chinaStep units, in chunks so the camera
     // culls what it cannot see, hidden under the detailed core (flush along its edge)
     const avgH = (x, z, sp) => { const r = Math.max(1, sp * 0.6); let acc = 0, ws = 0; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const w = a || b ? 1 : 2; acc += w * terr.H(x + a * r, z + b * r); ws += w; } return acc / ws; };

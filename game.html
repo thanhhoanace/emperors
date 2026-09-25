@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,">
+<title>Tam Quốc Loạn Nhập · Thế giới</title>
+<style>html,body{margin:0;background:#15120f;overflow:hidden}canvas{display:block}
+#loading{position:fixed;inset:0;display:grid;place-items:center;color:#e9e0cc;font:18px "Noto Serif",Georgia,serif;letter-spacing:.08em}</style>
+</head>
+<body>
+<div id="loading">Đang dựng thiên hạ năm 219…</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/utils/BufferGeometryUtils.js"></script>
+<script src="src/world/kit.js"></script>
+<script src="src/world/city.js"></script>
+<script src="src/world/hancity.js"></script>
+<script src="src/world/terrain.js"></script>
+<script src="src/world/terrain-real.js"></script>
+<script src="src/world/flora.js"></script>
+<script src="src/world/names.js"></script>
+<script src="src/world/world-runtime.js"></script>
+<script src="src/world/event-presenter.js"></script>
+<script src="src/world/hud.js"></script>
+<script>
+// The world of autumn 219 presenting RuntimeEvent v1 (docs/product/runtime-event.md). The engine decides what happened;
+// this page only shows it: Engine → RuntimeEvent v1 → EventPresenter → WorldRuntime (docs/architecture.md).
+//   default   the canonical fixtures: opening, guest_arrival, one tension gate, a lost and a won attack, back to the campaign
+//   ?live=1   one turn from the local server (POST /api/turn) instead of fixtures; owners then follow the returned state
+//   ?qa=1     no autoplay: tests drive window.__game.seek(i, t)
+(async () => {
+  const params = new URLSearchParams(location.search);
+  const QA = params.has('qa'), LIVE = params.has('live');
+  const W = Number(params.get('w')) || innerWidth, H = Number(params.get('h')) || innerHeight;
+  const json = (u) => fetch(u).then((r) => { if (!r.ok) throw new Error(u + ' ' + r.status); return r.json(); });
+  const [world, cities, characters, gates, fixtures] = await Promise.all([
+    json('data/world.json'), json('data/cities.json').then((j) => j.cities), json('data/scenario/characters.json'),
+    json('data/scenario/gates.json'), json('data/scenario/runtime-events.v1.json'),
+  ]);
+  const rt = await WorldRuntime.create({ world, cities, width: W, height: H, dpr: Number(params.get('dpr')) || Math.min(1.5, devicePixelRatio || 1), base: 'assets/map/' });
+  document.getElementById('loading').remove();
+  const colors = {}, glyphs = {};
+  for (const f of world.factions) { colors[f.id] = f.color; glyphs[f.id] = K.FACTIONS[f.id] ? K.FACTIONS[f.id].glyph : ''; }
+  const hud = WorldHud.create({ colors, glyphs, names: WorldNames });
+  const presenter = EventPresenter.create(rt, { world, characters, names: WorldNames, hud });
+  const seats = new Set(world.factions.map((f) => f.start.seat));
+  hud.setPlaces(world.provinces.map((p) => { const s = rt.palaceOf(p.id); return { pid: p.id, text: p.city, seat: seats.has(p.id), at: [s[0], s[1] + 1.5, s[2]] }; }));
+  const idle = () => { rt.render(); hud.drawPlaces(rt, rt.view().mode === 'far'); };
+
+  // A gate event exactly as the engine emits it (src/engine/attach-219.js emitGate + normalizeEvent). guest_arrival has no
+  // fixture in runtime-events.v1.json; it comes from gates.json in the same v1 shape.
+  const gateEvent = (id) => { const g = gates.gates.find((x) => x.id === id); return { v: 1, kind: 'gate', text: (g.emit && g.emit.text) || g.id, tone: 'neutral', id: g.id, actors: g.actors || [], shot: g.shot || null }; };
+  const fx = (pred) => fixtures.events.find(pred);
+  let events;
+  if (LIVE) {
+    const r = await fetch('/api/turn', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ seed: Number(params.get('seed')) || 219 }) }).then((x) => x.json());
+    events = r.result.events; // RuntimeEvent v1 (never result.rawEvents)
+    window.__liveState = r.state;
+  } else if (params.has('all')) {
+    events = [fx((e) => e.id === 'opening'), gateEvent('guest_arrival'), ...fixtures.events.filter((e) => e.id !== 'opening')];
+  } else {
+    events = [
+      fx((e) => e.id === 'opening'),
+      gateEvent('guest_arrival'),
+      fx((e) => e.id === 'fan_xiang_stalemate'),                       // a post_turn tension gate
+      fx((e) => e.kind === 'attack' && e.win === false),               // Tần: Lũng Tây → Trường An, repelled
+      fx((e) => e.kind === 'attack' && e.win === true),                // Tôn: Giang Hạ → Giang Lăng, taken
+    ];
+  }
+  const frozen = JSON.stringify(events); // QA: presentation must leave events untouched
+
+  const ownersOf = (state) => { const o = {}; for (const [pid, p] of Object.entries(state.provinces)) if (p.owner && p.owner !== 'neutral') o[pid] = p.owner; return o; };
+  const titleOf = (ev) => (ev.kind === 'gate' ? EventPresenter.GATE_TITLE[ev.id] : EventPresenter.KIND_TITLE[ev.kind]) || ev.kind;
+  const plans = events.map((ev) => presenter.plan(ev));
+  window.__game = {
+    rt, presenter, hud, events, plans, frozen, world,
+    // frame i at time t (seconds), deterministic; t = 'end' → the last frame of that event
+    seek(i, t) { const pl = plans[i]; const f = presenter.show(pl, t === 'end' ? pl.duration : t); rt.render(); return { view: f.view.name, mode: f.view.mode, marks: f.marks.map((m) => ({ id: m.id, kind: m.kind, fid: m.fid, p: m.p })), hud: f.hud.map((h) => ({ type: h.type, text: h.text, title: h.title, win: h.win })) }; },
+    campaign() { presenter.end(); idle(); return rt.view().name; },
+    measure: () => rt.measure(),
+    ready: true,
+  };
+  idle();
+  hud.controls((s) => { presenter.speed = s; }, () => { presenter.end(); idle(); });
+  if (QA) return;
+  await new Promise((r) => setTimeout(r, 600));
+  await presenter.playAll(events, { speed: Number(params.get('speed')) || 1, onEvent: (ev) => hud.log(ev, titleOf(ev)) });
+  if (LIVE && window.__liveState) rt.setOwners(ownersOf(window.__liveState));
+  idle(); // owners from the engine's state, not from the shots
+  window.__game.done = true;
+})().catch((e) => { console.error(e); window.__error = String((e && e.stack) || e); const l = document.getElementById('loading'); if (l) l.textContent = 'Lỗi: ' + e.message; });
+</script>
+</body></html>

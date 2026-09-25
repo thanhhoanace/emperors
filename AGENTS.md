@@ -14,8 +14,8 @@ Chi tiết: `docs/product/lanes.md`. Không sửa file của luồng kia.
 
 | Luồng | Được sửa | Cấm |
 | --- | --- | --- |
-| **Claude — hình** | `docs/design/**`, `assets/map/**`, `tools/bake-map.mjs`, `data/cities.json`, `lonlat` trong `world.json`, ADR 0004–0006, phần hình `proposal-all-china.md` | `src/engine/**`, `tests/engine.test.mjs`, `tests/sim.mjs`, `scenario.md`, `diplomacy.md`, `rules.md`, `data/scenario/**`, `data/personas/**` |
-| **Grok — luật** | `scenario.md`, `diplomacy.md`, `march.md`, `rules.md`, `data/scenario/**`, `src/engine/**`, test engine/sim, `data/personas/**`, ADR 0007+ | prototype three.js, `hancity.js`, `bake-map.mjs`, `assets/map`, `data/cities.json` |
+| **Claude — hình** | `src/world/**`, `game.html`, `docs/design/**`, `assets/map/**`, `tools/bake-map.mjs`, `data/cities.json`, `lonlat` trong `world.json`, ADR 0004–0006, phần hình `proposal-all-china.md` | `src/engine/**`, `tests/engine.test.mjs`, `tests/sim.mjs`, `scenario.md`, `diplomacy.md`, `rules.md`, `data/scenario/**`, `data/personas/**` |
+| **Grok — luật** | `scenario.md`, `diplomacy.md`, `march.md`, `rules.md`, `data/scenario/**`, `src/engine/**`, test engine/sim, `data/personas/**`, ADR 0007+ | `src/world/**`, `game.html`, prototype three.js, `hancity.js`, `bake-map.mjs`, `assets/map`, `data/cities.json` |
 
 `docs/status.md`: mỗi bên chỉ sửa mục của mình. `data/world.json` khi đổi owner/start là việc Grok; Claude chỉ đụng `lonlat`.
 
@@ -44,12 +44,14 @@ Tài liệu không chép con số từ `data/`.
 ## Cấu trúc
 
 ```text
-index.html               entry GitHub Pages
+index.html               entry GitHub Pages (Phase 1 cũ)
+game.html                thế giới 219 diễn RuntimeEvent v1 (?live=1: một lượt từ server)
 src/engine/engine.js     luật thuần, tất định theo seed
+src/world/               runtime hình: world-runtime.js, event-presenter.js, hud.js, names.js + thư viện terrain/hancity/flora/kit
 data/                    world.json + cities.json + personas/ + scenario/
 tools/bake-map.mjs       nướng địa hình → assets/map/
 server/server.js         static + POST /api/turn
-tests/                   engine.test.mjs, events.test.mjs, sim.mjs, map.test.mjs
+tests/                   engine.test.mjs, events.test.mjs, sim.mjs, map.test.mjs, runtime.test.mjs, e2e/ (Puppeteer)
 docs/                    product/, design/, research/, architecture.md, status.md
 ```
 
@@ -60,6 +62,7 @@ PUPPETEER_SKIP_DOWNLOAD=1 npm ci
 npm test
 npm run sim -- 500
 npm start
+xvfb-run -a npm run qa   # QA trình duyệt (cần server): Phase 1 + runtime-slice → test-results/runtime-*.png
 ```
 
 ## Quy tắc
