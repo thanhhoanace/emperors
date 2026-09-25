@@ -1,7 +1,6 @@
 # data/scenario/
 
-Snapshot kịch bản chưa đưa vào engine.
-
-- `219.json` — thu 219, 20 châu, đế ở rìa. SOT lời: `docs/product/scenario.md`.
-- Game đang chạy vẫn đọc `data/world.json` (năm 200, 14 châu).
-- Số trong `219.json` là đoán để sim sau này. Không chép số sang docs.
+- `219.json` — snapshot thu 219, **cùng schema** `data/world.json` (meta, rules, provinces, factions, neutral). Engine chưa đọc; `createGame(world)` có thể nuốt file này khi được chỉ định.
+- `characters.json` — governor, thừa kế, trung lập. Engine chưa đọc.
+- Số quân/lương là đoán để sim. Đo bằng `npm run sim` sau khi nhập.
+- `lonlat` châu mới khớp `data/cities.json` (Claude). `guan` = Trường An (cities key `liang` + alias).
