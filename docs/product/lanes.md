@@ -2,6 +2,8 @@
 
 Hai luồng song song trên nhánh `claude/gracious-pasteur-6s8fmk`. Không sửa file của luồng kia.
 Gameplay đã khóa: `docs/product/GAMEPLAY-FREEZE.md`.
+Hộp cát AI trong game: `docs/product/agent-sandbox.md`.
+Round A = Perception. Round A.5 = statecraft (chưa). Round B = Officers (chưa).
 
 ## Cô lập — đọc gì
 

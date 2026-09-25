@@ -1,82 +1,72 @@
-# Perception · sở hữu chỉ số
+# Perception — Round A
 
-> Codex đúng kiến trúc. File này chốt *ai ghi số đâu* để không fan-out.
-> Chưa wire. Round A sau playable loop.
+> SOT hành vi: `docs/product/GAMEPLAY-FREEZE.md`.
+> Officers / statecraft A.5 / credibility: chưa.
 
-## Ba thứ không được trộn
-
-| Lớp | Ai đọc | Lưu đâu |
-| --- | --- | --- |
-| Truth | `resolveTurn`, sim referee, Claude *trình diễn* | `state` + `data/world.json` |
-| Perception | `decide(fid)`, HUD 1 đế | **Tính mỗi lượt**. Persist chỉ log |
-| Presentation | Claude shot / full board | RuntimeEvent v1 |
-
-`decide(cao_cao)` cấm đọc `state.factions.li_shimin.troops`.
-Test: `decide` chỉ nhận `projectPerception(g, fid)`.
-
-## Persist gì
-
-Không lưu 7 knowledge graph đầy đủ.
-Rebuild được từ truth + 3 log:
+## Ranh giới
 
 ```
-state.intelLog = {
-  lastSeen: { [observer][targetFid]: { troops, action, turn, province } },
-  identity: { [observer][targetFid]: "unknown"|"suspected"|"known"|"self_revealed" },
-  rumors:   { [observer]: [gateId] }
+truth state
+    → projectPerception(game, observerFid)
+    → DecisionContext
+    → decide(context)
+```
+
+`resolveTurn` đọc truth. RuntimeEvent = clip.
+
+Sau khi `perception.js` đã attach:
+- `decide` **chỉ** nhận DecisionContext.
+- `fillDecisions` / `decideAll` **bắt buộc** projectPerception rồi decide(context).
+- Gọi `decide(game, fid)` ném lỗi.
+- Map band → số **private** trong engine. Context không có `bandValues`.
+
+## DecisionContext v1
+
+```
+{
+  v: 1,
+  fid, seed, turn,
+  calendar: { year, season },
+  self: { troops, grain, loyalty, prestige, seat, provinces[], pacts, last, grudge,
+          weights, traits, name, short, quotes, homeCity },
+  world: { owners, neighbors, strategic, emperorAt, cities, publicLabels },
+  others: { [fid]: { publicLabel, claimedIdentity, alive, troopBand,
+                     lastAction, lastSeenTurn, adjacent, provinces } },
+  legal: { actions, attackTargets, annexTargets, pactTargets, fortifyTargets },
+  prior: null | { id, status: "active"|"obsolete", bias, focus },
+  rules: { lateWarTurn, pactMax, coalitionAt, fortMax, commitBase, commitAggression }
 }
 ```
 
-`projectPerception(g, fid)` ra snapshot Codex mô tả (estimate, confidence, publicName, intel[]).
+## Band
 
-Identity: biết tên ≠ biết xuyên không. `known` = "Doanh Chính, kẻ dựng hiệu Tần". Chỉ spectator biết đời sau.
+`unknown | weak | medium | strong | very_strong`
 
-## Derived capability
+Ngưỡng: `data/scenario/intel-rules.json`. `Engine.bandValue(band)` private.
 
-5 stat catalog → 5 capability *cố định hệ số* → engine đọc 3 số trận.
+Kề → band hiện tại. Không kề → stale từ intelLog hoặc `unknown`.
 
-Hệ số nằm **một chỗ**: `data/scenario/formulas.json` (Grok). Không nhân tag/affinity/fort vào từng công thức.
+## Danh tính
 
-Combat đọc `FIELD` `DEFENSE` `SIEGE`.
-Nội trị / chiêu đọc `GOVERN` `DIPLOMACY`.
+`publicLabel` + optional `claimedIdentity`. Không credibility.
 
-## Sở hữu file
+## Prior A-hybrid
 
-JSON vẫn đúng cho *catalog tĩnh*. Sai cho số suy ra.
+Chỉ `li_shimin`, `zhu_yuanzhang`. Mẫu `wu_jing_pressure`.
+Tần / Vũ / Tào / Lưu / Tôn: `prior === null`.
 
-| File | Chủ | Được có | Cấm |
-| --- | --- | --- | --- |
-| `data/world.json` | Grok owner/start/rules; Claude lonlat | quân thật, chủ ô | perception, 5 stat tướng |
-| `data/scenario/officers.json` | Grok | id, tên, ô mở, 5 stat *mở*, hệ, tag, homeRegion, preferences[], relations *hiếm* | 210 ô affinity, XP, capability |
-| `data/scenario/intel-rules.json` | Grok | đai nhớ, publicName, nậc identity, rumor vs intel | snapshot từng phe |
-| `data/scenario/formulas.json` | Grok | trọng số 70/30, hệ số confidence | — |
-| `data/scenario/gates.json` | Grok | cửa, shot | ai được biết cửa |
-| `state.*` | Engine runtime | troops, owner, firedGates, intelLog | capability đã nhân |
-| `src/engine/perception.js` | Grok | `projectPerception` | DOM |
-| Claude runtime | Claude | đọc RuntimeEvent | đọc raw troops để AI |
+## intelLog
 
-Thêm phe thứ 8: sửa `intel-rules` + doctrine tag, không sửa 30×8 ô.
+```
+state.intelLog = {
+  lastSeen: { [observer]: { [target]: { troops, action, turn, province } } },
+  claims: { [fid]: string }
+}
+```
 
-## Affinity
+## API
 
-Không bảng 30×7.
-Tính: homeRegion khớp ô chủ + doctrine khớp cải cách phe + `relations` chỉ cặp nổi (Quan–Lưu, Lã–Tôn, Liêu–Tào).
-Doctrine vocab đóng: `centralization` `merit` `aristocracy` `river` `cavalry` `colony`. Không đẻ tag tự do.
-
-## Governor / commander
-
-Một officer, hai slot. 1 action / phe.
-`{ action, from, to, commander }`.
-Kéo Quan Vũ khỏi Kinh = công ↑ thủ Kinh ↓. Không thêm lượt.
-
-## Outcome khi mất ô
-
-Không chết mặc định. Round C: retreat / captured / wounded / dead.
-V1–A: mất ô → retreat nếu còn đường, else captured. Chết hiếm.
-
-## Round
-
-A Perception + test AI không lao đúng 4 đế yếu.
-B Officer 5 stat → capability, governor/commander.
-C Capture / retreat.
-D XP / doctrine.
+`Engine.projectPerception(g, fid)`
+`Engine.decide(context)`
+`Engine.fillDecisions(g, playerFid, playerDecision)`
+`Engine.observeFactions(g)`

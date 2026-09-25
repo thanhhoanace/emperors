@@ -26,6 +26,8 @@ Chi tiết + cô lập kiến thức: `docs/product/lanes.md`.
 | Gameplay đã khóa | `docs/product/GAMEPLAY-FREEZE.md` |
 | Kịch bản 219 | `docs/product/scenario.md` |
 | RuntimeEvent | `docs/product/runtime-event.md` |
+| Perception / DecisionContext | `docs/product/perception.md` |
+| Hộp cát AI trong game | `docs/product/agent-sandbox.md` |
 | Phân vai / cô lập | `docs/product/lanes.md` |
 | Số đang chạy | `data/world.json` |
 | Đang ở đâu | `docs/status.md` |

@@ -1,7 +1,7 @@
 # GAMEPLAY FREEZE — 2026-09-26
 
-> Khóa hướng. Không đổi trừ khi chủ dự án mở khóa.
-> Chưa code. Thứ tự: Round A Perception → sim → Round A.5 statecraft → sim nhân quả → Round B Officers.
+> **SOT gameplay.** Thắng thảo luận cũ. Round A Perception đang wire. A.5 / Officers chưa.
+> Hộp cát LLM: `docs/product/agent-sandbox.md`.
 
 ## Khóa
 

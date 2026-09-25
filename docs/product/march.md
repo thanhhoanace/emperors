@@ -5,7 +5,7 @@
 
 ## Luật (engine) — không đụng
 
-Tấn công = từ châu A (thủ phủ hoặc châu kề đích) sang châu B láng giềng. Không có ô đường. Không có stack dừng giữa hai thành. `passage` (mượn đường) chỉ làm B thành "kề logic" qua đất minh, vẫn 1 đích.
+Tấn công = từ châu A sang châu B láng giềng. `from` do người chơi gửi, nếu A thuộc phe đánh và kề B thì trọng tài dùng `from`; không hợp lệ thì `originFor`. Không nhảy ô. Không stack.
 
 ## Việc người xem thấy (Claude)
 
