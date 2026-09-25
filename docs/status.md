@@ -40,6 +40,7 @@ Frontend không tự bù các chỗ này; UI hiện đúng những gì engine l�
 - Cải cách 3 tầng: tên có, chưa tăng tier.
 - `deal_counter` chưa có vòng trả giá tự động; AI mặc định `pact`.
 - `index.html` vẫn Phase 1 cũ; trò chơi mới ở `game.html` (chưa thay, chờ duyệt).
+- Vòng chơi: bảng xếp hạng và ước lực tấn công đọc số thật của engine (quân mọi phe). Khi `projectPerception` (`perception.md`, `intel.md`) được wire, HUD 1 đế phải đổi sang đọc lớp tin đó; hiện chưa có API.
 - Vòng chơi: một lượt đầu có ~9 event, diễn 2× mất vài phút; có 1×/2×/4× và "Bỏ qua". Người chơi chỉ chọn qua danh sách (chưa bấm châu trên bản đồ; đích được tô trên nhãn thành).
 - Runtime: bộ đệm GPU sát trần 150 MB (145 MB) khi đã xem nhiều châu/thành; tiền cảnh một số góc cận thành còn sườn núi tán rừng thô.
 - Runtime: vị trí tướng trong cảnh `gate` lấy châu trấn gốc (`characters.json` `governors`), chưa theo state khi tướng mất châu.
