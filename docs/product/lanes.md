@@ -1,28 +1,28 @@
 # Phân vai agent
 
-Hai luồng song song trên nhánh `claude/gracious-pasteur-6s8fmk`. Không sửa file của luồng kia. Cần đổi SOT chung thì chỉ sửa đúng dòng trong `docs/status.md`.
+Hai luồng song song trên nhánh `claude/gracious-pasteur-6s8fmk`. Không sửa file của luồng kia.
+Gameplay đã khóa: `docs/product/GAMEPLAY-FREEZE.md`.
 
-## Claude — hình và thế giới 3D
+## Cô lập — đọc gì
 
-Được sửa: `src/world/**` (runtime hình: thế giới, trình diễn event, HUD), `game.html`, `tests/runtime.test.mjs`, `tests/game-controller.test.mjs`, `tests/e2e/runtime-slice.mjs`, `tests/e2e/game-loop.mjs`, `docs/design/**`, `docs/design/prototypes/**`, `assets/map/**`, `tools/bake-map.mjs`, `data/cities.json`, `data/world.json` chỉ cột `lonlat` của châu *đang vẽ*, `assets/SOURCE.md`, ADR 0004–0006, `docs/product/proposal-all-china.md` phần hình.
+| Agent | Được đọc để làm việc | Không được dùng làm input |
+| --- | --- | --- |
+| Claude | freeze (mục WAR + RuntimeEvent), `march.md`, `runtime-event.md`, `cities.json`, DEM | `decide` nội bộ, `intel-rules`, doctrine, persona phe khác, prior Lý/Chu |
+| Grok | freeze cả file, `data/scenario/**`, `src/engine/**`, personas để viết thoại | `src/world/**`, bake, `hancity.js` |
+| Codex | freeze + diff để review | Tự nhét statecraft vào HUD / mesh |
 
-Việc: thành Đông Hán, DEM, LOD, canvas duyệt, map toàn quốc (phạm vi / tỉ lệ A-B-C), nướng mặt nạ, 6 thành mới năm 219, Lạc–Trường An không còn phế tích 190, tướng đi đường theo `march.md`.
+Trong *game*: mỗi `decide(fid)` chỉ thấy DecisionContext của đúng phe. Không load kịch bản / persona / doctrine phe khác.
 
-Không sửa: `src/engine/**`, `tests/engine.test.mjs`, `tests/sim.mjs`, `docs/product/scenario.md`, `docs/product/diplomacy.md`, `docs/product/rules.md`, `data/scenario/**`, `data/personas/**` (trừ khi chủ dự án bảo vẽ chân dung).
+## Claude — hình
 
-## Grok / kịch bản — luật và sim
+Được sửa: `src/world/**`, `game.html`, test runtime/e2e, `docs/design/**`, `assets/map/**`, `tools/bake-map.mjs`, `data/cities.json`, `lonlat` trong `world.json`, ADR 0004–0006.
 
-Được sửa: `docs/product/scenario.md`, `diplomacy.md`, `march.md` (hợp đồng event), `rules.md`, `data/scenario/**`, `src/engine/**`, `tests/engine.test.mjs`, `tests/sim.mjs`, `data/personas/**` (thoại), ADR 0007+ về luật.
+Cấm: `src/engine/**`, `tests/engine.test.mjs`, `tests/sim.mjs`, `docs/product/scenario.md`, `GAMEPLAY-FREEZE.md` (trừ khi chủ dự án bảo dẫn link), `diplomacy.md`, `rules.md`, `data/scenario/**`, `data/personas/**`.
 
-Việc: nhập snapshot 219, menu ngoại giao, đình chiến khách, cải cách, gates, chế độ người chơi 1 đế, `npm run sim`.
+## Grok — luật
 
-Không sửa: `src/world/**`, `game.html`, prototype three.js, `hancity.js`, `bake-map.mjs`, `assets/map`, `data/cities.json` (hình thành). Cần thành mới thì ghi id + `lonlat` vào `scenario.md` / `219.json`, để Claude dựng.
+Được sửa: freeze, scenario, diplomacy, march, rules, `data/scenario/**`, `src/engine/**`, test engine/sim, personas, ADR 0007+.
 
-## File chung — sửa tối thiểu
+Cấm: `src/world/**`, `game.html`, bake, `assets/map`, `data/cities.json`.
 
-| File | Ai |
-| --- | --- |
-| `docs/status.md` | Cả hai, chỉ mục của mình |
-| `AGENTS.md` | Chỉ khi đổi quy ước repo |
-| `data/world.json` | Claude: `lonlat`. Grok: owner / start / rules *khi nhập engine* — báo trước |
-| Event `attack` | Grok xuất `from`/`to`/`win`. Claude diễn |
+Round A và A.5 là hai patch riêng. Không trộn Perception với statecraft.
