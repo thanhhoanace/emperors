@@ -11,3 +11,4 @@ Không sửa ADR đã chấp nhận; muốn đổi thì viết ADR mới và ghi
 | 0004 | Hướng visual: A (chiến dịch kiểu TW3K) + cắt cảnh trận của C, kể chuyện kiểu Ryan Sael | Chấp nhận |
 | 0005 | Ngân sách hiệu năng web: LOD thành, rừng một lớp tán, địa hình theo ô, nướng sẵn, 3 mức chất lượng | Đề xuất |
 | 0006 | Bản đồ theo địa hình thật (3 km/đơn vị), thành trì theo khảo cổ Đông Hán, châu chia theo núi sông | Đề xuất |
+| 0007 | Kịch bản thu 219, đế ở rìa, 20 châu, Civ nhẹ; không quận TW3K | Chấp nhận |

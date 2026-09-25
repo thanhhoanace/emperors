@@ -1,7 +1,10 @@
 # Đề xuất vòng 6: bản đồ toàn Trung Quốc và lợi thế riêng của bốn hoàng đế
 
-**Trạng thái:** chờ chủ dự án duyệt (2026-09-25). Chưa sửa luật, dữ liệu hay code theo đề xuất này.
-Mọi con số dưới đây chỉ là ví dụ, phải đo lại bằng `npm run sim` trước khi đưa vào `data/world.json`.
+**Trạng thái (cập nhật 2026-09-25):**
+- Phần *luật* của đề xuất này (mục 4–6: châu, nơi xuất phát, lợi thế) **đã được thay** bằng kịch bản thu 219 mà chủ dự án chốt: `docs/product/scenario.md`, `decisions/0007`. Kịch bản có 20 châu có chủ; Tần ở Lũng Tây, Lý ở Tịnh, Lưu Triệt ở Hà Tây, Chu ở Hoài; cải cách 3 tầng thay cho bảng lợi thế ở mục 6. Mục 4–6 chỉ giữ lại làm tư liệu.
+- Phần *hình* (mục 3, 8, 9: phạm vi, phép chiếu, tỉ lệ, kỹ thuật bản đồ) **vẫn chờ chủ dự án chọn**.
+
+Mọi con số dưới đây chỉ là ví dụ.
 
 ## 1. Ý tưởng của chủ dự án
 
@@ -60,9 +63,9 @@ Chi tiết theo vùng của cách C:
 
 ![Bản đồ đề xuất](../design/proposal-all-china.jpg)
 
-*Ảnh dựng từ AWS Terrain Tiles (độ cao) và Natural Earth (biên giới), phép chiếu Albers. Châu chia tạm theo chi phí đi lại, chỉ để minh hoạ.*
+*Kịch bản thu 219 (20 châu có chủ, `scenario.md`) đặt lên bản đồ toàn Trung Quốc. Ảnh dựng từ AWS Terrain Tiles (độ cao) và Natural Earth (biên giới), phép chiếu Albers. Ranh châu chia tạm theo chi phí đi lại, chỉ để minh hoạ; phần không tô là đất hoang không có chủ.*
 
-## 4. Châu
+## 4. Châu (đã thay bằng `scenario.md`)
 
 Từ 14 châu tăng lên khoảng 30–35 châu: 14 châu cũ, cộng khoảng 19 châu biên. Chủ năm 200 của các châu biên:
 
@@ -77,7 +80,7 @@ Từ 14 châu tăng lên khoảng 30–35 châu: 14 châu cũ, cộng khoảng 1
 
 **Đất hoang:** cao nguyên Tây Tạng, Taklamakan, rừng Mãn Châu phía bắc, Đài Loan. Có thể vào nhưng mất quân (hao quân vì địa hình, bệnh).
 
-## 5. Nơi xuất phát
+## 5. Nơi xuất phát (đã thay bằng `scenario.md`)
 
 Ba quân phiệt giữ Trung Nguyên như cũ. Bốn hoàng đế đứng ở bốn phía, mỗi người cạnh một vùng biên yếu mà chỉ họ biết cách khai thác.
 
@@ -90,7 +93,7 @@ Ba quân phiệt giữ Trung Nguyên như cũ. Bốn hoàng đế đứng ở b�
 
 Sửa theo lịch sử: Phiên Ngung (Lĩnh Nam) bắt đầu là **trung lập** (nhà Sĩ Nhiếp), không thuộc Tôn Quyền.
 
-## 6. Lợi thế riêng
+## 6. Lợi thế riêng (đã thay bằng cải cách 3 tầng trong `scenario.md`)
 
 Mỗi hoàng đế có ba lợi thế, gắn với một vùng trên bản đồ để bản đồ lớn thật sự có ý nghĩa:
 
@@ -114,7 +117,7 @@ Mỗi hoàng đế có ba lợi thế, gắn với một vùng trên bản đồ
 - **Tôn Quyền:** mất Phiên Ngung lúc đầu. Giữ lợi thế thủy quân. Thêm "chiêu mộ Sơn Việt" (thêm lính sau khi đánh Sơn Việt) và một biến cố "vượt biển" nhiều rủi ro.
 - **Lưu Bị:** ngoại giao với Vũ Lăng Man và Nam Trung.
 
-## 7. Thay đổi luật và engine (sau khi duyệt)
+## 7. Thay đổi luật và engine (tư liệu; luật đã chốt nằm ở `scenario.md`)
 
 - `data/world.json`:
   - châu có thẻ tài nguyên (ngựa, sắt, muối, ngọc, tơ lụa, lúa, buôn bán);
@@ -153,17 +156,14 @@ Mỗi hoàng đế có ba lợi thế, gắn với một vùng trên bản đồ
 9. **Sương theo khoảng cách camera,** bầu trời đi theo camera, **chu kỳ ngày đêm** theo bảng khoá. Một lượt có thể ứng với một thời điểm trong ngày.
 10. **Nước dùng một shader duy nhất,** đọc mặt nạ khoảng cách tới bờ vẽ sẵn.
 
-## 10. Thứ tự làm nếu được duyệt
+## 10. Thứ tự làm
 
-1. Chốt với anh: phạm vi (có Bắc Việt, Bắc Triều Tiên không), cách tỉ lệ (A/B/C), danh sách châu, nơi xuất phát, bộ lợi thế.
-2. Luật và dữ liệu: engine, test, `rules.md`, `world.json` v2. Đo cân bằng bằng sim cho tới khi bảy phe đều có cơ hội thắng.
+1. Chủ dự án chốt phần hình: phạm vi và tỉ lệ.
+2. Luật 219 nhập engine theo `scenario.md` (không thuộc đề xuất này).
 3. Bake toàn quốc theo phép chiếu Albers, có ô và mặt nạ nướng sẵn; bản đồ tranh cho chế độ thu nhỏ.
-4. Thành và trại vùng biên; render lại các góc máy; đưa lên canvas duyệt.
+4. Thành năm 219: Lạc Dương, Trường An đã dựng lại sau loạn; thêm Thiên Thủy, Cô Tang, Chung Ly, Nam Trịnh, Giang Lăng, Điền Trì. Render lại, đưa lên canvas duyệt.
 
-## 11. Cần anh quyết
+## 11. Cần anh quyết (phần hình)
 
-1. Phạm vi: đúng biên giới Trung Quốc ngày nay, hay theo thế giới nhà Hán (có Bắc Việt Nam, Bắc Triều Tiên)?
+1. Phạm vi bản đồ hình: đúng biên giới Trung Quốc ngày nay, hay theo thế giới nhà Hán (có Bắc Việt Nam, Bắc Triều Tiên)? Luật vẫn chỉ 20 châu có chủ; phần còn lại là đất hoang có tên.
 2. Tỉ lệ: A, B hay C (em đề xuất C)?
-3. Nơi xuất phát: đưa hẳn các hoàng đế ra vùng biên như bảng ở mục 5, hay giữ gần lõi?
-4. Tần Thủy Hoàng và Hán Vũ Đế: chỉ có lợi thế "đường cũ, công trình cũ" (đúng lịch sử), hay cho thêm công nghệ đời sau?
-5. Bốn chỗ kịch bản lệch lịch sử (`docs/design/history.md`): Kiến Nghiệp, Trường An, Hạ Khẩu, Nghiệp Thành.

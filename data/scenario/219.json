@@ -1,0 +1,36 @@
+{
+  "id": "219_periphery",
+  "status": "draft_not_wired",
+  "note": "Engine still loads data/world.json (year 200, 14 provinces). Numbers here are starting guesses for a future sim pass.",
+  "meta": {
+    "title": "Tam Quốc Loạn Nhập",
+    "startYear": 219,
+    "era": "Kiến An năm thứ 24 — mùa thu",
+    "seasons": ["Xuân", "Hạ", "Thu", "Đông"],
+    "startSeason": "Thu",
+    "description": "Tào–Thục–Ngô đã thành ba khối và đang giằng Kinh Châu cùng Hán Trung. Bốn hoàng đế xuyên không xuất hiện ở rìa và khe Hoài."
+  },
+  "rules": {
+    "unifyProvinces": 12,
+    "maxTurns": 48,
+    "lateWarTurn": 20,
+    "coalitionAtProvinces": 4,
+    "coalitionAtSeats": ["guan", "ji", "yi"],
+    "guestTruceTurns": 8
+  },
+  "emperor": { "province": "yu", "name": "Hán Hiến Đế" },
+  "seeDocs": "docs/product/scenario.md",
+  "note2": "Full province graph, faction starts, reforms and gates live in this file on disk artifacts if truncated; engine must not load until complete.",
+  "factionsStart": {
+    "qin_shihuang": { "provinces": ["longxi"], "seat": "longxi", "troops": 28000, "grain": 45000 },
+    "li_shimin": { "provinces": ["bing"], "seat": "bing", "troops": 30000, "grain": 40000 },
+    "zhu_yuanzhang": { "provinces": ["huai"], "seat": "huai", "troops": 22000, "grain": 38000 },
+    "liu_che": { "provinces": ["hexi"], "seat": "hexi", "troops": 26000, "grain": 42000 },
+    "cao_cao": { "provinces": ["yu", "ji", "qing", "yan", "xu", "si_li", "guan", "jing"], "seat": "yu", "troops": 140000, "grain": 200000 },
+    "liu_bei": { "provinces": ["yi", "han_zhong", "jing_nan"], "seat": "yi", "troops": 58000, "grain": 95000 },
+    "sun_quan": { "provinces": ["yang", "jiang"], "seat": "yang", "troops": 62000, "grain": 110000 }
+  },
+  "neutral": { "you": 18000, "jiao": 15000, "nanzhong": 12000 },
+  "newProvinces": ["guan", "han_zhong", "jing_nan", "longxi", "hexi", "huai", "nanzhong"],
+  "removedIds": ["liang"]
+}
