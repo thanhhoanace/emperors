@@ -6,8 +6,10 @@ import { fileURLToPath } from 'node:url';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
-export const Engine = require(path.join(ROOT, 'src/engine/attach-219.js'))(
-  require(path.join(ROOT, 'src/engine/engine.js'))
+export const Engine = require(path.join(ROOT, 'src/engine/perception.js'))(
+  require(path.join(ROOT, 'src/engine/attach-219.js'))(
+    require(path.join(ROOT, 'src/engine/engine.js'))
+  )
 );
 
 function readJson(rel) {
@@ -17,6 +19,7 @@ function readJson(rel) {
 export const world = readJson('data/world.json');
 world.gatesPack = readJson('data/scenario/gates.json');
 world.charactersPack = readJson('data/scenario/characters.json');
+world.intelRules = readJson('data/scenario/intel-rules.json');
 
 export const personas = Object.fromEntries(
   world.factions.map((f) => [f.id, readJson(`data/personas/${f.id}.json`)])

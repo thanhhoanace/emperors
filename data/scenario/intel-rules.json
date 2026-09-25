@@ -1,0 +1,24 @@
+{
+  "seeDocs": "docs/product/perception.md",
+  "bands": { "weakMax": 25000, "mediumMax": 45000, "strongMax": 90000 },
+  "aliases": {
+    "qin_shihuang": { "publicLabel": "Chúa Lũng Tây", "trueName": "Tần Thủy Hoàng", "claimedName": "Doanh Chính" },
+    "li_shimin": { "publicLabel": "Chúa Tấn Dương", "trueName": "Lý Thế Dân", "claimedName": "Lý Thế Dân" },
+    "liu_che": { "publicLabel": "Chúa Cô Tang", "trueName": "Hán Vũ Đế", "claimedName": "Lưu Triệt" },
+    "zhu_yuanzhang": { "publicLabel": "Chúa Chung Ly", "trueName": "Chu Nguyên Chương", "claimedName": "Chu Nguyên Chương" },
+    "cao_cao": { "publicLabel": "Tào Tháo", "trueName": "Tào Tháo" },
+    "liu_bei": { "publicLabel": "Lưu Bị", "trueName": "Lưu Bị" },
+    "sun_quan": { "publicLabel": "Tôn Quyền", "trueName": "Tôn Quyền" }
+  },
+  "knownByDefault": ["cao_cao", "liu_bei", "sun_quan"],
+  "prior": {
+    "id": "wu_jing_pressure",
+    "holders": ["li_shimin", "zhu_yuanzhang"],
+    "when": {
+      "alive": ["guan_yu"],
+      "owner": { "jing_nan": "liu_bei", "jiang": "sun_quan" }
+    },
+    "bias": { "attack": 1.35 },
+    "focus": ["jing_nan", "jing"]
+  }
+}
