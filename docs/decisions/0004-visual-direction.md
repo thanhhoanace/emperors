@@ -1,6 +1,6 @@
 # 0004 — Hướng visual: thế giới hiện thực, kể chuyện kiểu Ryan Sael
 
-**Trạng thái:** Đề xuất · chờ chủ dự án chọn A / B / C · 2026-09-24
+**Trạng thái:** Chấp nhận · 2026-09-25 (đề xuất 2026-09-24)
 
 ## Bối cảnh
 
@@ -18,4 +18,12 @@ Chi tiết và ảnh: `docs/design/direction.md`, canvas https://claude.ai/artif
 
 ## Quyết định
 
-_Chờ chủ dự án chọn. Khi có quyết định, ghi ở đây và đổi trạng thái sang "Chấp nhận"._
+Chủ dự án chọn **A — Chiến dịch Thiên Hạ**, kết hợp **cắt cảnh trận của C** mỗi khi có giao chiến.
+
+Nhận xét kèm quyết định: thành trì trong bản mock còn "đồ chơi", chưa đạt mức Total War: Three Kingdoms và chưa đạt độ chăm chút của dat.city. Vì vậy, trước khi đưa vào app, thành trì phải được dựng lại ở mức chi tiết cao (mái cong có ngói, tường gạch, lầu cổng, tứ hợp viện, cung điện, bóng tiếp xúc) và gửi chủ dự án duyệt lại.
+
+## Hệ quả
+
+- Frontend mới đi theo bố cục và UI của A (thủy mặc, bản đồ tròn, biển tên thành có chân dung, camera theo lượt, xám ngoài tiêu điểm).
+- Mỗi event `attack` có thể mở cảnh cắt trận 3–5 giây (góc thấp, khung điện ảnh, thanh tương quan lực lượng); nút "Bỏ qua" và chế độ tốc độ nhanh phải tắt được cảnh này.
+- Khung sa bàn của B không dùng trong app; có thể dùng cho cảnh mở đầu/kết thúc video sau này.

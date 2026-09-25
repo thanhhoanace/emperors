@@ -32,7 +32,7 @@ docs/design/prototypes/ ── cảnh three.js để render ảnh duyệt design
 ```text
 index.html            nạp script cổ điển theo thứ tự, không bundler
 src/engine/engine.js  (giữ nguyên)
-src/world/            terrain.js, water.js, forest.js, cities.js, armies.js, fx.js, lens.js (DOF + xám ngoài tiêu điểm), camera.js (tour khóa theo điểm dừng)
+src/world/            terrain.js, water.js, forest.js, cities.js (từ prototypes/city.js, thêm LOD theo khoảng cách), armies.js, fx.js, lens.js (DOF + SSAO + xám ngoài tiêu điểm), camera.js (tour khóa theo điểm dừng), battle.js (cảnh cắt trận)
 src/ui/               hud.js, ranking.js, log.js, tags.js (nhãn nổi), controls.js
 src/main.js           nạp data → tạo game → diễn lượt: decide từng phe (camera bay tới, "Đang nghĩ…", câu thoại) → resolveTurn → hoạt cảnh event → cập nhật bảng và nhật ký
 ```

@@ -13,9 +13,18 @@ fs.mkdirSync(OUT, { recursive: true });
 const browser = await puppeteer.launch({ headless: false, protocolTimeout: 600000, args: ['--no-sandbox', '--enable-webgl', '--ignore-gpu-blocklist', '--use-gl=angle', '--use-angle=swiftshader-webgl', '--window-size=1500,1000'] });
 try {
   const tab = await browser.newPage();
+  const errors = [];
+  tab.on('pageerror', (e) => errors.push(e.message));
+  tab.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await tab.setViewport({ width: 1440, height: 900, deviceScaleFactor: Number(dpr) });
   await tab.goto(`${BASE}${page}.html?shot=${shot}&dpr=${dpr}`);
-  await tab.waitForFunction(() => window.__done === true, { timeout: 400000, polling: 1000 });
+  try {
+    await tab.waitForFunction(() => window.__done === true, { timeout: 400000, polling: 1000 });
+  } catch (e) {
+    throw new Error(`render failed: ${errors.join(' | ') || e.message}`);
+  }
+  const lost = await tab.evaluate(() => { const c = document.querySelector('canvas'); const gl = c && (c.getContext('webgl2') || c.getContext('webgl')); return !gl || gl.isContextLost(); });
+  if (lost) throw new Error('render failed: WebGL context lost (scene too heavy for this GPU; try dpr 1)');
   const file = path.join(OUT, `${page}-${shot}.jpg`);
   await (await tab.$('canvas')).screenshot({ path: file, type: 'jpeg', quality: 90 });
   fs.writeFileSync(file.replace(/\.jpg$/, '.json'), JSON.stringify(await tab.evaluate(() => window.__anchors), null, 1));

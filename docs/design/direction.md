@@ -1,8 +1,8 @@
 # Hướng visual và UI
 
 > **Vai trò:** SOT cho *cách game trông và cảm*: tham chiếu, nguyên tắc, phương án đang chờ duyệt, những điều không đổi.
-> **Trạng thái (2026-09-24): CHỜ CHỦ DỰ ÁN CHỌN PHƯƠNG ÁN.** Canvas duyệt: https://claude.ai/artifact/958ZoQxAFcGPKTUNGVdWeV
-> (trang "Vòng 2 · Hiện thực" là hướng chính; "Vòng 1 · Stylized" để so sánh). Khi đã chọn: ghi kết quả vào `decisions/0004` và cập nhật file này.
+> **Trạng thái (2026-09-25): ĐÃ CHỌN A + cắt cảnh trận của C** (`decisions/0004`). Đang làm lại thành trì ở mức chi tiết cao để duyệt tiếp.
+> Canvas duyệt: https://claude.ai/artifact/958ZoQxAFcGPKTUNGVdWeV
 
 ## Yêu cầu của chủ dự án
 
@@ -20,7 +20,7 @@
 
 Ảnh Civ VI cũ nằm trong `references/legacy-civ6/` và chỉ dùng để tham khảo (ảnh có bản quyền, không phát hành cùng game).
 
-## Vòng 2 — ba hướng hiện thực (đang chờ chọn)
+## Vòng 2 — ba hướng hiện thực (đã chọn A + C2)
 
 Cả ba dựng từ **cùng một thế giới** (`prototypes/real.html`): địa hình theo 14 châu, sông Hoàng Hà / Trường Giang / Hán Thủy / Hoài Thủy, núi đá vôi, khoảng 50.000 cây instanced, 14 thành tường, ruộng quanh thành, quân Tào Tháo đang hành quân từ Hứa Xương đánh Tương Dương.
 
@@ -31,7 +31,19 @@ Cả ba dựng từ **cùng một thế giới** (`prototypes/real.html`): đị
 | Đánh đổi | Việc 3D nặng nhất; toàn cảnh khó đọc lãnh thổ hơn C | Cảm giác mô hình nhiều hơn; ít không khí điện ảnh | Nhìn từ trên kém điện ảnh; cảnh trận cận mặt đất đòi mô hình chi tiết |
 | Ảnh | `real.html?shot=campaign`, `far` | `board`, `boardclose` | `strategy`, `battle` |
 
-**Đề xuất:** A làm nền chính, lấy thêm cắt cảnh trận của C cho mỗi lần giao chiến; dùng khung sa bàn của B cho cảnh mở đầu và kết thúc video.
+**Đã chọn:** A làm nền chính, cắt cảnh trận của C cho mỗi lần giao chiến.
+
+## Thành trì — tiêu chuẩn chất lượng
+
+Phản hồi của chủ dự án: thành trong mock vòng 2 còn "đồ chơi", chưa tới TW3K và chưa tới độ chăm chút của dat.city. Một thành đạt yêu cầu phải có:
+
+- Mái cong kiểu Trung Hoa (dốc gắt ở nóc, thoải ở mép, bốn góc vênh), vật liệu ngói có vân, bờ nóc và bờ quyết, mái có độ dày; lầu lớn dùng mái chồng hai tầng.
+- Tường thành vát chân, vật liệu gạch hoặc đất nện, lỗ châu mai, ụ nhô ("mã diện"), tháp góc; cổng có vòm tối, cửa gỗ, lầu cổng hai tầng; cổng chính có ủng thành.
+- Bên trong dày đặc và có trật tự: đại lộ Bắc–Nam từ cổng chính vào cung, phố lát đá, tứ hợp viện, chợ, cây trong sân, người đi lại, đèn lồng. Cung điện đặt trên nền đá nhiều cấp.
+- Ánh sáng tạo khối: bóng đổ, bóng tiếp xúc (AO) ở chân tường và khe mái, nắng xiên giờ vàng.
+- Không một khối hộp trơn nào nhìn thấy được ở tầm camera chiến dịch.
+
+Hiện trạng (vòng 3, 2026-09-25): `prototypes/city.js` dựng thành theo đủ các tiêu chí trên; ảnh ở trang "Vòng 3" của canvas. Còn giữ chỗ: lính (khối hộp có cờ), cây (hơi hoạt hình), chân dung nhân vật; chưa có LOD.
 
 ## Vòng 1 — stylized (đã bị thay)
 
@@ -47,12 +59,13 @@ Ba hướng đồ chơi/voxel bám sát Ryan: sa bàn khối (`prototypes/a.html
 
 ## Prototype
 
-`docs/design/prototypes/` chứa các cảnh three.js dùng để render ảnh duyệt. Đây là mã nháp, không phải code sản phẩm: dùng làm điểm xuất phát khi triển khai phương án được chọn.
+`docs/design/prototypes/` chứa các cảnh three.js dùng để render ảnh duyệt (`real.html` + `city.js` là hướng đã chọn; `a/b/c.html` là vòng 1). Đây là mã nháp, không phải code sản phẩm: dùng làm điểm xuất phát khi triển khai phương án được chọn.
 
 ```bash
 npm start
 PUPPETEER_EXECUTABLE_PATH=/path/to/chrome xvfb-run -a node docs/design/prototypes/render.mjs real campaign
 # → test-results/design/real-campaign.jpg (+ .json toạ độ màn hình của thành và quân, để đặt nhãn UI)
+# các góc máy của hướng đã chọn: city, campaign, battle (far nặng, chỉ chạy ở dpr 1)
 ```
 
 Texture chi tiết (cỏ, pháp tuyến nước) tải từ thư mục ví dụ của repo three.js (MIT) lúc chạy. Trước khi phát hành phải thay bằng asset có giấy phép rõ ràng và ghi vào `assets/SOURCE.md`.

@@ -71,6 +71,9 @@ Trong container không có GPU: đặt `PUPPETEER_EXECUTABLE_PATH` tới Chromiu
 - Không đặt biến top-level tên `top`, `name`, `parent`… trong script cổ điển: trùng thuộc tính của `window`.
 - Feedback cũ của chủ dự án vẫn còn hiệu lực: cây không được to hơn thành; không để lại khối chữ nhật trông như placeholder; núi phải thành dãy, không phải cục đá rời; màu không được bạc.
 - Cân bằng phải đo bằng `npm run sim`, không đoán. Một thay đổi "nhỏ" có thể đẩy một phe từ 5% lên 50%.
+- Mờ tilt-shift làm cảnh trông như mô hình thu nhỏ. Hướng hiện thực chỉ giữ mờ theo chiều sâu và sương xa.
+- Thành trì chi tiết rất nặng: vẽ cùng lúc 14 thành đầy đủ làm WebGL phần mềm sập (mất context). Thành xa phải dùng LOD giản lược.
+- Thành chiếm khoảng 20 đơn vị bản đồ (cả ủng thành): khi đặt `geo` hay nắn sông, giữ sông cách tâm thành ít nhất 12 đơn vị.
 
 ## Workflow có sẵn
 

@@ -63,10 +63,7 @@
       "river": true,
       "north": true,
       "strategic": true,
-      "geo": [
-        -24,
-        -14
-      ],
+      "geo": [-24, -11],
       "neighbors": [
         "ji",
         "yu",
@@ -195,10 +192,7 @@
       "river": true,
       "north": false,
       "strategic": true,
-      "geo": [
-        -16,
-        28
-      ],
+      "geo": [-16, 25],
       "neighbors": [
         "si_li",
         "yu",
@@ -219,10 +213,7 @@
       "river": true,
       "north": false,
       "strategic": true,
-      "geo": [
-        64,
-        34
-      ],
+      "geo": [66, 40],
       "neighbors": [
         "yu",
         "jing",
@@ -241,10 +232,7 @@
       "river": true,
       "north": false,
       "strategic": true,
-      "geo": [
-        -72,
-        34
-      ],
+      "geo": [-72, 30],
       "neighbors": [
         "si_li",
         "jing",
@@ -325,10 +313,7 @@
       "river": true,
       "north": false,
       "strategic": false,
-      "geo": [
-        22,
-        42
-      ],
+      "geo": [26, 52],
       "neighbors": [
         "jing",
         "yang"

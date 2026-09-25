@@ -384,19 +384,41 @@
         focusR: { value: o.focusR || 0 },
         grayAmt: { value: o.gray ?? 0 },
         contrast: { value: o.contrast ?? 1.0 },
+        aoStrength: { value: o.ao ?? 0 },
+        aoRadius: { value: o.aoRadius ?? 0.4 },
+        projScale: { value: size.y / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)) },
         saturation: { value: o.saturation ?? 1.0 },
       },
       vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.,1.); }',
       fragmentShader: `
         #include <packing>
         varying vec2 vUv;
-        uniform sampler2D tColor, tDepth; uniform float near, far, focus, range, maxBlur, tilt, vignette, focusR, grayAmt, contrast, saturation; uniform vec2 band, res, focusXZ;
+        uniform sampler2D tColor, tDepth; uniform float near, far, focus, range, maxBlur, tilt, vignette, focusR, grayAmt, contrast, saturation, aoStrength, aoRadius, projScale; uniform vec2 band, res, focusXZ;
         uniform mat4 projInv, camWorld;
         vec3 worldAt(vec2 uv){
           float d = texture2D(tDepth, uv).x;
           vec4 v = projInv * vec4(uv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0);
           v /= v.w;
           return (camWorld * v).xyz;
+        }
+        vec3 vpos(vec2 uv){ float d = texture2D(tDepth, uv).x; vec4 v = projInv * vec4(uv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0); return v.xyz / v.w; }
+        float ssao(vec2 uv){
+          if (texture2D(tDepth, uv).x > 0.9999) return 1.0;
+          vec3 p = vpos(uv);
+          vec3 n = normalize(cross(dFdx(p), dFdy(p)));
+          if (n.z < 0.0) n = -n;
+          float rpx = clamp(aoRadius * projScale / max(0.1, -p.z), 2.0, 48.0);
+          float rot = fract(sin(dot(uv * res, vec2(12.9898, 78.233))) * 43758.5453) * 6.2831;
+          float occ = 0.0;
+          for (int i = 0; i < 20; i++) {
+            float fi = float(i);
+            float a = fi * 2.39996 + rot;
+            vec2 suv = uv + vec2(cos(a), sin(a)) * sqrt((fi + 0.5) / 20.0) * rpx / res;
+            vec3 v = vpos(suv) - p;
+            float dist = length(v);
+            occ += max(0.0, dot(n, v / max(dist, 1e-4)) - 0.1) * (1.0 - smoothstep(aoRadius * 0.6, aoRadius * 2.0, dist));
+          }
+          return clamp(1.0 - aoStrength * occ / 20.0, 0.0, 1.0);
         }
         float coc(vec2 uv){
           float d = texture2D(tDepth, uv).x;
@@ -418,6 +440,7 @@
             acc += texture2D(tColor, uv).rgb * w; wsum += w;
           }
           vec3 col = acc / wsum;
+          if (aoStrength > 0.0) col *= ssao(vUv);
           if (grayAmt > 0.0) {
             vec3 wp = worldAt(vUv);
             float out_ = smoothstep(focusR, focusR + 8.0, length(wp.xz - focusXZ));
@@ -436,6 +459,7 @@
         }`,
       depthWrite: false,
       depthTest: false,
+      extensions: { derivatives: true },
     });
     const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat);
     const qs = new THREE.Scene();
