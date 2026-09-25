@@ -292,6 +292,8 @@
   // round 8: Han gateways beyond the map (named, not played) and the great wastes, for the whole-country views
   for (const g of baked.meta.gates || []) { const p = proj(g.x, 1, g.z); if (inView(p)) out['gate:' + g.name] = { ...p, name: g.name }; }
   const WASTES = [['Cao nguyên Tây Tạng', 88, 33], ['Sa mạc Taklamakan', 83, 39], ['Tây Vực', 86, 42.2], ['Thảo nguyên Mạc Nam', 111, 42.6], ['Liêu Đông', 123.5, 41.3], ['Nam Hải', 114, 19.8]];
+  const WEST = [['Đôn Hoàng', 94.66, 40.14], ['Ngọc Môn quan', 93.86, 40.35], ['Tửu Tuyền', 98.5, 39.74], ['Trương Dịch', 100.45, 38.93], ['Dãy Kỳ Liên', 99.3, 38.2], ['Hồ La Bố Bạc', 90.35, 40.35], ['Hồ Cư Duyên', 101.25, 42.25], ['Sa mạc Ba Đan Cát Lâm', 102.2, 40.0]];
+  if (SHOT === 'west') for (const [name, lon, lat] of WEST) { const [x, z] = terr.toWorld(lon, lat), p = proj(x, terr.h(x, z) + 0.5, z); if (inView(p)) out['lbl:' + name] = { ...p, name }; }
   if (wholeCountry) for (const [name, lon, lat] of WASTES) { const [x, z] = terr.toWorld(lon, lat), p = proj(x, Math.max(0.5, terr.h(x, z)), z); if (inView(p)) out['waste:' + name] = { ...p, name }; }
   const VN = { Huang: 'Hoàng Hà', 'Chang Jiang': 'Trường Giang', Yangtze: 'Trường Giang', Han: 'Hán Thủy', Huai: 'Hoài Thủy', Wei: 'Vị Thủy', Xiang: 'Tương Giang', Gan: 'Cán Giang', Jialing: 'Gia Lăng Giang', Min: 'Mân Giang', Fen: 'Phần Thủy', Xi: 'Tây Giang', Liao: 'Liêu Hà' };
   const want = far ? ['Hoàng Hà', 'Trường Giang', 'Hoài Thủy', 'Hán Thủy'] : SHOT === 'region' ? ['Hoàng Hà', 'Hán Thủy', 'Hoài Thủy', 'Vị Thủy'] : ['Hán Thủy', 'Trường Giang'];

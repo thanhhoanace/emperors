@@ -115,3 +115,19 @@ Kỹ thuật bắt buộc (đã áp dụng trong `docs/design/prototypes/map.htm
 - Vẫn trong trần. Cận thành giữa rừng sâu (Điền Trì, Nam Trịnh) sát 3 triệu vì cây riêng; `world.html` giãn khoảng cách cây khi ước tính vượt khoảng 16.000 cây (Điền Trì 3,12 → 2,88 triệu).
 - Tải về khoảng 3 MB chưa nén HTTP; độ cao vẫn chiếm 2 MB. Chia ô tải dần làm cùng bake Albers toàn quốc.
 
+## Đo lại vòng 8 (toàn Trung Quốc, Albers, tỉ lệ C)
+
+| Cảnh | Lệnh vẽ | Tam giác/khung | Bộ đệm GPU | Tải về |
+| --- | --- | --- | --- | --- |
+| Toàn cảnh cả nước | 249 | 1,19 triệu | 34 MB | khoảng 2 MB (không ô lõi nào) |
+| Chiến lược cả nước | 247 | 1,19 triệu | 34 MB | khoảng 2 MB |
+| Hà Tây – Tây Vực | 75 | 1,49 triệu | 67 MB | khoảng 2 MB |
+| Vùng (Trung Nguyên) | 111 | 1,65 triệu | 50 MB | khoảng 3 MB (các ô trong bán kính 190) |
+| Chiến dịch (có bóng) | 226 | 2,45 triệu | 55 MB | khoảng 2,4 MB |
+| Cận thành, lớn nhất (Điền Trì) | 59 | 2,85 triệu | 53 MB | khoảng 2,4 MB |
+
+- Toàn cảnh vẽ cả nước mà vẫn 1,19 triệu tam giác: lõi Hán lưới 3 đơn vị, phần còn lại lưới 6 đơn vị, chia khối để camera bỏ phần không thấy.
+- Độ cao lõi chia 42 ô 128 đơn vị (tổng 2,2 MB); cảnh xa không tải ô nào, cảnh gần tải vài ô quanh camera.
+- Vùng (Trung Nguyên) 1,65 triệu, cao hơn vòng 7 (1,42) vì nhiều ô lõi chi tiết hơn; vẫn dưới trần cận cảnh.
+- Còn nợ: dựng mặt nạ lõi lúc mở trang vẫn khoảng 16 giây trong container. Nướng sẵn theo ô là bước sau.
+
