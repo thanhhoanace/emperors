@@ -46,7 +46,7 @@ npm test                           # test engine + dữ liệu
 npm run sim -- 500                 # chạy 500 ván, in tỉ lệ thắng và độ dài ván
 npm start                          # http://localhost:3000
 npm run qa                         # QA trình duyệt; cần server đang chạy (Linux: xvfb-run -a npm run qa)
-node docs/design/prototypes/render.mjs real campaign   # render ảnh prototype design (cần server)
+node docs/design/prototypes/render.mjs map campaign    # render ảnh prototype + in số đo hiệu năng (cần server)
 ```
 
 Trong container không có GPU: đặt `PUPPETEER_EXECUTABLE_PATH` tới Chromium có sẵn; WebGL chạy bằng SwiftShader, chậm nhưng đúng.
@@ -56,6 +56,7 @@ Trong container không có GPU: đặt `PUPPETEER_EXECUTABLE_PATH` tới Chromiu
 - **Tự kiểm tra trước khi báo xong.** Luôn chạy `npm test`. Đụng tới frontend thì chạy `npm run qa` và tự xem ảnh chụp màn hình. Quy trình đầy đủ: `.claude/skills/verify/SKILL.md`.
 - Engine thuần: không DOM, không `Math.random`; mọi ngẫu nhiên đi qua `state.seed`. Đổi luật thì sửa engine, test và `docs/product/rules.md` trong cùng một commit.
 - Frontend tĩnh, không bundler: script cổ điển, three.js r146 bản global qua CDN (`decisions/0002`).
+- Thế giới 3D phải nằm trong ngân sách web (`decisions/0005`): đo lệnh vẽ, tam giác, MB bằng `render.mjs` mỗi lần đổi hình ảnh.
 - Visual và UI theo `docs/design/direction.md`. Muốn đổi hướng visual thì dựng phương án cho chủ dự án duyệt trước (canvas Design), rồi mới code; ghi quyết định thành ADR.
 - Không dùng asset trích từ game thương mại (Civilization, Total War), kể cả ảnh chụp: chỉ để tham khảo. Asset mới phải ghi vào `assets/SOURCE.md`.
 - Không commit state máy cá nhân của công cụ agent: `.omc/`, `.omx/`, `.codex/`, `.claude/settings.local.json`.
@@ -74,6 +75,12 @@ Trong container không có GPU: đặt `PUPPETEER_EXECUTABLE_PATH` tới Chromiu
 - Mờ tilt-shift làm cảnh trông như mô hình thu nhỏ. Hướng hiện thực chỉ giữ mờ theo chiều sâu và sương xa.
 - Thành trì chi tiết rất nặng: vẽ cùng lúc 14 thành đầy đủ làm WebGL phần mềm sập (mất context). Thành xa phải dùng LOD giản lược.
 - Thành chiếm khoảng 20 đơn vị bản đồ (cả ủng thành): khi đặt `geo` hay nắn sông, giữ sông cách tâm thành ít nhất 12 đơn vị.
+- three r146 đặt `frustumCulled = false` cho InstancedMesh: chia instance theo ô, gán vùng bao cho từng ô rồi bật lại, nếu không mọi instance ngoài màn hình vẫn bị vẽ (cả lượt đổ bóng).
+- Hoa văn sinh bằng shader (nhiễu, thửa ruộng, vòm cây, texture lặp) phải mờ dần theo `fwidth`, nếu không nhìn xa sẽ thành vân ô vuông. Bump bằng `dFdx/dFdy` trên hoa văn bị kéo dài (sườn dốc) sinh khối 2×2 điểm ảnh.
+- Hai bề mặt chồng nhau (tán rừng trên đất) không được gần trùng nhau hay xuyên qua nhau: sinh z-fighting. Cắt mép bằng `discard` thay vì hạ bề mặt xuống dưới đất.
+- Màu tối trong không gian tuyến tính rất nhỏ: pha 5% màu phe vào tán rừng xanh đã thành nâu. Chỉ nhuộm khi thật sự cần (chế độ chiến lược).
+- Thuật toán đường đi: lưu khoảng cách bằng `Float64Array`. Dùng `Float32Array` thì sai số làm tròn khiến một đỉnh được "cải thiện" mãi, thuật toán chạy không dứt.
+- Soi ảnh render bằng cách cắt và phóng to từng vùng, không chỉ nhìn cả khung. Cô lập lỗi bằng `hide=` / `off=` / `dbg=` của `map.html`.
 
 ## Workflow có sẵn
 

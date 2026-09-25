@@ -7,6 +7,7 @@
 <script src="city.js"></script>
 <script>
 // Realistic world mock: TW3K campaign-map realism + Ryan's focus/lens treatment.
+const T0 = performance.now();
 const params = new URLSearchParams(location.search);
 const SHOT = params.get('shot') || 'campaign';
 const W = 1440, H = 900;
@@ -397,7 +398,13 @@ lensOpts.contrast = lensOpts.contrast ?? 1.04; lensOpts.saturation = lensOpts.sa
 // color grade: slight warm highlights, cool shadows, contrast
 const lens = K.lens(renderer, scene, camera, lensOpts);
 texturesLoaded.then(() => setTimeout(() => {
+  const buildMs = performance.now() - T0;
+  renderer.info.autoReset = false; renderer.info.reset();
+  const f0 = performance.now();
   lens.render();
+  renderer.getContext().finish();
+  const frameMs = performance.now() - f0;
+  window.__stats = K.stats(renderer, scene, { buildMs, frameMs });
   const out = {};
   for (const [pid, ci] of Object.entries(cityInfo)) out['city:' + pid] = { ...K.project(camera, W, H, ci.x, ci.y, ci.z), name: CITY[pid], fid: ci.fid, seat: ci.seat };
   for (const [k, a] of Object.entries(armyAnchors)) out[k] = K.project(camera, W, H, a.x, a.y, a.z);

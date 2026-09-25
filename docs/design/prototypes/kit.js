@@ -388,6 +388,13 @@
         aoRadius: { value: o.aoRadius ?? 0.4 },
         projScale: { value: size.y / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)) },
         saturation: { value: o.saturation ?? 1.0 },
+        // aerial perspective: haze thickens with distance and in low ground, warms toward the sun
+        atmos: { value: o.atmos ? o.atmos.density : 0 },
+        atmosFall: { value: o.atmos ? o.atmos.falloff ?? 0.12 : 0.12 },
+        atmosCol: { value: new THREE.Color(o.atmos ? o.atmos.color ?? 0xb9c7cf : 0xb9c7cf) },
+        atmosSun: { value: new THREE.Color(o.atmos ? o.atmos.sunColor ?? 0xf3d9a6 : 0xf3d9a6) },
+        sunDirW: { value: o.atmos && o.atmos.sunDir ? o.atmos.sunDir.clone().normalize() : new THREE.Vector3(0, 1, 0) },
+        camPos: { value: camera.position },
       },
       vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.,1.); }',
       fragmentShader: `
@@ -400,6 +407,16 @@
           vec4 v = projInv * vec4(uv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0);
           v /= v.w;
           return (camWorld * v).xyz;
+        }
+        uniform float atmos, atmosFall; uniform vec3 atmosCol, atmosSun, sunDirW, camPos;
+        vec3 aerial(vec3 col, vec2 uv){
+          if (atmos <= 0.0 || texture2D(tDepth, uv).x > 0.9999) return col;
+          vec3 wp = worldAt(uv); vec3 ray = wp - camPos; float dist = length(ray);
+          float y0 = max(camPos.y, 0.0), y1 = max(wp.y, 0.0), k = atmosFall;
+          float avg = abs(y1 - y0) < 0.05 ? exp(-k * y0) : (exp(-k * y0) - exp(-k * y1)) / (k * (y1 - y0));
+          float f = 1.0 - exp(-atmos * dist * avg);
+          float sd = pow(max(dot(ray / dist, sunDirW), 0.0), 6.0);
+          return mix(col, mix(atmosCol, atmosSun, sd * 0.6), f);
         }
         vec3 vpos(vec2 uv){ float d = texture2D(tDepth, uv).x; vec4 v = projInv * vec4(uv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0); return v.xyz / v.w; }
         float ssao(vec2 uv){
@@ -441,6 +458,7 @@
           }
           vec3 col = acc / wsum;
           if (aoStrength > 0.0) col *= ssao(vUv);
+          col = aerial(col, vUv);
           if (grayAmt > 0.0) {
             vec3 wp = worldAt(vUv);
             float out_ = smoothstep(focusR, focusR + 8.0, length(wp.xz - focusXZ));
@@ -474,6 +492,24 @@
         renderer.render(qs, qc);
       },
     };
+  };
+
+  // Weight of a rendered frame: draw calls, triangles, GPU buffer bytes, timings.
+  K.stats = function (renderer, scene, extra = {}) {
+    const seen = new Set();
+    let bytes = 0, meshes = 0, instances = 0;
+    scene.traverse((o) => {
+      if (!o.isMesh) return;
+      meshes++;
+      if (o.isInstancedMesh) { instances += o.count; bytes += o.instanceMatrix.array.byteLength + (o.instanceColor ? o.instanceColor.array.byteLength : 0); }
+      const g = o.geometry;
+      if (seen.has(g)) return;
+      seen.add(g);
+      for (const a of Object.values(g.attributes)) bytes += a.array.byteLength;
+      if (g.index) bytes += g.index.array.byteLength;
+    });
+    const i = renderer.info;
+    return { calls: i.render.calls, triangles: i.render.triangles, geometries: i.memory.geometries, textures: i.memory.textures, programs: (i.programs || []).length, meshes, instances, bufferMB: +(bytes / 1048576).toFixed(1), ...Object.fromEntries(Object.entries(extra).map(([k, v]) => [k, Math.round(v)])) };
   };
 
   // Screen position of a world point, for the UI overlay positions report.

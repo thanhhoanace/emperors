@@ -1,6 +1,6 @@
 # Asset Sources
 
-> Trạng thái (2026-09-24): các asset Kenney dưới đây thuộc bản đồ cũ (v1). Frontend mới chưa dùng; prototype design trong `docs/design/prototypes/` dựng hình bằng code và tải texture chi tiết từ thư mục ví dụ của repo three.js (MIT) lúc chạy. Asset nào đưa vào bản phát hành đều phải ghi ở đây kèm giấy phép.
+> Trạng thái (2026-09-25): các asset Kenney dưới đây thuộc bản đồ cũ (v1). Frontend mới chưa dùng. Prototype bản đồ vòng 4 (`docs/design/prototypes/map.html`) dựng hình và sinh mọi texture bằng code, không tải file nào. Riêng `real.html` cũ (vòng 2–3) còn tải hai texture từ thư mục ví dụ của repo three.js (MIT). Asset nào đưa vào bản phát hành đều phải ghi ở đây kèm giấy phép.
 
 This project uses local CC0 assets only for the v1 map restyle.
 

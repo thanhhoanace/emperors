@@ -98,23 +98,22 @@
     m.onBeforeCompile = (sh) => {
       sh.uniforms.tTri = { value: tex };
       sh.uniforms.triScale = { value: scale };
-      sh.uniforms.uGround = { value: CK.ground };
       sh.vertexShader = sh.vertexShader
-        .replace('#include <common>', '#include <common>\nvarying vec3 vTriP; varying vec3 vTriN;')
+        .replace('#include <common>', '#include <common>\nvarying vec3 vTriP; varying vec3 vTriN; varying float vTriG;')
         .replace('#include <begin_vertex>', `#include <begin_vertex>
           #ifdef USE_INSTANCING
             mat4 triM = modelMatrix * instanceMatrix;
           #else
             mat4 triM = modelMatrix;
           #endif
-          vTriP = (triM * vec4(transformed, 1.0)).xyz; vTriN = normalize(mat3(triM) * objectNormal);`);
+          vTriP = (triM * vec4(transformed, 1.0)).xyz; vTriN = normalize(mat3(triM) * objectNormal); vTriG = triM[3].y;`);
       sh.fragmentShader = sh.fragmentShader
-        .replace('#include <common>', '#include <common>\nvarying vec3 vTriP; varying vec3 vTriN; uniform sampler2D tTri; uniform float triScale; uniform float uGround;')
+        .replace('#include <common>', '#include <common>\nvarying vec3 vTriP; varying vec3 vTriN; varying float vTriG; uniform sampler2D tTri; uniform float triScale;')
         .replace('#include <map_fragment>', `
           vec3 bw = pow(abs(normalize(vTriN)), vec3(4.0)); bw /= (bw.x + bw.y + bw.z);
           vec3 tc = texture2D(tTri, vTriP.zy * triScale).rgb * bw.x + texture2D(tTri, vTriP.xz * triScale).rgb * bw.y + texture2D(tTri, vTriP.xy * triScale).rgb * bw.z;
           diffuseColor.rgb *= pow(tc, vec3(2.2));
-          diffuseColor.rgb *= mix(0.45, 1.0, smoothstep(uGround, uGround + 0.45, vTriP.y));`);
+          diffuseColor.rgb *= mix(0.45, 1.0, smoothstep(vTriG, vTriG + 0.45, vTriP.y)); // grime at the foot of each object`);
     };
     const key = 'tri' + (triplanar.n = (triplanar.n || 0) + 1);
     m.customProgramCacheKey = () => key;
@@ -176,6 +175,13 @@
   const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
   const cyl = (rt, rb, h, s = 8) => new THREE.CylinderGeometry(rt, rb, h, s);
 
+  // ------------------------------------------------------------ detail level
+  // 'full' for the city the camera is looking at, 'lite' for every other city on the map (docs/decisions/0005).
+  // Lite keeps the silhouette (walls, gate towers, palace, packed roofs) at ~1/8 of the triangles.
+  const DETAIL = { full: { nu: 10, ns: 7, tubes: true, columns: true }, lite: { nu: 3, ns: 2, tubes: false, columns: false } };
+  let DET = DETAIL.full;
+  CK.setDetail = (lod) => { DET = DETAIL[lod] || DETAIL.full; };
+
   // ------------------------------------------------------------ curved roof
   // Hip roof with concave slopes and upturned corners. Ridge runs along the longer side.
   function hipRoof(w, d, h, o = {}) {
@@ -194,7 +200,7 @@
       (u, s) => [-hw + s * hd, lerp(-hd * (1 - s), hd * (1 - s), u)],
     ];
     const geos = [];
-    const nu = o.segU ?? 10, ns = o.segS ?? 7;
+    const nu = o.segU ?? DET.nu, ns = o.segS ?? DET.ns;
     faces.forEach((f, fi) => {
       const pos = [], uv = [], idx = [];
       for (let j = 0; j <= ns; j++)
@@ -233,11 +239,11 @@
       bag.add('wood', g);
     });
     if (sMax >= 1) {
-      // main ridge with end ornaments
+      // main ridge with end ornaments (lite: ridge only)
       bag.at(rk, box(Math.max(0.05, lr * 2 + rt * 2), rt * 2.2, rt * 1.6), 0, h + rt * 0.6, 0);
       for (const sx of [-1, 1]) bag.at(rk, box(rt * 1.4, rt * 4, rt * 1.6), sx * (lr + rt * 0.6), h + rt * 2, 0, 0);
       // hip ridges down to the corners
-      for (const sx of [-1, 1])
+      if (DET.tubes) for (const sx of [-1, 1])
         for (const sz of [-1, 1]) {
           const pts = [];
           for (let k = 0; k <= 8; k++) { const s = 1 - k / 8; const x = sx * (hw - s * hd), z = sz * hd * (1 - s); pts.push(new THREE.Vector3(x, Y(x, z, s) + rt * 0.5, z)); }
@@ -263,7 +269,7 @@
     bag.at('plaster', box(w * 0.94, h, d * 0.9), 0, base + h / 2, 0);
     // facade: lattice panels between columns on the front, plus back door
     const ncol = Math.max(2, Math.round(w / 0.32));
-    for (let i = 0; i <= ncol; i++) {
+    for (let i = 0; i <= ncol && DET.columns; i++) {
       const x = -w / 2 + (i * w) / ncol;
       for (const z of [d / 2, -d / 2]) bag.at('red', cyl(0.028, 0.032, h, 6), x * 0.97, base + h / 2, z * 0.97);
       if (i < ncol && o.facade !== false) bag.at('lattice', box(w / ncol - 0.06, h * 0.72, 0.012), x + w / ncol / 2, base + h * 0.44, d * 0.455);
@@ -349,10 +355,41 @@
 
   // ------------------------------------------------------------ the city
   // opts: { x, z, y, half, seat, palaceRoof: 'gold'|'gray'|'green', flags: fn(x,y,z,s) }
+  const VCACHE = {};
+  CK.sink = () => ({ static: new Bag(), inst: {} });
+  CK.flush = function (sink, scene) {
+    const g = new THREE.Group();
+    sink.static.meshes(g);
+    for (const b of Object.values(sink.inst)) {
+      // one InstancedMesh per variant for ALL far cities (they are all on screen in the overview anyway)
+      const geo = b.proto.geo.clone();
+      const im = new THREE.InstancedMesh(geo, b.proto.mats, b.mats.length);
+      const box = new THREE.Box3(), p = new THREE.Vector3();
+      b.mats.forEach((m, i) => { im.setMatrixAt(i, m); box.expandByPoint(p.setFromMatrixPosition(m)); });
+      geo.boundingSphere = box.getBoundingSphere(new THREE.Sphere()); geo.boundingSphere.radius += 4;
+      im.frustumCulled = true;
+      im.receiveShadow = true;
+      g.add(im);
+    }
+    // far cities take the baked terrain light but cast no real-time shadow (they sit outside the shadow frustum)
+    g.traverse((o) => { if (o.isMesh) o.castShadow = false; });
+    scene.add(g);
+    return g;
+  };
   CK.build = function (scene, o) {
+    const lod = o.lod || 'full', lite = lod === 'lite';
+    CK.setDetail(lod);
     const root = new THREE.Group();
     root.position.set(o.x, o.y, o.z);
     scene.add(root);
+    // o.sink (lite cities): geometry goes into shared buckets instead of this city's own meshes, so all
+    // far cities together cost ~50 draw calls. CK.flush(sink, scene) builds them once every city is in.
+    const rootM = new THREE.Matrix4().makeTranslation(o.x, o.y, o.z);
+    const emit = (bag, local) => {
+      if (o.sink) { o.sink.static.merge(bag, local ? local.clone().premultiply(rootM) : rootM); return; }
+      if (!local) { bag.meshes(root); return; }
+      const g = new THREE.Group(); g.applyMatrix4(local); bag.meshes(g); root.add(g);
+    };
     const S = o.half, WH = o.wallH ?? 1.35, TB = 0.95, TT = 0.62;
     const walls = new Bag(), merlons = [], anchors = { gates: [], towers: [] };
     const gateW = 2.4;
@@ -367,15 +404,15 @@
         put('brick', wallRun(segLen, WH, TB, TT), cx, 0, S);
         put('paving', box(segLen, 0.02, TT * 0.9), cx, WH + 0.01, S);
         put('brick', box(segLen, 0.1, 0.05), cx, WH + 0.05, S - TT / 2 + 0.03);
-        for (let t = -segLen / 2 + 0.12; t < segLen / 2 - 0.1; t += 0.26) merlons.push(new THREE.Vector3(cx + t, WH + 0.09, S + TT / 2 - 0.04).applyMatrix4(m));
+        if (!lite) for (let t = -segLen / 2 + 0.12; t < segLen / 2 - 0.1; t += 0.26) merlons.push(new THREE.Vector3(cx + t, WH + 0.09, S + TT / 2 - 0.04).applyMatrix4(m));
         // bastions (ma mian) along the run
         const nb = Math.max(1, Math.floor(segLen / 3.2));
         for (let b = 1; b <= nb; b++) {
           const bx = sx * (gateW / 2 + (segLen * b) / (nb + 1));
           put('brick', wallRun(0.9, WH, 1.5, 1.2), bx, 0, S + 0.55);
           put('paving', box(0.86, 0.02, 1.1), bx, WH + 0.01, S + 0.6);
-          for (let t = -0.35; t <= 0.36; t += 0.24) merlons.push(new THREE.Vector3(bx + t, WH + 0.09, S + 1.15).applyMatrix4(m));
-          for (const e of [-1, 1]) for (let t = 0.2; t < 1.1; t += 0.26) merlons.push(new THREE.Vector3(bx + e * 0.43, WH + 0.09, S + 0.15 + t).applyMatrix4(m));
+          if (!lite) for (let t = -0.35; t <= 0.36; t += 0.24) merlons.push(new THREE.Vector3(bx + t, WH + 0.09, S + 1.15).applyMatrix4(m));
+          if (!lite) for (const e of [-1, 1]) for (let t = 0.2; t < 1.1; t += 0.26) merlons.push(new THREE.Vector3(bx + e * 0.43, WH + 0.09, S + 0.15 + t).applyMatrix4(m));
         }
       }
       // gatehouse block with arched tunnel and doors, then a two-storey gate tower
@@ -397,7 +434,7 @@
         const bw = 3.6, bd = 2.2;
         put('brick', wallRun(bw, WH * 0.85, 0.7, 0.5), 0, 0, S + bd + 0.5);
         for (const e of [-1, 1]) put('brick', wallRun(bd, WH * 0.85, 0.7, 0.5).rotateY(Math.PI / 2), e * (bw / 2), 0, S + 0.45 + bd / 2);
-        for (let t = -bw / 2 + 0.15; t < bw / 2; t += 0.26) merlons.push(new THREE.Vector3(t, WH * 0.85 + 0.09, S + bd + 0.72).applyMatrix4(m));
+        if (!lite) for (let t = -bw / 2 + 0.15; t < bw / 2; t += 0.26) merlons.push(new THREE.Vector3(t, WH * 0.85 + 0.09, S + bd + 0.72).applyMatrix4(m));
         const arch = new THREE.Shape();
         arch.moveTo(-0.3, 0); arch.lineTo(-0.3, 0.42); arch.absarc(0, 0.42, 0.3, Math.PI, 0, true); arch.lineTo(0.3, 0); arch.lineTo(-0.3, 0);
         put('dark', new THREE.ShapeGeometry(arch, 8).rotateY(Math.PI / 2), bw / 2 + 0.36, 0.001, S + 1.5);
@@ -410,14 +447,16 @@
       walls.merge(t, new THREE.Matrix4().makeTranslation(sx * S, WH + 0.1, sz * S));
       anchors.towers.push(new THREE.Vector3(sx * S, WH + 1.2, sz * S));
     }
-    walls.meshes(root);
+    emit(walls);
     // merlons (instanced)
+    const mat4 = new THREE.Matrix4();
+    if (merlons.length) {
     const mg = box(0.13, 0.17, 0.09);
     const mm = new THREE.InstancedMesh(mg, M.brick, merlons.length);
-    const mat4 = new THREE.Matrix4();
     merlons.forEach((p, i) => { const ang = Math.abs(p.z) > Math.abs(p.x) ? 0 : Math.PI / 2; mm.setMatrixAt(i, mat4.compose(p, new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), ang), new THREE.Vector3(1, 1, 1))); });
     mm.castShadow = mm.receiveShadow = true;
     root.add(mm);
+    }
 
     // ------------ interior: streets, palace, compounds, shops, market
     const inner = S - 0.8;
@@ -425,7 +464,7 @@
     ground.at('earth', box(S * 2 - 0.4, 0.02, S * 2 - 0.4), 0, 0.006, 0);
     ground.at('paving', box(0.95, 0.03, inner * 2 + 3.4), 0, 0.015, 1.4); // south avenue to the palace
     ground.at('paving', box(inner * 2, 0.03, 0.8), 0, 0.015, 1.2); // east-west avenue
-    ground.meshes(root);
+    emit(ground);
     const occupied = [];
     const block = (x, z, w, d) => occupied.push([x - w / 2, x + w / 2, z - d / 2, z + d / 2]);
     const free = (x, z, w, d) => Math.abs(x) + w / 2 < inner && Math.abs(z) + d / 2 < inner && !occupied.some(([a, b, c, e]) => x + w / 2 > a && x - w / 2 < b && z + d / 2 > c && z - d / 2 < e);
@@ -445,18 +484,22 @@
     pal.merge(front, new THREE.Matrix4().makeTranslation(0, 0.12, pz + pd * 0.36));
     for (const sx of [-1, 1]) { const sideH = hall(pd * 0.34, pw * 0.12, 0.36, { roofMat, ridgeMat, roofH: 0.24 }); pal.merge(sideH, new THREE.Matrix4().makeRotationY(sx * Math.PI / 2).setPosition(sx * pw * 0.36, 0.12, pz + pd * 0.05)); }
     if (o.seat) { const pg = pagoda(o.pagodaTiers || 5, { roofMat }); pal.merge(pg, new THREE.Matrix4().makeTranslation(pw * 0.36, 0.12, pz - pd * 0.3)); }
-    pal.meshes(root);
+    emit(pal);
     anchors.palace = new THREE.Vector3(0, 0.36 + great.height, pz);
     // drum tower at the crossing
     const drum = new Bag();
     drum.at('brick', wallRun(1.2, 0.55, 1.2, 1.05), 0, 0, 1.2);
     drum.merge(hall(0.95, 0.8, 0.3, { roofH: 0.34, double: false }), new THREE.Matrix4().makeTranslation(0, 0.55, 1.2));
-    drum.meshes(root);
+    emit(drum);
     block(0, 1.2, 1.4, 1.4);
 
     // instanced compounds (a few variants) filling the free blocks
-    const variants = [compound(1.7, 1.5, { gateX: 0.28 }), compound(1.5, 1.35, { gateX: -0.28 }), compound(2.0, 1.6, { gateX: 0.3 })].map((b) => b.grouped());
-    const shopV = [shop(0.7, 0.45), shop(0.9, 0.5)].map((b) => b.grouped());
+    // prototypes are built once per detail level and shared by every city (geometry memory is paid once)
+    const vc = (VCACHE[lod] = VCACHE[lod] || {
+      variants: [compound(1.7, 1.5, { gateX: 0.28 }), compound(1.5, 1.35, { gateX: -0.28 }), compound(2.0, 1.6, { gateX: 0.3 })].map((b) => b.grouped()),
+      shopV: [shop(0.7, 0.45), shop(0.9, 0.5)].map((b) => b.grouped()),
+    });
+    const { variants, shopV } = vc;
     const placed = variants.map(() => []), shopsPlaced = shopV.map(() => []);
     // shops line the avenues
     for (let t = -inner + 0.6; t < inner - 0.4; t += 0.78) {
@@ -471,11 +514,11 @@
     block(mx, mz, 2.2, 1.8);
     const market = new Bag();
     market.at('paving', box(2.2, 0.03, 1.8), mx, 0.015, mz);
-    for (let i = 0; i < 14; i++) { const x = mx + rr(-0.9, 0.9), z = mz + rr(-0.7, 0.7); market.at('wood', box(0.22, 0.1, 0.16), x, 0.08, z); market.at('red', cyl(0.008, 0.008, 0.26, 4), x, 0.13, z); }
-    market.meshes(root);
-    for (let i = 0; i < 14; i++) { const aw = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.24), M.cloth[i % M.cloth.length]); aw.position.set(mx + rr(-0.9, 0.9), 0.27, mz + rr(-0.7, 0.7)); aw.rotation.set(-Math.PI / 2 + 0.25, rr(-0.3, 0.3), 0); aw.castShadow = true; root.add(aw); }
+    for (let i = 0; i < (lite ? 0 : 14); i++) { const x = mx + rr(-0.9, 0.9), z = mz + rr(-0.7, 0.7); market.at('wood', box(0.22, 0.1, 0.16), x, 0.08, z); market.at('red', cyl(0.008, 0.008, 0.26, 4), x, 0.13, z); }
+    emit(market);
+    for (let i = 0; i < (lite ? 0 : 14); i++) { const aw = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.24), M.cloth[i % M.cloth.length]); aw.position.set(mx + rr(-0.9, 0.9), 0.27, mz + rr(-0.7, 0.7)); aw.rotation.set(-Math.PI / 2 + 0.25, rr(-0.3, 0.3), 0); aw.castShadow = true; root.add(aw); }
     // temple with pagoda in another quadrant for non-seat cities too
-    if (!o.seat) { const temple = new THREE.Group(); pagoda(4).meshes(temple); temple.position.set(-inner * 0.55, 0, inner * 0.45); root.add(temple); block(-inner * 0.55, inner * 0.45, 1.4, 1.4); }
+    if (!o.seat) { emit(pagoda(4), new THREE.Matrix4().makeTranslation(-inner * 0.55, 0, inner * 0.45)); block(-inner * 0.55, inner * 0.45, 1.4, 1.4); }
     // compounds packed ward by ward (the four quadrants between the avenues), lanes between rows
     const sizes = [[1.7, 1.5], [1.5, 1.35], [2.0, 1.6]];
     const small = [];
@@ -495,8 +538,13 @@
       }
     }
     for (const [x, z, ry] of small) shopsPlaced[Math.floor(r() * shopsPlaced.length)].push([x, z, ry]);
-    const inst = (proto, list) => {
+    const inst = (proto, list, key) => {
       if (!list.length) return;
+      if (o.sink) {
+        const b = (o.sink.inst[lod + ':' + key] = o.sink.inst[lod + ':' + key] || { proto, mats: [] });
+        for (const [x, z, ry, sc = 1] of list) b.mats.push(new THREE.Matrix4().compose(new THREE.Vector3(x, 0, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), ry), new THREE.Vector3(sc, 0.9 + 0.1 * sc, sc)).premultiply(rootM));
+        return;
+      }
       const im = new THREE.InstancedMesh(proto.geo, proto.mats, list.length);
       list.forEach(([x, z, ry, sc = 1], i) => im.setMatrixAt(i, mat4.compose(new THREE.Vector3(x, 0, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), ry), new THREE.Vector3(sc, 0.9 + 0.1 * sc, sc))));
       im.castShadow = im.receiveShadow = true;
@@ -514,15 +562,18 @@
           else shopsPlaced[Math.floor(r() * shopsPlaced.length)].push([pt.x, pt.z, (side * Math.PI) / 2 + (off > 0 ? -Math.PI / 2 : Math.PI / 2), 0.9]);
         }
       }
-    variants.forEach((v, k) => inst(v, placed[k]));
-    shopV.forEach((v, k) => inst(v, shopsPlaced[k]));
+    variants.forEach((v, k) => inst(v, placed[k], 'c' + k));
+    shopV.forEach((v, k) => inst(v, shopsPlaced[k], 's' + k));
     // lanterns along the south avenue
+    if (!lite) {
     const lan = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.035, 0.035, 0.07, 8), M.lantern, 60);
     let li = 0;
     for (let t = -inner + 0.5; t < inner + 2.5 && li < 58; t += 0.55) for (const e of [-1, 1]) lan.setMatrixAt(li++, mat4.makeTranslation(e * 0.52, 0.32, t));
     lan.count = li;
     root.add(lan);
+    }
     anchors.compounds = placed.reduce((a, l) => a + l.length, 0);
+    CK.setDetail('full');
     anchors.inner = inner;
     root.userData.anchors = anchors;
     return root;

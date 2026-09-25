@@ -1,0 +1,206 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000}canvas{display:block}</style></head>
+<body>
+<script src="/node_modules/three/build/three.min.js"></script>
+<script src="/node_modules/three/examples/js/utils/BufferGeometryUtils.js"></script>
+<script src="kit.js"></script>
+<script src="city.js"></script>
+<script src="terrain.js"></script>
+<script src="flora.js"></script>
+<script>
+// Round 4: the campaign map rebuilt toward TW3K (China-shaped terrain, baked light, canopy forests, hamlets)
+// within the web budget of docs/decisions/0005. Shots: overview, strategic, campaign, city, autumn.
+(async () => {
+  const T0 = performance.now();
+  const params = new URLSearchParams(location.search);
+  const SHOT = params.get('shot') || 'overview';
+  const W = 1440, H = 900;
+  const world = await (await fetch('/data/world.json')).json();
+  // data/world.json geo is in map units; the renderer spreads it so land dominates the cities (TW3K ratio)
+  const S = 1.45;
+  const PROV = {}, NEI = {}, CITY = {};
+  for (const p of world.provinces) { PROV[p.id] = [p.geo[0] * S, p.geo[1] * S]; NEI[p.id] = p.neighbors; CITY[p.id] = p.city; }
+  const J = PROV.jing;
+  const ownerOf = {}, seatOf = {}, FCOL = {};
+  for (const f of world.factions) { FCOL[f.id] = new THREE.Color(f.color); seatOf[f.id] = f.start.seat; for (const p of f.start.provinces) ownerOf[p] = f.id; }
+  const isSeat = (pid) => ownerOf[pid] && seatOf[ownerOf[pid]] === pid;
+
+  const view = {
+    overview: { target: [0, 0, 6], cam: [16, 172, 290], fov: 34, sun: [-0.5, 0.45, -0.25], focus: null },
+    strategic: { target: [0, 0, 6], cam: [16, 172, 290], fov: 34, sun: [-0.5, 0.55, -0.25], focus: null },
+    campaign: { target: [J[0] - 10, 0, J[1] - 16], cam: [J[0] + 34, 24, J[1] + 50], fov: 32, sun: [0.55, 0.4, -0.35], focus: 'jing' },
+    autumn: { target: [J[0] - 10, 0, J[1] - 16], cam: [J[0] + 34, 24, J[1] + 50], fov: 32, sun: [0.6, 0.3, -0.25], focus: 'jing' },
+    city: { target: [J[0] + 1.5, 1.2, J[1] + 1.5], cam: [J[0] + 16.5, 22.2, J[1] + 24.5], fov: 32, sun: [-0.62, 0.5, 0.42], focus: 'jing' },
+  }[SHOT];
+  const close = SHOT === 'campaign' || SHOT === 'autumn' || SHOT === 'city';
+  const sunDir = new THREE.Vector3(...view.sun).normalize();
+  const { renderer, scene, camera } = K.setup(W, H, { dpr: Number(params.get('dpr') || 1.5), fov: view.fov, exposure: 0.95 });
+  const off = (params.get('off') || '').split(','); // debug: off=shadow,ao,dof,atmos
+  renderer.shadowMap.enabled = close && !off.includes('shadow'); // the overview relies on baked terrain light only
+  K.seed(21);
+
+  // ---------------------------------------------------------------- terrain
+  const terr = Terrain.create({ scale: S, provinces: PROV, neighbors: NEI, sun: sunDir });
+  terr.setOwners((pid) => (ownerOf[pid] ? FCOL[ownerOf[pid]] : null), (pid) => ownerOf[pid]);
+  const grass = Terrain.detailTexture(512);
+  const waterNormals = Terrain.waterNormalTexture(256); waterNormals.repeat.set(90, 90);
+  const ground = Terrain.groundMaterial(terr, grass, params.get('dbg') === 'masks'), canopy = Terrain.canopyMaterial(terr, ['flat', 'albedo'].includes(params.get('dbg')) ? params.get('dbg') : null);
+  const gu = ground.userData.uniforms;
+  if (SHOT === 'strategic') { gu.uTint.value = 0.42; gu.uBorder.value = 1.0; gu.uBorderW.value = 0.45; canopy.userData.uniforms.uTint.value = 0.3; }
+  if (SHOT === 'overview') { gu.uBorderW.value = 0.35; }
+  if (close) { gu.uTint.value = 0.0; gu.uBorder.value = 0.8; gu.uBorderW.value = 0.06; }
+  if (SHOT === 'autumn') gu.uSeason.value = canopy.userData.uniforms.uSeason.value = 1;
+  const M = Terrain.meshes(terr, { ground, canopy }, close ? { focus: [[view.target[0], view.target[2]], [view.cam[0], view.cam[2]]], near: SHOT === 'city' ? 30 : 45, mid: 120 } : { step: 1 });
+  scene.add(M.ground, M.canopy, M.outer);
+
+  // ---------------------------------------------------------------- sky, env, water
+  const skyMat = new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false,
+    uniforms: { sun: { value: sunDir }, zen: { value: new THREE.Color(0x5f86b5) }, hor: { value: new THREE.Color(0xd6d8cf) }, glow: { value: new THREE.Color(0xffe2b0) } },
+    vertexShader: 'varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }',
+    fragmentShader: `varying vec3 vD; uniform vec3 sun, zen, hor, glow;
+      void main(){ float h = clamp(vD.y, -0.2, 1.0); vec3 col = mix(hor, zen, pow(max(h,0.0), 0.5));
+        float s = max(dot(normalize(vD), sun), 0.0); col += glow * (pow(s, 6.0) * 0.5 + pow(s, 300.0) * 2.5);
+        if (h < 0.0) col = hor; gl_FragColor = vec4(col, 1.0); }`,
+  });
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(2600, 32, 16), skyMat);
+  scene.add(sky);
+  const envScene = new THREE.Scene(); envScene.add(new THREE.Mesh(new THREE.SphereGeometry(100, 32, 16), skyMat.clone()));
+  const env = new THREE.PMREMGenerator(renderer).fromScene(envScene, 0.02).texture;
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000).rotateX(-Math.PI / 2), Terrain.waterMaterial(terr, waterNormals, env));
+  water.renderOrder = 2;
+  scene.add(water);
+
+  // ---------------------------------------------------------------- cities (full detail only where the camera looks)
+  for (const m of Object.values(CityKit.mats)) if (!Array.isArray(m)) Terrain.receiveBaked(m, terr, 0.8);
+  for (const m of CityKit.mats.cloth) Terrain.receiveBaked(m, terr, 0.8);
+  const flagCache = {};
+  const flagMat = (fid) => {
+    if (!flagCache[fid]) { const cv = document.createElement('canvas'); cv.width = 64; cv.height = 96; const g = cv.getContext('2d'); g.fillStyle = '#' + FCOL[fid].getHexString(); g.fillRect(0, 0, 64, 96); g.fillStyle = 'rgba(255,255,255,0.85)'; g.fillRect(0, 84, 64, 12); g.font = '700 42px "Noto Serif CJK SC","Noto Serif SC",serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = fid === 'qin_shihuang' ? '#26221c' : '#fff'; g.fillText(K.FACTIONS[fid].glyph, 32, 44); const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; flagCache[fid] = new THREE.MeshStandardMaterial({ map: t, side: THREE.DoubleSide, roughness: 0.9 }); }
+    return flagCache[fid];
+  };
+  const flagParts = {};
+  const banner = (fid, x, y, z, h = 1.6, s = 1) => {
+    if (!fid) return;
+    const L = (flagParts[fid] = flagParts[fid] || { pole: [], cloth: [] });
+    L.pole.push(new THREE.CylinderGeometry(0.025 * s, 0.025 * s, h, 4).translate(x, y + h / 2, z));
+    const g = new THREE.PlaneGeometry(0.45 * s, 0.7 * s, 4, 1); const p = g.attributes.position; for (let i = 0; i < p.count; i++) p.setZ(i, Math.sin((p.getX(i) + 0.2) * 9) * 0.04 * s);
+    L.cloth.push(g.translate(x + 0.24 * s, y + h - 0.38 * s, z));
+  };
+  const cityInfo = {};
+  const sink = CityKit.sink();
+  for (const pid of Object.keys(PROV)) {
+    const [cx, cz] = PROV[pid]; const fid = ownerOf[pid]; const seat = isSeat(pid); const big = seat || pid === 'si_li';
+    const lod = view.focus === pid ? 'full' : 'lite';
+    const c = CityKit.build(scene, { lod, sink: lod === 'lite' ? sink : null, x: cx, y: 1.2, z: cz, half: big ? 7.5 : 5.5, seat, palaceRoof: pid === 'yu' ? 'gold' : pid === 'yang' ? 'green' : 'gray', pagodaTiers: 5, canBuild: (x, z) => terr.h(x, z) > 0.9 && terr.riverSD(x, z) > 1.5, suburbs: lod === 'full' });
+    const a = c.userData.anchors;
+    if (lod === 'full') { for (const g of a.gates) banner(fid, cx + g.x * 1.02 + 0.9, 1.2 + g.y - 1.0, cz + g.z * 1.02, 1.4, 0.9); for (const t of a.towers) banner(fid, cx + t.x, 1.2 + t.y - 0.6, cz + t.z, 1.0, 0.7); }
+    else banner(fid, cx, 1.2 + a.palace.y + 0.2, cz + a.palace.z, 3.2, 2.2);
+    cityInfo[pid] = { x: cx, y: 1.2 + a.palace.y + 2.2, z: cz, seat, fid };
+  }
+  CityKit.flush(sink, scene);
+
+  // ---------------------------------------------------------------- dressing
+  const focus = view.focus ? PROV[view.focus] : null;
+  const nearR = SHOT === 'city' ? 26 : 30;
+  const trees = Flora.trees(terr, focus ? { cx: view.target[0], cz: view.target[2], R: nearR, lone: 5000, season: SHOT === 'autumn' ? 1 : 0 } : { lone: 1200 });
+
+  scene.add(...trees, ...Flora.hamlets(terr), Flora.greatWall(terr));
+  const br = Flora.bridges(terr); if (br) scene.add(br);
+  // armies (placeholder soldiers; the battle cutaway gets real models)
+  const armyAnchors = {};
+  if (close) {
+    const BGU = THREE.BufferGeometryUtils;
+    const soldier = BGU.mergeBufferGeometries([Flora.colored(new THREE.BoxGeometry(0.13, 0.24, 0.09).translate(0, 0.2, 0), 0xffffff), Flora.colored(new THREE.BoxGeometry(0.08, 0.08, 0.08).translate(0, 0.37, 0), 0xd9b08a), Flora.colored(new THREE.BoxGeometry(0.015, 0.62, 0.015).translate(0.08, 0.34, 0), 0x5c4a36)]);
+    const men = new THREE.InstancedMesh(soldier, Terrain.receiveBaked(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8 }), terr), 12000);
+    men.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(12000 * 3).fill(1), 3); men.count = 0;
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
+    const regiment = (fid, x, z, yaw, cols, rows, sp = 0.22) => {
+      const col = FCOL[fid].clone().lerp(new THREE.Color(0x3a3530), 0.3), cs = Math.cos(yaw), sn = Math.sin(yaw);
+      for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) {
+        const lx = (i - (cols - 1) / 2) * sp + K.rr(-0.03, 0.03), lz = (j - (rows - 1) / 2) * sp + K.rr(-0.03, 0.03);
+        const px = x + lx * cs + lz * sn, pz = z - lx * sn + lz * cs, py = Math.max(terr.h(px, pz), 0.42);
+        men.setMatrixAt(men.count, m4.compose(new THREE.Vector3(px, py, pz), q.setFromAxisAngle(up, yaw), new THREE.Vector3(1.4, 1.4, 1.4))); men.setColorAt(men.count++, col);
+      }
+      for (let b = 0; b < 2; b++) { const lx = (b - 0.5) * sp * 4, lz = -(rows / 2) * sp - 0.1; const px = x + lx * cs + lz * sn, pz = z - lx * sn + lz * cs; banner(fid, px, terr.h(px, pz), pz, 1.2, 0.65); }
+    };
+    const road = terr.roads.find((r) => (r.a === 'yu' && r.b === 'jing') || (r.a === 'jing' && r.b === 'yu'));
+    if (road) {
+      const pts = road.a === 'yu' ? road.pts : road.pts.slice().reverse();
+      const at = (t) => pts[Math.floor(t * (pts.length - 1))];
+      for (let k = 0; k < 5; k++) { const t = 0.42 + k * 0.05; const [x, z] = at(t), [x2, z2] = at(t + 0.01); regiment('cao_cao', x, z, Math.atan2(x2 - x, z2 - z) + Math.PI, 7, 9); }
+      const [ax, az] = at(0.52); armyAnchors.cao_army = { x: ax, y: terr.h(ax, az) + 2.4, z: az };
+    }
+    const [jx, jz] = PROV.jing;
+    for (const [dx, dz] of [[10.5, -2.5], [10.5, 2.5], [12.5, 0]]) regiment('liu_bei', jx + dx, jz + dz, -Math.PI / 2, 8, 6);
+    armyAnchors.liu_army = { x: jx + 11, y: 3, z: jz };
+    men.instanceMatrix.needsUpdate = true; men.instanceColor.needsUpdate = true; men.castShadow = true;
+    scene.add(men);
+  }
+  for (const [fid, L] of Object.entries(flagParts)) {
+    const BGU = THREE.BufferGeometryUtils;
+    const pole = new THREE.Mesh(BGU.mergeBufferGeometries(L.pole), new THREE.MeshStandardMaterial({ color: 0x3b3129, roughness: 0.8 }));
+    const cloth = new THREE.Mesh(BGU.mergeBufferGeometries(L.cloth), flagMat(fid));
+    cloth.castShadow = pole.castShadow = close; scene.add(pole, cloth);
+  }
+  // clouds: a band beyond the map edge (north and west) and wisps on the high ranges
+  const cl = [];
+  for (let i = 0; i < 12; i++) cl.push([K.rr(-380, 300), K.rr(34, 50), K.rr(-280, -190), K.rr(110, 200), 0.5]);
+  for (let i = 0; i < 8; i++) cl.push([K.rr(-340, -220), K.rr(30, 44), K.rr(-170, 170), K.rr(90, 170), 0.45]);
+  for (const [x, z] of [[-100, 30], [-60, 0], [-40, 38], [0, -70], [-110, -10], [-96, 58]]) cl.push([x * S + K.rr(-6, 6), K.rr(17, 22), z * S + K.rr(-6, 6), K.rr(20, 36), 0.3]);
+  if (!close || SHOT !== 'city') scene.add(Flora.clouds(cl));
+
+  // debug: ?hide=water,canopy,clouds,trees,cities hides layers to isolate artifacts
+  const hide = (params.get('hide') || '').split(',');
+  if (hide.includes('water')) water.visible = false;
+  if (hide.includes('canopy')) M.canopy.visible = false;
+  if (hide.includes('outer')) M.outer.visible = false;
+  if (hide.includes('clouds')) scene.children.filter((c) => c.isGroup && c.children[0] && c.children[0].isSprite).forEach((c) => (c.visible = false));
+
+  // ---------------------------------------------------------------- light, camera, lens
+  camera.position.set(...view.cam); camera.lookAt(new THREE.Vector3(...view.target));
+  camera.far = 5000; camera.near = close ? 0.5 : 2; camera.updateProjectionMatrix(); camera.updateMatrixWorld();
+  scene.add(new THREE.HemisphereLight(0xc6d6e8, 0x5a5238, 0.72));
+  const sun = new THREE.DirectionalLight(0xffe4bf, 2.5);
+  const tgt = new THREE.Vector3(...view.target);
+  sun.position.copy(tgt).addScaledVector(sunDir, 150); sun.target.position.copy(tgt);
+  if (close) {
+    sun.castShadow = true; sun.shadow.mapSize.set(4096, 4096);
+    const ss = SHOT === 'city' ? 22 : 50;
+    Object.assign(sun.shadow.camera, { left: -ss, right: ss, top: ss, bottom: -ss, near: 1, far: 400 });
+    sun.shadow.bias = -0.0003; sun.shadow.normalBias = 0.2;
+    M.ground.receiveShadow = true;
+  }
+  scene.add(sun, sun.target);
+  scene.fog = null;
+  const atmos = { density: close ? 0.006 : 0.0028, falloff: close ? 0.16 : 0.07, color: 0xbac8cf, sunColor: 0xf6d7a0, sunDir };
+  const lensOpts = {
+    overview: { range: 220, maxBlur: 2, bandCenter: 0.5, bandWidth: 0.5, tilt: 0, vignette: 0.2, contrast: 1.06, saturation: 1.0 },
+    strategic: { range: 220, maxBlur: 1.5, bandCenter: 0.5, bandWidth: 0.5, tilt: 0, vignette: 0.2, contrast: 1.05, saturation: 0.95 },
+    campaign: { range: 60, maxBlur: 3, bandCenter: 0.5, bandWidth: 0.5, tilt: 0, vignette: 0.22, ao: 0.7, aoRadius: 0.5, contrast: 1.07, saturation: 1.0, focusXZ: [J[0] + 4, J[1] - 2], focusR: 34, gray: 0.28 },
+    autumn: { range: 60, maxBlur: 3, bandCenter: 0.5, bandWidth: 0.5, tilt: 0, vignette: 0.22, ao: 0.7, aoRadius: 0.5, contrast: 1.07, saturation: 1.0 },
+    city: { range: 26, maxBlur: 4, bandCenter: 0.5, bandWidth: 0.3, tilt: 0, vignette: 0.24, ao: 1.1, aoRadius: 0.35, saturation: 0.9, contrast: 1.08 },
+  }[SHOT];
+  lensOpts.focus = camera.position.distanceTo(tgt);
+  lensOpts.atmos = off.includes('atmos') ? null : atmos;
+  if (off.includes('ao')) lensOpts.ao = 0;
+  if (off.includes('dof')) lensOpts.maxBlur = 0;
+  const lens = K.lens(renderer, scene, camera, lensOpts);
+
+  await new Promise((r) => setTimeout(r, 100));
+  const buildMs = performance.now() - T0;
+  renderer.info.autoReset = false; renderer.info.reset();
+  const f0 = performance.now();
+  lens.render();
+  renderer.getContext().finish();
+  window.__stats = { ...K.stats(renderer, scene, { buildMs, frameMs: performance.now() - f0, terrainMs: terr.buildMs }), phase: terr.phase };
+  const out = {};
+  for (const [pid, ci] of Object.entries(cityInfo)) out['city:' + pid] = { ...K.project(camera, W, H, ci.x, ci.y, ci.z), name: CITY[pid], fid: ci.fid || null, seat: ci.seat };
+  for (const [k, a] of Object.entries(armyAnchors)) out[k] = K.project(camera, W, H, a.x, a.y, a.z);
+  for (const rv of terr.rivers) if (rv.label) { const p = rv.line[Math.floor(rv.line.length * 0.55)]; out['river:' + rv.id] = { ...K.project(camera, W, H, p[0], 0.3, p[1]), name: rv.label }; }
+  window.__anchors = out;
+  window.__scene = scene; window.__camera = camera;
+  window.__done = true;
+})().catch((e) => { console.error(e); window.__error = String(e && e.stack || e); });
+</script>
+</body></html>

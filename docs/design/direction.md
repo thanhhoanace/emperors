@@ -1,7 +1,7 @@
 # Hướng visual và UI
 
 > **Vai trò:** SOT cho *cách game trông và cảm*: tham chiếu, nguyên tắc, phương án đang chờ duyệt, những điều không đổi.
-> **Trạng thái (2026-09-25): ĐÃ CHỌN A + cắt cảnh trận của C** (`decisions/0004`). Đang làm lại thành trì ở mức chi tiết cao để duyệt tiếp.
+> **Trạng thái (2026-09-25): ĐÃ CHỌN A + cắt cảnh trận của C** (`decisions/0004`). Thành trì vòng 3 đã được duyệt. Bản đồ chiến dịch vòng 4 (theo TW3K, trong ngân sách web `decisions/0005`) đang chờ duyệt.
 > Canvas duyệt: https://claude.ai/artifact/958ZoQxAFcGPKTUNGVdWeV
 
 ## Yêu cầu của chủ dự án
@@ -43,7 +43,41 @@ Phản hồi của chủ dự án: thành trong mock vòng 2 còn "đồ chơi",
 - Ánh sáng tạo khối: bóng đổ, bóng tiếp xúc (AO) ở chân tường và khe mái, nắng xiên giờ vàng.
 - Không một khối hộp trơn nào nhìn thấy được ở tầm camera chiến dịch.
 
-Hiện trạng (vòng 3, 2026-09-25): `prototypes/city.js` dựng thành theo đủ các tiêu chí trên; ảnh ở trang "Vòng 3" của canvas. Còn giữ chỗ: lính (khối hộp có cờ), cây (hơi hoạt hình), chân dung nhân vật; chưa có LOD.
+Hiện trạng: `prototypes/city.js` dựng thành theo đủ các tiêu chí trên và **đã được duyệt** (2026-09-25). Có hai mức chi tiết: `full` cho thành camera đang nhìn, `lite` cho các thành xa (`decisions/0005`).
+
+## Bản đồ chiến dịch — tiêu chuẩn TW3K (vòng 4)
+
+Phản hồi của chủ dự án về vòng 2–3: "bản đồ chưa đạt được theo Total War: Three Kingdoms, search thêm cho chuẩn". Nguồn tham khảo gồm ảnh chủ dự án gửi và các bài phỏng vấn, đánh giá về bản đồ TW3K; không dùng asset của game.
+
+Điều TW3K làm:
+- Bản đồ 3D có nhiều vách dựng và núi, rừng xanh dày, dãy núi hiểm trở theo địa hình Trung Hoa; sông lấp lánh, đồng bằng nắng.
+- Mùa thay đổi: lá chuyển xanh sang nâu đỏ; có tuyết, hoa đào.
+- Có chu kỳ ngày đêm.
+- Phóng gần thì hậu cảnh mờ theo độ sâu.
+- Thu nhỏ hết cỡ thì sang chế độ chiến lược, tô lãnh thổ theo chủ.
+- UI mực thủy mặc tối giản.
+
+Một bản đồ đạt yêu cầu phải có:
+- **Địa lý nhận ra được là Trung Hoa**, kể cả khi đã bóp méo cho vừa lối chơi:
+  - Hoàng Hà uốn chữ 几 quanh Ordos, cao nguyên hoàng thổ;
+  - Trường Giang qua Tam Hiệp; Hán, Hoài, Vị, Phần; các hồ Động Đình, Bà Dương, Thái Hồ;
+  - Bột Hải và bán đảo Sơn Đông;
+  - bồn địa Tứ Xuyên có núi bao quanh; Tần Lĩnh, Thái Hành, Nam Lĩnh;
+  - Tây Tạng tuyết phía tây, thảo nguyên và Vạn Lý Trường Thành phía bắc;
+  - núi đá vôi phía nam.
+- **Tỉ lệ:** thành chiếm khoảng 1/6 bề ngang châu, đất giữa các thành có làng, ruộng, rừng, đường. Renderer giãn toạ độ `geo` với hệ số `S` (hiện 1,45); `data/world.json` vẫn giữ toạ độ bản đồ.
+- **Sông mảnh và uốn khúc**, không phải kênh thẳng. Sông lớn có bãi, Hoàng Hà nước đục.
+- **Núi cao**, có sống núi và vách đá, tuyết trên đỉnh. **Rừng thành khối tán liền**, không phải chấm tròn rải đều.
+- **Đường tự tìm lối** qua thung lũng và đèo; ruộng chia thửa; nhiều làng nhỏ.
+- **Không khí:** chân trời, sương dày ở thung lũng, đỉnh núi nhô khỏi sương, bóng núi.
+- **Biên giới:** nét màu của phe, châu cùng phe chỉ có nét mờ; có chế độ chiến lược tô màu theo chủ.
+- **Mùa** đổi bằng tham số (`uSeason`).
+- **Không nhiễu hình:** mọi hoa văn sinh bằng shader phải giới hạn theo kích thước điểm ảnh (`fwidth`), hai bề mặt chồng nhau không được trùng mặt phẳng. Xem mục Bài học trong `AGENTS.md`.
+
+Hiện trạng (2026-09-25): `prototypes/map.html` + `terrain.js` + `flora.js` dựng đủ các ý trên. Ảnh ở trang "Vòng 4" của canvas: toàn cảnh, chế độ chiến lược, lượt chiến dịch, mùa thu, cận thành. Còn giữ chỗ:
+- quân trên bản đồ vẫn là khối lính hộp; TW3K dùng một tướng cưỡi ngựa cỡ lớn kèm cờ;
+- rìa thảo nguyên phía bắc còn trống;
+- chân dung nhân vật.
 
 ## Vòng 1 — stylized (đã bị thay)
 
@@ -59,13 +93,16 @@ Ba hướng đồ chơi/voxel bám sát Ryan: sa bàn khối (`prototypes/a.html
 
 ## Prototype
 
-`docs/design/prototypes/` chứa các cảnh three.js dùng để render ảnh duyệt (`real.html` + `city.js` là hướng đã chọn; `a/b/c.html` là vòng 1). Đây là mã nháp, không phải code sản phẩm: dùng làm điểm xuất phát khi triển khai phương án được chọn.
+`docs/design/prototypes/` chứa các cảnh three.js dùng để render ảnh duyệt. Đây là mã nháp, không phải code sản phẩm, nhưng là điểm xuất phát khi dựng app.
+- Hướng đang dùng: `map.html` + `terrain.js` + `flora.js` + `city.js`.
+- Để so sánh: `real.html` (vòng 2–3) và `a/b/c.html` (vòng 1).
 
 ```bash
 npm start
-PUPPETEER_EXECUTABLE_PATH=/path/to/chrome xvfb-run -a node docs/design/prototypes/render.mjs real campaign
-# → test-results/design/real-campaign.jpg (+ .json toạ độ màn hình của thành và quân, để đặt nhãn UI)
-# các góc máy của hướng đã chọn: city, campaign, battle (far nặng, chỉ chạy ở dpr 1)
+PUPPETEER_EXECUTABLE_PATH=/path/to/chrome xvfb-run -a node docs/design/prototypes/render.mjs map campaign
+# → test-results/design/map-campaign.jpg + .json (stats: lệnh vẽ, tam giác, MB, thời gian dựng; anchors: toạ độ màn hình để đặt nhãn UI)
+# góc máy: overview, strategic, campaign, autumn, city. Tham số thứ 3 là dpr, thứ 4 là query gỡ lỗi:
+#   "hide=water,canopy,clouds"  "off=shadow,ao,dof,atmos"  "dbg=masks|flat|albedo"
 ```
 
-Texture chi tiết (cỏ, pháp tuyến nước) tải từ thư mục ví dụ của repo three.js (MIT) lúc chạy. Trước khi phát hành phải thay bằng asset có giấy phép rõ ràng và ghi vào `assets/SOURCE.md`.
+`map.html` không tải texture nào: vân cỏ, pháp tuyến nước, gạch, ngói đều sinh bằng code. Riêng `real.html` cũ còn tải hai texture từ repo three.js (MIT); Chromium headless trong container chặn chứng chỉ của nguồn này, nên các ảnh cũ render thiếu texture đó.

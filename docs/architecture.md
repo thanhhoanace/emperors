@@ -12,6 +12,7 @@ data/personas/*  ├─► src/engine/engine.js ──► tests/engine.test.mjs,
                  │                           ──► [frontend mới — chờ duyệt design]
 index.html ── Phase 1 slice cũ (three r146, tự chứa, không dùng engine)
 docs/design/prototypes/ ── cảnh three.js để render ảnh duyệt design
+                           map.html (vòng 4) = terrain.js + flora.js + city.js + kit.js (lens)
 ```
 
 ### Engine (`src/engine/engine.js`)
@@ -32,10 +33,16 @@ docs/design/prototypes/ ── cảnh three.js để render ảnh duyệt design
 ```text
 index.html            nạp script cổ điển theo thứ tự, không bundler
 src/engine/engine.js  (giữ nguyên)
-src/world/            terrain.js, water.js, forest.js, cities.js (từ prototypes/city.js, thêm LOD theo khoảng cách), armies.js, fx.js, lens.js (DOF + SSAO + xám ngoài tiêu điểm), camera.js (tour khóa theo điểm dừng), battle.js (cảnh cắt trận)
+src/world/            terrain.js (từ prototypes/terrain.js: đọc heightfield + mặt nạ đã nướng, lưới theo ô, shader đất/tán/nước),
+                      flora.js (cây gần tiêu điểm, làng, trường thành, cầu), cities.js (từ prototypes/city.js: full/lite + gộp lượt vẽ),
+                      armies.js, fx.js, lens.js (DOF + SSAO + khí quyển + xám ngoài tiêu điểm), camera.js (tour khóa theo điểm dừng),
+                      quality.js (3 mức chất lượng, tự hạ DPR), battle.js (cảnh cắt trận)
+tools/bake-map.mjs    chạy lúc build: tính heightfield, sông, đường, mặt nạ, bóng nướng → assets/map/*.png (thay 5–8 giây tính lúc mở trang)
 src/ui/               hud.js, ranking.js, log.js, tags.js (nhãn nổi), controls.js
 src/main.js           nạp data → tạo game → diễn lượt: decide từng phe (camera bay tới, "Đang nghĩ…", câu thoại) → resolveTurn → hoạt cảnh event → cập nhật bảng và nhật ký
 ```
+
+Hiệu năng: mọi thứ trong `src/world` phải nằm trong ngân sách của `decisions/0005`. Đổi hình ảnh xong thì đo bằng `render.mjs`, không đoán.
 
 Ranh giới:
 
