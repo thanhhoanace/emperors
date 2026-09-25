@@ -101,3 +101,17 @@ Kỹ thuật bắt buộc (đã áp dụng trong `docs/design/prototypes/map.htm
   - Cây riêng thưa hơn ở cảnh chiến dịch.
   - Kết quả: toàn cảnh 4,6 → 1,2 triệu tam giác; chiến dịch 3,9 → 2,1 triệu.
 - **Mọi cảnh đều nằm trong trần tam giác.** Cận thành lớn nhất (Trường An) sát trần 3 triệu. Mức chất lượng "Vừa" sẽ giảm cây riêng và bóng.
+
+## Đo lại vòng 7 (thế giới thu 219, 20 thủ phủ)
+
+| Cảnh | Lệnh vẽ | Tam giác/khung | Bộ đệm GPU |
+| --- | --- | --- | --- |
+| Toàn cảnh | 228 | 1,25 triệu | 35 MB |
+| Chiến lược | 231 | 1,26 triệu | 35 MB |
+| Vùng (Trung Nguyên) | 105 | 1,42 triệu | 42 MB |
+| Chiến dịch (có bóng) | 218 | 2,23 triệu | 43 MB |
+| Cận thành, nhỏ nhất – lớn nhất | 62–177 | 1,43 (Chung Ly) – 2,90 triệu (Nam Trịnh) | 39–41 MB |
+
+- Vẫn trong trần. Cận thành giữa rừng sâu (Điền Trì, Nam Trịnh) sát 3 triệu vì cây riêng; `world.html` giãn khoảng cách cây khi ước tính vượt khoảng 16.000 cây (Điền Trì 3,12 → 2,88 triệu).
+- Tải về khoảng 3 MB chưa nén HTTP; độ cao vẫn chiếm 2 MB. Chia ô tải dần làm cùng bake Albers toàn quốc.
+
