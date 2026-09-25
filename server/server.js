@@ -1,19 +1,14 @@
 /**
  * Tam Quốc Loạn Nhập — local server.
- *
- * The game runs fully in the browser (GitHub Pages has no backend), so this
- * server only does two things:
- *   1. serve the repo as static files (http://localhost:3000)
- *   2. POST /api/turn — play one turn server-side with the same engine.
- *      Today the agents are the MOCK decision rules in src/engine/engine.js.
- *      This is the seam where LLM agents plug in later (see docs/architecture.md).
  */
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
-const Engine = require(path.join(ROOT, 'src/engine/engine.js'));
+const Engine = require(path.join(ROOT, 'src/engine/attach-219.js'))(
+  require(path.join(ROOT, 'src/engine/engine.js'))
+);
 const world = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/world.json'), 'utf8'));
 world.gatesPack = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/scenario/gates.json'), 'utf8'));
 world.charactersPack = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/scenario/characters.json'), 'utf8'));
