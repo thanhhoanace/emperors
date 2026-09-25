@@ -209,6 +209,10 @@ function attach(Engine) {
     return result;
   };
 
+  Engine.playTurn = function (g) {
+    return Engine.resolveTurn(g, Engine.decideAll(g));
+  };
+
   Engine.fillDecisions = function (g, playerFid, playerDecision) {
     return Engine.aliveIds(g).map((id) => {
       if (id === playerFid && playerDecision) {
