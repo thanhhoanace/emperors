@@ -256,15 +256,16 @@
 
   // anchors for the UI overlay (canvas artboards)
   const out = {}, inView = (p) => p.x > 60 && p.x < W - 60 && p.y > 60 && p.y < H - 60 && p.z < 1;
+  const proj = (x, y, z) => { const v = new THREE.Vector3(x, y, z).project(camera); return { x: Math.round((v.x + 1) * 0.5 * W), y: Math.round((1 - v.y) * 0.5 * H), z: v.z }; }; // with depth, so labels behind the camera drop out
   for (const [pid, ci] of Object.entries(cityInfo)) out['city:' + pid] = { ...K.project(camera, W, H, ci.x, ci.y, ci.z), name: CITY[pid], fid: ci.fid || null, seat: ci.seat };
-  for (const l of labels) { const p = K.project(camera, W, H, l.x, l.y, l.z); if (inView(p)) out['lbl:' + l.name] = { ...p, name: l.name }; }
+  for (const l of labels) { const p = proj(l.x, l.y, l.z); if (inView(p)) out['lbl:' + l.name] = { ...p, name: l.name }; }
   for (const [k, a] of Object.entries(armyAnchors)) out[k] = K.project(camera, W, H, a.x, a.y, a.z);
   const VN = { Huang: 'Hoàng Hà', 'Chang Jiang': 'Trường Giang', Yangtze: 'Trường Giang', Han: 'Hán Thủy', Huai: 'Hoài Thủy', Wei: 'Vị Thủy', Xiang: 'Tương Giang', Gan: 'Cán Giang', Jialing: 'Gia Lăng Giang', Min: 'Mân Giang', Fen: 'Phần Thủy', Xi: 'Tây Giang', Liao: 'Liêu Hà' };
   const want = far ? ['Hoàng Hà', 'Trường Giang', 'Hoài Thủy', 'Hán Thủy'] : SHOT === 'region' ? ['Hoàng Hà', 'Hán Thủy', 'Hoài Thủy', 'Vị Thủy'] : ['Hán Thủy', 'Trường Giang'];
   for (const vn of want) {
     let best = null;
     for (const rv of baked.water.rivers) if (VN[rv.name] === vn) for (let k = 0; k < rv.pts.length; k += 6) {
-      const [x, z, y] = rv.pts[k], p = K.project(camera, W, H, x, y + 0.2, z); if (!inView(p)) continue;
+      const [x, z, y] = rv.pts[k], p = proj(x, y + 0.2, z); if (!inView(p)) continue;
       const score = Math.abs(p.x - W * 0.5) + Math.abs(p.y - H * 0.55) * 0.7; if (!best || score < best.score) best = { ...p, score, name: vn };
     }
     if (best) out['river:' + vn] = best;

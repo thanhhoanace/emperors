@@ -371,7 +371,8 @@
         const a = p[Math.max(0, k - 1)], b = p[Math.min(p.length - 1, k + 1)], tx = b[0] - a[0], tz = b[1] - a[1], l = Math.hypot(tx, tz) || 1;
         const nx = -tz / l, nz = tx / l, w = rv.hw * 1.12, y = p[k][2] + 0.02;
         if (k) along += Math.hypot(p[k][0] - p[k - 1][0], p[k][1] - p[k - 1][1]);
-        const yl = o.lift ? Math.max(y, terr.h(p[k][0], p[k][1]) + 0.04, terr.h(p[k][0] + nx * w * 0.5, p[k][1] + nz * w * 0.5) + 0.04, terr.h(p[k][0] - nx * w * 0.5, p[k][1] - nz * w * 0.5) + 0.04) : y;
+        let yl = y;
+        if (o.lift) { const L = Math.max(1.2, w); for (const [dx, dz] of [[0, 0], [L, 0], [-L, 0], [0, L], [0, -L]]) yl = Math.max(yl, terr.h(p[k][0] + dx, p[k][1] + dz) + 0.04); yl = Math.min(yl, y + 0.5); } // the mesh interpolates over ±1 cell; never float in gorges
         pos.push(p[k][0] + nx * w, yl, p[k][1] + nz * w, p[k][0] - nx * w, yl, p[k][1] - nz * w);
         uv.push(0, along * 0.35, 1, along * 0.35); silt.push(rv.silt ? 1 : 0, rv.silt ? 1 : 0);
         if (k) { const q = base + (k - 1) * 2; ind.push(q, q + 2, q + 1, q + 1, q + 2, q + 3); }

@@ -1,6 +1,6 @@
 # 0005 — Ngân sách hiệu năng web cho thế giới 3D
 
-**Trạng thái:** Đề xuất · 2026-09-25 (chờ duyệt cùng bản đồ vòng 4)
+**Trạng thái:** Đề xuất · 2026-09-25 (chờ duyệt cùng bản đồ vòng 4–5; sửa mục tải về theo vòng 5)
 
 ## Bối cảnh
 
@@ -33,7 +33,7 @@ Thế giới 3D phải nằm trong ngân sách sau. Mỗi thay đổi visual đ�
 
 | Hạng mục | Mục tiêu (máy tính, GPU tích hợp) |
 | --- | --- |
-| Tải về lần đầu | ≤ 1 MB gzip (three.js + code + dữ liệu). Texture sinh bằng code; ảnh nào bắt buộc thì nén (KTX2/WebP) |
+| Tải về lần đầu | ≤ 1 MB gzip (three.js + code + dữ liệu + lưới độ cao thô). Lưới độ cao mịn tải dần theo ô quanh camera, tổng ≤ 2,5 MB. Texture sinh bằng code; ảnh nào bắt buộc thì nén (KTX2/WebP) |
 | Hiện bản đồ đầu tiên | ≤ 3 giây trên 4G. Dựng dần: địa hình trước, thành/cây sau, không có tác vụ nào dài quá 100 ms |
 | Lệnh vẽ | ≤ 400 (kể cả bóng) |
 | Tam giác mỗi khung | ≤ 1,5 triệu ở toàn cảnh, ≤ 3 triệu ở cận cảnh (kể cả bóng) |
@@ -67,3 +67,30 @@ Kỹ thuật bắt buộc (đã áp dụng trong `docs/design/prototypes/map.htm
   - Dựng địa hình trong trình duyệt mất 5–8 giây trong container. App thật phải nướng heightfield và mặt nạ thành ảnh PNG ngay lúc build (script Node), để lúc mở trang chỉ cần tải khoảng vài trăm KB và dựng mesh.
   - Đo FPS trên laptop và điện thoại thật; chưa đo được vì container không có GPU.
 - Bản đồ vòng 2 (`prototypes/real.html`) giữ lại để so sánh, không dùng làm nền cho app.
+
+## Đo lại vòng 5 (địa hình thật, `decisions/0006`)
+
+`render.mjs world <góc máy>`, GPU phần mềm (số tam giác không phụ thuộc dpr):
+
+| Cảnh | Lệnh vẽ | Tam giác/khung | Bộ đệm GPU |
+| --- | --- | --- | --- |
+| Toàn cảnh | 215 | 1,2 triệu | 32 MB |
+| Chiến lược | 218 | 1,2 triệu | 32 MB |
+| Vùng (Trung Nguyên) | 105 | 1,4 triệu | 38 MB |
+| Chiến dịch (có bóng) | 210 | 2,1 triệu | 40 MB |
+| Cận thành Tương Dương | 170 | 1,5 triệu | 37 MB |
+| Cận thành Trường An | 153 | 2,8 triệu | 38 MB |
+| Cận thành Hạ Khẩu | 107 | 1,4 triệu | 36 MB |
+
+- **Tải về: khoảng 2,4 MB gzip.**
+  - Độ cao 2,05 MB: lưới mịn 1,77 MB và lưới thô 0,28 MB. Đã nén delta 2 chiều; bản thô là 4,8 MB.
+  - Sông 0,1 MB, three.js 0,15 MB, code 0,08 MB.
+  - Vượt trần lần đầu, nên đã sửa ngân sách ở bảng trên. App thật phải tải lưới thô trước, rồi tải dần lưới mịn theo ô.
+- **Dựng mặt nạ lúc mở trang: khoảng 13 giây trong container.** Gồm rừng, ruộng, đường, biên châu (14 lượt Dijkstra) và bóng núi. Phải nướng sẵn lúc build (`tools/bake-map.mjs`).
+- **Những gì đã làm để vào trần tam giác:**
+  - Toàn cảnh dùng lưới đất 2 đơn vị.
+  - Mép che khe chỉ đặt ở chỗ hai ô khác độ mịn. Trước đó mép còn tốn tam giác hơn cả mặt đất.
+  - Thành xa dùng mẫu nhà khoảng 60 tam giác.
+  - Cây riêng thưa hơn ở cảnh chiến dịch.
+  - Kết quả: toàn cảnh 4,6 → 1,2 triệu tam giác; chiến dịch 3,9 → 2,1 triệu.
+- **Mọi cảnh đều nằm trong trần tam giác.** Cận thành lớn nhất (Trường An) sát trần 3 triệu. Mức chất lượng "Vừa" sẽ giảm cây riêng và bóng.

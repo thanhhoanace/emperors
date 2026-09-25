@@ -15,7 +15,12 @@
   - Trường An thuộc Tư Lệ;
   - Hạ Khẩu là của Hoàng Tổ;
   - Nghiệp Thành là của Viên Thiệu.
-- **Mạng của môi trường cloud** đang chặn dat.city, x.com, twdb.io, totalwar.fandom.com, static.wikia.nocookie.net, wikipedia.org, upload.wikimedia.org. Vì vậy chưa đọc được cách dat.city render và chưa xem được ảnh bản đồ TW3K. Chủ dự án mở các host này trong cài đặt môi trường (Network access), hoặc gửi ảnh chụp.
+- **Mạng đã mở (25/9).** dat.city, x.com, twdb.io, Wikipedia truy cập được; totalwar.fandom.com vẫn chặn bot (403). Đang tra: mã dat.city, bản đồ TW3K, khảo cổ 14 thành, vùng biên năm 200.
+- **Hướng mới của chủ dự án (25/9), chờ phương án được duyệt:**
+  - Mở rộng bản đồ ra toàn Trung Quốc ngày nay, không chỉ Trung Nguyên.
+  - Hoàng đế xuyên không biết địa lý rộng hơn nên có lợi thế địa thế. Quân phiệt cũ mạnh ở chỗ đông quân, tập trung ở Trung Nguyên.
+  - Mỗi hoàng đế cần một lợi thế riêng.
+  - Đây là đổi luật cốt lõi: lên phương án trước, chờ duyệt rồi mới code.
 
 ## Đã xong
 
