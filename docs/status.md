@@ -16,7 +16,8 @@ Node và server cùng compose: `engine.js` → `attach-219.js` → `perception.j
 - Lịch: lượt 1 = Thu 219 (`startSeason`).
 - Tấn công: `from` hợp lệ thì dùng, không thì `originFor`. `STRATAGEMS` đã export. Browser: `EmperorsAttach219`.
 - Perception: một snapshot trước khi quyết định; `projectPerception` không mutate; không `seed`, không `bandValues` trong DecisionContext.
-- `npm test`: 44 pass. `npm run sim -- 500`: Lý 36.0%, 3K không bắn đế yếu ẩn (0).
+- Prior `wu_jing_pressure`: neo thêm `jing` của Tào; `bias.attack` chỉ nhân điểm mục tiêu trong `focus`, một lần.
+- Anti-cheat: counterfactual tests. Sim không còn metric “đế yếu ẩn”.
 
 ## Chặn còn
 

@@ -16,7 +16,7 @@
     "holders": ["li_shimin", "zhu_yuanzhang"],
     "when": {
       "alive": ["guan_yu"],
-      "owner": { "jing_nan": "liu_bei", "jiang": "sun_quan" }
+      "owner": { "jing_nan": "liu_bei", "jiang": "sun_quan", "jing": "cao_cao" }
     },
     "bias": { "attack": 1.35 },
     "focus": ["jing_nan", "jing"]
