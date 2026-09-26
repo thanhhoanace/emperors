@@ -56,6 +56,15 @@ Kề → band hiện tại. Không kề → stale từ intelLog hoặc `unknown`
 Chỉ `li_shimin`, `zhu_yuanzhang`. Mẫu `wu_jing_pressure`.
 Tần / Vũ / Tào / Lưu / Tôn: `prior === null`.
 
+Neo active (cả bốn phải đúng; gãy một cái → obsolete):
+
+- Quan Vũ còn sống
+- `jing_nan` của Lưu Bị
+- `jiang` của Tôn Quyền
+- `jing` của Tào Tháo
+
+`bias.attack` nhân **một lần**, và chỉ vào điểm số mục tiêu nằm trong `focus`. Không nhân `w.attack` toàn cục. Prior = cửa lịch sử hấp dẫn hơn, không phải phe trở nên hung hơn.
+
 ## intelLog
 
 ```

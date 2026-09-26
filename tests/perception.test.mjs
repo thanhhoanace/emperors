@@ -62,6 +62,37 @@ test('adjacent observer may see different troop bands', () => {
   assert.notEqual(ca.others.li_shimin.troopBand, cb.others.li_shimin.troopBand);
 });
 
+test('hidden Li persona and doctrine do not change Cao context or decision', () => {
+  const seed = 219;
+  const a = newGame(seed);
+  const b = newGame(seed);
+  isolateCaoFromLi(a);
+  isolateCaoFromLi(b);
+  a.state.intelLog = { lastSeen: {}, claims: {} };
+  b.state.intelLog = { lastSeen: {}, claims: {} };
+  const Li = b.def.F.li_shimin;
+  Li.persona = Object.assign({}, Li.persona, {
+    name: 'HIDDEN_NAME',
+    short: 'HIDDEN_SHORT',
+    quotes: { attack: ['hidden'], internal: ['hidden'], diplomacy: ['hidden'], stratagem: ['hidden'], fortify: ['hidden'] },
+  });
+  Li.weights = Object.assign({}, Li.weights, { attack: 99, internal: 0.01 });
+  Li.traits = Object.assign({}, Li.traits, { aggression: 1, attack: 9 });
+  Li.type = 'historical_warlord';
+  const ca = Engine.projectPerception(a, 'cao_cao');
+  const cb = Engine.projectPerception(b, 'cao_cao');
+  assert.equal(ca.others.li_shimin.adjacent, false);
+  assert.equal(cb.others.li_shimin.adjacent, false);
+  assert.equal(JSON.stringify(ca), JSON.stringify(cb));
+  assert.equal(ca.others.li_shimin.type, undefined);
+  assert.equal(ca.others.li_shimin.weights, undefined);
+  assert.equal(ca.others.li_shimin.traits, undefined);
+  assert.equal(ca.others.li_shimin.persona, undefined);
+  const da = Engine.decide(ca, { seed: 219 });
+  const db = Engine.decide(cb, { seed: 219 });
+  assert.deepEqual(da, db);
+});
+
 test('hidden type change does not leak into Cao context', () => {
   const a = newGame(5);
   const b = newGame(5);
