@@ -500,9 +500,12 @@
       return vec3(sqrt(d1), sqrt(d2), id); }
   `;
 
-  // Realm and province borders: crisp anti-aliased line (width uBorderW) in the owner's colour + a soft inner
-  // wash. Shared by the ground and the canopy so borders stay visible over forests.
+  // Realm and province borders: crisp anti-aliased line (width uBorderW) in the owner's colour over a dark halo, and a
+  // band of the owner's colour inside the realm; lines between two provinces of one owner stay faint. tBord.a marks the
+  // player's legal attack targets (0.6) and the chosen one (1.0) with a warm hatch (uFront).
+  // Shared by the ground and the canopy so borders stay visible over forests.
   const GLSL_BORDER = `
+    uniform float uFront;
     // beyond the baked grid (round 5): fade into a haze so the map ends in cloud, not in a cut edge
     float edgeFog(vec2 wp){
       if (uLandOn > 0.5) { // round 8, all of China: haze beyond present-day China (land mask A) and the edge of the bake
@@ -514,15 +517,22 @@
     vec3 applyBorders(vec3 col, vec4 own, vec4 bd, float land, vec2 wp){
       float dR = (1.0 - bd.r) * 1.5, feR = max(fwidth(dR), 1e-4), wR = max(uBorderW, feR * 0.9);
       float lineR = (1.0 - smoothstep(wR - feR, wR + feR, dR)) * step(0.004, bd.r) * land;
-      float dP = (1.0 - bd.g) * 1.5, feP = max(fwidth(dP), 1e-4), wP = max(uBorderW * 0.5, feP * 0.7);
+      float dP = (1.0 - bd.g) * 1.5, feP = max(fwidth(dP), 1e-4), wP = max(uBorderW * 0.3, feP * 0.6);
       float lineP = (1.0 - smoothstep(wP - feP, wP + feP, dP)) * step(0.004, bd.g) * land;
       float outline = (1.0 - smoothstep(wR * 1.6 - feR, wR * 1.6 + feR, dR)) * step(0.004, bd.r) * land;
       float dash = own.a > 0.5 ? 1.0 : step(0.5, fract((wp.x + wp.y) * 0.4));
       vec3 lc = own.a > 0.5 ? mix(own.rgb * 1.35 + 0.02, mix(own.rgb, vec3(0.92, 0.88, 0.78), 0.3), uSoft) : vec3(0.62, 0.60, 0.55);
-      col = mix(col, col * 0.62, lineP * uBorder * 0.5);
-      col = mix(col, col * 0.35, outline * uBorder * 0.6 * dash);
+      col = mix(col, col * 0.8, lineP * uBorder * 0.4);
+      col = mix(col, col * 0.2, outline * uBorder * 0.85 * dash);
       col = mix(col, lc, lineR * uBorder * dash);
-      return mix(col, own.rgb, (1.0 - smoothstep(0.0, 1.4, dR)) * step(0.004, bd.r) * own.a * uBorder * 0.2 * land);
+      col = mix(col, own.rgb, (1.0 - smoothstep(0.0, 1.5, dR)) * step(0.004, bd.r) * own.a * uBorder * 0.42 * land);
+      // legal attack targets: a warm diagonal hatch, anti-aliased so it holds at the campaign distance
+      float fr = smoothstep(0.3, 0.4, bd.a) * land * uFront, pk = smoothstep(0.85, 0.95, bd.a) * land * uFront;
+      float hq = (wp.x - wp.y) * 0.22, hx = fract(hq), fh = max(fwidth(hq), 1e-4);
+      float hatch = smoothstep(0.5 - fh, 0.5 + fh, hx) * (1.0 - smoothstep(0.82 - fh, 0.82 + fh, hx));
+      col = mix(col, col * 1.12 + vec3(0.02, 0.008, 0.0), fr * 0.5);
+      col = mix(col, mix(vec3(0.62, 0.20, 0.10), vec3(0.80, 0.56, 0.16), pk), max(fr, pk) * hatch * 0.42);
+      return col;
     }`;
   T.GLSL_NOISE = GLSL_NOISE;
   // Shared uniforms: grid → uv, baked light, owner colours, view mode.
@@ -531,7 +541,7 @@
     uGrid: { value: new THREE.Vector4(terr.G.x0, terr.G.z0, terr.G.w, terr.G.d) },
     tLand: { value: terr.tex.land || terr.tex.D }, uLandOn: { value: terr.land ? 1 : 0 },
     uLandGrid: { value: terr.land ? new THREE.Vector4(terr.land.x0, terr.land.z0, terr.land.w, terr.land.d) : new THREE.Vector4(0, 0, 1, 1) },
-    uTint: { value: 0.06 }, uBorder: { value: 0.75 }, uBorderW: { value: 0.22 }, uSnowLine: { value: 13 }, uSnowWest: { value: 1 }, uWaterLine: { value: 0.12 }, uFieldK: { value: 1 }, uDetailK: { value: 1 }, uSoft: { value: 0 }, uEdgeFog: { value: 0 }, uCrownK: { value: 1 }, uOutArid: { value: new THREE.Vector4(-150, -175, -170, -190) }, uSeason: { value: 0 }, uFocus: { value: new THREE.Vector3(0, 0, 0) },
+    uTint: { value: 0.06 }, uBorder: { value: 0.75 }, uBorderW: { value: 0.22 }, uFront: { value: 1 }, uSnowLine: { value: 13 }, uSnowWest: { value: 1 }, uWaterLine: { value: 0.12 }, uFieldK: { value: 1 }, uDetailK: { value: 1 }, uSoft: { value: 0 }, uEdgeFog: { value: 0 }, uCrownK: { value: 1 }, uOutArid: { value: new THREE.Vector4(-150, -175, -170, -190) }, uSeason: { value: 0 }, uFocus: { value: new THREE.Vector3(0, 0, 0) },
     ...extra,
   });
   // Patch any MeshStandardMaterial so it receives the baked terrain shadow + cavity AO by world position.
@@ -663,7 +673,7 @@
           col = mix(col, own.rgb, uTint * own.a * step(0.1, hgt));
           // wasteland (no province at all; encoded as black, alpha 0): washed pale in the owner view
           float wild = (1.0 - own.a) * (1.0 - step(0.05, own.r + own.g + own.b));
-          col = mix(col, vec3(dot(col, vec3(0.3, 0.55, 0.15))) * 0.9 + vec3(0.1, 0.09, 0.07), uTint * wild * 1.6 * step(0.1, hgt));
+          col = mix(col, vec3(dot(col, vec3(0.3, 0.55, 0.15))) * 0.9 + vec3(0.1, 0.09, 0.07), min(uTint, 0.06) * wild * 1.6 * step(0.1, hgt));
           col = applyBorders(col, own, bd, step(0.2, hgt), vWP.xz);
           diffuseColor.rgb = mix(col, pow(EDGE_HAZE, vec3(2.2)), edgeFog(vWP.xz));
           #ifdef DEBUG_MASKS
@@ -733,8 +743,8 @@
           if (mA.r < 0.13 + 0.14 * (1.0 - crown * detail) + 0.08 * (tnoise(vWP.xz * 0.8) - 0.5)) discard;
           if (uLandOn > 0.5) { vec2 exC = max(uGrid.xy - vWP.xz, vWP.xz - uGrid.xy - uGrid.zw); if (max(exC.x, exC.y) + 12.0 * (tnoise(vWP.xz * 0.04) - 0.5) > -18.0) discard; } // thins out where the core meets the land mask
           diffuseColor.rgb = pow(col, vec3(2.2));
-          { vec4 own = texture2D(tOwn, uvG); diffuseColor.rgb = mix(diffuseColor.rgb, own.rgb, uTint * own.a * 0.8);
-            float wild = (1.0 - own.a) * (1.0 - step(0.05, own.r + own.g + own.b)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(dot(diffuseColor.rgb, vec3(0.3, 0.55, 0.15))) * 0.9 + vec3(0.1, 0.09, 0.07), uTint * wild * 1.6);
+          { vec4 own = texture2D(tOwn, uvG); diffuseColor.rgb = mix(diffuseColor.rgb, own.rgb, uTint * own.a);
+            float wild = (1.0 - own.a) * (1.0 - step(0.05, own.r + own.g + own.b)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(dot(diffuseColor.rgb, vec3(0.3, 0.55, 0.15))) * 0.9 + vec3(0.1, 0.09, 0.07), min(uTint, 0.06) * wild * 1.6);
             if (uCanopyBorder > 0.0) diffuseColor.rgb = mix(diffuseColor.rgb, applyBorders(diffuseColor.rgb, own, texture2D(tBord, uvG), 1.0, vWP.xz), uCanopyBorder);
             diffuseColor.rgb = mix(diffuseColor.rgb, pow(EDGE_HAZE, vec3(2.2)), edgeFog(vWP.xz)); }
           #ifdef DEBUG_FLAT

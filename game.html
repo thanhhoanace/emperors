@@ -57,9 +57,9 @@
     pressureText: GameController.PRESSURE_TEXT, statHelp: GameController.STAT_HELP, intelWords: GameController.intelWords,
     makeDecision: ctrl.decision, validate: ctrl.validate,
     onChoose: (fid) => loop.choose(fid), onSubmit: (d) => loop.submit(d).catch(fail), onSkip: () => presenter.skip(),
-    onMark: (m) => { // a faction target lights its provinces on the public map
+    onMark: (m) => { // a faction target lights its provinces on the public map; attack lights the legal frontier
       if (m.faction) { const own = ctrl.owners(); m = { via: Object.keys(own).filter((pid) => own[pid] === m.faction) }; }
-      hud.markPlaces(m); idle();
+      hud.markPlaces(m); rt.setFrontier(m.front || [], m.pick || null); idle();
     },
   });
   window.__game = { Engine, ctrl, ui, world, ready: false };

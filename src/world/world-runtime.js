@@ -14,9 +14,9 @@
   const WALL = [[122.5, 41.8], [120.0, 41.9], [117.5, 41.5], [115.0, 41.2], [113.0, 40.9], [111.0, 41.0], [109.0, 41.2], [107.5, 41.3], [106.5, 40.2], [105.8, 38.9], [104.5, 37.5], [103.4, 37.35], [103.15, 37.85], [102.95, 38.25], [102.3, 38.45], [101.0, 38.75], [99.0, 39.6], [97.5, 40.1], [95.5, 40.35], [93.8, 40.35], [92.6, 40.3]];
   // Look of each camera mode (the round-8 shots: whole country, region, close)
   const MODES = {
-    far: { border: 0.6, borderW: 0.9, tint: 0.06, canopyBorder: 1, lens: { range: 500, maxBlur: 1.5, band: [0.5, 0.5], vignette: 0.2, contrast: 1.06, saturation: 1.0, ao: 0, atmos: 0.0012, fall: 0.05 } },
-    near: { border: 0.7, borderW: 0.4, tint: 0.06, canopyBorder: 1, lens: { range: 220, maxBlur: 2, band: [0.5, 0.5], vignette: 0.22, contrast: 1.06, saturation: 1.0, ao: 0, atmos: 0.003, fall: 0.05 } },
-    city: { border: 0.8, borderW: 0.08, tint: 0.0, canopyBorder: 0, lens: { range: 30, maxBlur: 3.5, band: [0.5, 0.3], vignette: 0.24, contrast: 1.08, saturation: 0.95, ao: 1.0, aoR: 0.12, atmos: 0.012, fall: 0.3 } },
+    far: { border: 0.9, borderW: 0.9, tint: 0.22, canopyBorder: 1, lens: { range: 500, maxBlur: 1.5, band: [0.5, 0.5], vignette: 0.2, contrast: 1.06, saturation: 1.0, ao: 0, atmos: 0.0012, fall: 0.05 } },
+    near: { border: 0.75, borderW: 0.25, tint: 0.06, canopyBorder: 1, lens: { range: 220, maxBlur: 2, band: [0.5, 0.5], vignette: 0.22, contrast: 1.06, saturation: 1.0, ao: 0, atmos: 0.003, fall: 0.05 } },
+    city: { border: 0.8, borderW: 0.05, tint: 0.0, canopyBorder: 0, lens: { range: 30, maxBlur: 3.5, band: [0.5, 0.3], vignette: 0.24, contrast: 1.08, saturation: 0.95, ao: 1.0, aoR: 0.12, atmos: 0.012, fall: 0.3 } },
   };
   const FAR_DIST = 350; // beyond this camera distance the whole-country level of detail is used
 
@@ -339,7 +339,7 @@
       for (const ci of Object.values(cities)) { const full = cityMode && v.city === ci.pid; if (ci.lite) ci.lite.visible = cityMode && !full; if (ci.full) ci.full.group.visible = full; }
       const treesOn = new Set(v.mode === 'far' ? [] : (v.trees || []).map((t) => t.key));
       for (const [k, g] of Object.entries(treeSets)) g.visible = treesOn.has(k);
-      gu.uBorder.value = cu.uBorder.value = mode.border; gu.uBorderW.value = cu.uBorderW.value = mode.borderW; gu.uTint.value = mode.tint; cu.uCanopyBorder.value = mode.canopyBorder;
+      gu.uBorder.value = cu.uBorder.value = mode.border; gu.uBorderW.value = cu.uBorderW.value = mode.borderW; gu.uTint.value = mode.tint; cu.uTint.value = v.mode === 'far' ? mode.tint * 0.8 : 0; cu.uCanopyBorder.value = mode.canopyBorder; // on the campaign view forests carry the owner wash too
       camera.fov = v.fov; camera.position.set(...v.cam); camera.lookAt(...v.target);
       camera.far = v.mode === 'far' ? 6000 : 3000; camera.near = v.mode === 'city' ? Math.max(0.05, dist * 0.004) : dist * 0.02;
       camera.updateProjectionMatrix(); camera.updateMatrixWorld(); sky.position.copy(camera.position);
@@ -388,6 +388,8 @@
       for (const ci of Object.values(cities)) if (ci.full && ci.full.owner !== owners[ci.pid]) { scene.remove(ci.full.group); freeMeshes(ci.full.group); ci.full = null; }
       if (current) rt.setView(current);
     };
+    // the player's legal attack targets and the chosen one, hatched on the terrain (presentation only; from the menu)
+    rt.setFrontier = (pids, pick) => { const set = new Set(pids || []); return terr.setHighlight ? terr.setHighlight((pid) => (pid === pick ? 1 : set.has(pid) ? 0.6 : 0)) : false; };
 
     // ---------------------------------------------------------------- markers: generals and armies
     const FIG = {

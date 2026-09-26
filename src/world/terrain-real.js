@@ -413,12 +413,23 @@
       const cols = [...provIds.map((id) => { const c = colorOf(id); return c ? [c.r, c.g, c.b, 1] : [0.45, 0.45, 0.42, 0]; }), [0, 0, 0, 0]]; // wasteland: black, alpha 0
       const owner = [...provIds.map((id) => ownerOf2(id) || null), null];
       for (let n = 0; n < N; n++) {
-        const c = cols[provOf[n]], o = n * 4, wild = provOf[n] === WILDI || prov2[n] === WILDI, same = owner[provOf[n]] === owner[prov2[n]] && !wild, p = clamp(1 - border[n] / 2.5, 0, 1);
+        // realm edges (R) reach 4 units in, so the perimeter carries a band of the owner's colour; province edges (G) 2.5
+        const c = cols[provOf[n]], o = n * 4, wild = provOf[n] === WILDI || prov2[n] === WILDI, same = owner[provOf[n]] === owner[prov2[n]] && !wild, p = clamp(1 - border[n] / 2.5, 0, 1), pr = clamp(1 - border[n] / 4, 0, 1);
         ownData[o] = b8(c[0]); ownData[o + 1] = b8(c[1]); ownData[o + 2] = b8(c[2]); ownData[o + 3] = b8(c[3]);
         // B: proximity to the wasteland edge (kept for later; the shaders mark wasteland with a pale wash, a line speckles)
-        bordData[o] = b8(same || wild ? 0 : p); bordData[o + 1] = b8(same ? p : 0); bordData[o + 2] = b8(wild ? p : 0);
+        bordData[o] = b8(same || wild ? 0 : pr); bordData[o + 1] = b8(same ? p : 0); bordData[o + 2] = b8(wild ? p : 0);
       }
       tOwn.needsUpdate = true; tBord.needsUpdate = true;
+    }
+    // tBord.a: presentation marks per province (0.6 = a legal attack target, 1 = the chosen one); owners stay in tOwn
+    let hlKey = '';
+    function setHighlight(levelOf) {
+      const lv = [...provIds.map((id) => b8(levelOf(id) || 0)), 0], key = lv.join(',');
+      if (key === hlKey) return false;
+      hlKey = key;
+      for (let n = 0; n < N; n++) bordData[n * 4 + 3] = lv[provOf[n]];
+      tBord.needsUpdate = true;
+      return true;
     }
     mark('textures');
 
@@ -430,7 +441,7 @@
       return k * (0.2 + sstep(0.1, 0.5, f) * (0.25 + f * 0.45 * (0.75 + 0.5 * vnoise(x * 0.7, z * 0.7)) + Math.min(0.5, slopeAt(x, z) * 0.35)));
     };
     const out = {
-      S: 1, G, H: hh2, h: hh2, canopyLift, slopeAt, riverSD, landSD, roadD, region, rivers: [], water, roads, pillars, hamlets, provIds, setOwners, toWorld, toLonLat,
+      S: 1, G, H: hh2, h: hh2, canopyLift, slopeAt, riverSD, landSD, roadD, region, rivers: [], water, roads, pillars, hamlets, provIds, setOwners, setHighlight, toWorld, toLonLat,
       wall: (opts.wall || []).map(([lon, lat]) => toWorld(lon, lat)),
       forestAt: (x, z) => (inGrid(x, z) ? lookup(forest, x, z) : 0), fieldAt: (x, z) => (inGrid(x, z) ? lookup(field, x, z) : 0),
       sunAt: (x, z) => (inGrid(x, z) ? lookup(sh, x, z) : 1), provinceAt: (x, z) => provIds[provOf[idx(Math.round(clamp((x - G.x0) / G.step, 0, G.nx - 1)), Math.round(clamp((z - G.z0) / G.step, 0, G.nz - 1)))]],

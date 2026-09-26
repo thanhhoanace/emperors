@@ -27,6 +27,7 @@
   .hud .place.seat{font-size:15px;font-weight:600;background:rgba(18,15,12,.72)}
   .hud .place.pick{outline:2px solid #f2d27a;background:rgba(60,44,20,.9)}
   .hud .place.via{outline:1px dashed #cdbb95}
+  .hud .place.front{box-shadow:0 0 0 1px #e07a5a,0 0 10px rgba(224,122,90,.55);background:rgba(58,24,16,.8)}
   .hud .log{position:absolute;right:24px;top:24px;width:300px;max-height:46vh;overflow:hidden;font-size:13px;line-height:1.4}
   .hud .log div{padding:5px 10px;margin-bottom:4px;background:rgba(18,15,12,.62);border-left:3px solid var(--c,#8a7a5a)}
   .hud .log div.now{background:rgba(40,32,22,.85)}
@@ -86,10 +87,11 @@
       places.forEach((it, i) => {
         const d = placesEl.children[i], p = rt.project(it.at);
         d.style.display = p.visible ? '' : 'none'; d.style.left = p.x + 'px'; d.style.top = p.y + 'px'; d.style.setProperty('--c', own[it.pid] ? col(own[it.pid]) : '#9a9486');
-        d.classList.toggle('pick', marks.pick === it.pid); d.classList.toggle('via', (marks.via || []).includes(it.pid));
+        d.classList.toggle('pick', marks.pick === it.pid); d.classList.toggle('via', (marks.via || []).includes(it.pid)); d.classList.toggle('front', (marks.front || []).includes(it.pid));
       });
     };
-    // the player's pending choice on the campaign map: the target city, and the provinces the army can come from
+    // the player's pending choice on the campaign map: the legal targets (front), the target city, the provinces the army
+    // can come from
     let marks = {};
     hud.markPlaces = (m) => { marks = m || {}; };
     hud.clear = () => { lastKey = ''; cardEl.classList.remove('on'); actorsEl.innerHTML = ''; badgeEl.className = 'badge'; labelsEl.innerHTML = ''; };
