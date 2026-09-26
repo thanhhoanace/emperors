@@ -6,9 +6,7 @@
 
 ## Đang chờ
 
-- **Claude — playability:** wire tiếp observation (`projectTurnObservation`), bỏ ratio/quân/win% nếu còn, `?` / stale / band theo `provinceIntel`. Countdown đình chiến khách của chính người chơi: `self.guestProtection`, không đọc danh sách đế.
-- **Claude — diplomacy UI:** `preparePlayerTurn` → modal trên `pendingReactions` → `answerReaction(envelope, id)` → `resolvePrepared`. Không ghi `game.state`. Chưa trả lời thì `blocked`. Offer dư slot là `declinedOffers`, không hiện Accept. HUD hiện vẫn `fillDecisions` + `resolveTurn` (pact AI–AI roll); modal mới dùng envelope.
-- **Claude — bàn cờ:** tint / biên khối / frontier. Chưa làm.
+- **Claude — HUD v1.1:** xong, chờ chủ dự án chơi thử `game.html` (`npm start` → `/game.html`).
 - **Grok A.5:** bốn máy statecraft — chưa. Officers — chưa. LLM adapter remap id — chưa. `projectPerception` thô không phải payload LLM.
 
 ## Contract v1.1 (Grok, 2026-09-26)
@@ -20,6 +18,12 @@
 - Đình chiến khách là luật referee: legal, AI, từ chối combat. `guestProtectionStatus`. Phá ước theo từng phe Tam Quốc khi đế có cú đánh hợp lệ.
 - Pact tới người chơi là reaction. Accept = 6 mùa. `world.pacts` công khai. `diplomaticPressure` suy từ khối + biên + grudge.
 
+## HUD contract v1.1 (Claude, 2026-09-26)
+
+- Lượt người chơi: `ctrl.prepare` → `Engine.preparePlayerTurn` **một lần** (envelope trong `ctrl.pendingTurn`, không ghi `game.state`) → thẻ sứ giả cho từng `pendingReactions` (CHẤP NHẬN / TỪ CHỐI, không tốn lệnh) → `answerReaction` cùng envelope → `resolvePrepared` → `projectTurnObservation` → `GameController.presentationOf`.
+- Người chơi chỉ thấy observation: cảnh kết quả lệnh mình + tối đa một phản ứng nhắm vào mình, còn lại vào nhật ký; một thẻ "Thiên hạ" từ `publicNews` (trống → "Không có tin đáng tin mới."). Câu chữ từ `textKey` + nhãn; không `ev.text`, không đếm việc giấu. `entry.events` giữ để replay/debug. `?demo=1` vẫn diễn RuntimeEvent.
+- Thẻ đánh theo `provinceIntel` (band châu, tướng giữ thành hoặc "?", lũy hoặc "?", tin hiện tại / cũ lượt N / chưa có). Đích từ `legal.attackTargets`. Bảo hộ khách từ `self.guestProtection`. Minh ước từ `world.pacts`. Áp lực biên giới từ `diplomaticPressure`. Sửa lỗi nhãn chiêu hàng (`ownerLabel`). Giải thích Quân/Lương/Dân tâm/Uy khi rê chuột (luật hiện tại, không A.5).
+
 ## HUD perception (Claude, 2026-09-26)
 
 `game.html` nạp `engine.js` → `attach-219.js` → `perception.js` (tự gắn vào `window.EmperorsEngine`, không `attach` lại) và `world.intelRules` trước `createGame`. AI mọi phe qua `fillDecisions` → DecisionContext.
@@ -27,7 +31,7 @@
 - UI đọc `ctrl.view()`; phe khác chỉ từ `projectPerception(game, playerFid)`: `publicLabel` (+ `claimedIdentity` nếu có), còn/mất, số châu, band quân (Yếu/Vừa/Mạnh/Rất mạnh/Chưa rõ), lượt thấy cuối. Phe mình: số thật.
 - Bỏ khỏi mô hình UI: xếp hạng `Engine.ranking` (quân/Uy thật, tên thật), ước lực đánh (`defenders`, `ratio`, `commit`), quân thật của đích mưu, tên persona của đế ẩn, `seatOf` đọc thủ phủ địch từ state.
 - Bảng phe xếp theo số châu rồi thứ tự cố định. Người chơi chọn được nơi xuất quân (`from`) khi có nhiều châu kề đích.
-- RuntimeEvent không lọc: phần diễn và nhật ký vẫn là sự thật spectator (tên thật trong lời event).
+- (Đã thay bởi contract v1.1 ở trên: phần diễn và nhật ký của người chơi giờ chỉ từ TurnObservation; RuntimeEvent thô chỉ còn ở `?demo=1`.)
 
 ## Round A (engine)
 
@@ -41,6 +45,8 @@ Node và server cùng compose: `engine.js` → `attach-219.js` → `perception.j
 
 ## Chặn còn
 
-1. HUD chưa vẽ observation / accept-reject / `self.guestProtection` / province card. Pact tới người chơi trên HUD cũ vẫn roll vì chưa gọi `preparePlayerTurn`.
-2. Menu đánh của HUD vẫn có thể đi từ frontier, không từ `legal.attackTargets`. Referee từ chối đánh trái đình chiến khách; UI có thể vẫn hiện mục tiêu đó cho đến khi Claude đọc legal.
-3. A.5 / Officers chưa. Context nội bộ còn id đế ẩn — không gửi LLM cho đến khi có lớp remap.
+1. Observation `own_event` / `target_event` không có `code` (lương cạn, dời thủ phủ, hủy binh vì minh, bội minh, đường tiến quân bị cắt, đón Hiến Đế) → UI chỉ viết "Biến cố ở …" / "Biến cố trong nước.". Tối thiểu: engine gắn `code` cho các event này và observation giữ `code`.
+2. Event `stratagem` không mang `sub` → kế của mình lấy từ chính lệnh mình; kế địch nhắm vào ta chỉ ghi "dùng kế với ta". Tối thiểu: `resolveStratagem` đặt `sub`, `normalizeEvent` chép `sub`.
+3. `observePact` bỏ `code` → sứ giả bị từ chối vì đủ minh (`pact_full`) hiện giống bị ta từ chối ("Minh ước … đề nghị không thành."). Tối thiểu: giữ `code` trong visible pact.
+4. `tests/e2e/game-loop.mjs` đã đổi sang observation (spy `preparePlayerTurn`, tự từ chối sứ giả) nhưng chưa chạy lại đủ.
+5. A.5 / Officers chưa. Context nội bộ còn id đế ẩn — không gửi LLM cho đến khi có lớp remap.

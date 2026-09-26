@@ -137,3 +137,31 @@ test('every event of real engine turns plans without touching the game', () => {
   }
   assert.ok(kinds.has('attack') && kinds.has('gate'), [...kinds].join());
 });
+
+// Playable path (gameplay contract v1.1): the presenter plays safe display items built from the TurnObservation. They
+// bring their own labels and text; the plan must never ask names.name() or read anything the item does not carry.
+test('safe playable items: labels only, no names lookup, no origin the observation did not give', () => {
+  const rt = mockRuntime(), asked = [];
+  const P = EP.create(rt, { world, characters, names: { name: (id) => { asked.push(id); return Names.name(id); } } });
+  asked.length = 0; // factions are named once at creation, for spectator cards
+  const own = { safe: true, kind: 'attack', shot: 'march', from: 'bing', to: 'ji', fid: 'li_shimin', win: true, title: 'Tấn công', text: 'Lý Thế Dân đánh Nghiệp Thành — thắng.', tone: 'good', kicker: 'Lý Thế Dân',
+    badge: { win: true, text: 'Thắng' }, actors: [{ id: 'actor:a', name: 'Lý Thế Dân', fid: 'li_shimin', role: 'Bên đánh', faction: '' }, { id: 'actor:d', name: 'Tào Tháo', fid: 'cao_cao', role: 'Bên thủ', faction: '', glyph: '' }] };
+  const hit = { safe: true, kind: 'attack', shot: 'focus', to: 'bing', prov: 'bing', view: 'city', dust: true, fid: 'qin_shihuang', title: 'Bị tấn công', text: 'Quân Chúa Lũng Tây đánh Tấn Dương — giữ vững.', tone: 'good', kicker: 'Chúa Lũng Tây',
+    badge: { win: true, text: 'Giữ vững' }, actors: [{ id: 'actor:a', name: 'Chúa Lũng Tây', fid: 'qin_shihuang', role: 'Bên đánh', faction: '', glyph: '' }] };
+  for (const it of [own, hit]) {
+    const pl = P.plan(deepFreeze(JSON.parse(JSON.stringify(it)))), frames = sample(P, pl);
+    assert.equal(P.frameAt(pl, pl.duration).view.name, 'campaign');
+    const cards = frames.flatMap((f) => f.hud), texts = cards.map((h) => [h.title, h.text, h.kicker, ...(h.actors || []).map((a) => a.name)].join(' ')).join('\n');
+    assert.ok(cards.some((h) => h.type === 'event' && h.text === it.text && h.kicker === it.kicker));
+    assert.ok(!/Tần Thủy Hoàng|Doanh Chính|Hạ Hầu|Trương Liêu|Tào Phi/.test(texts), 'no character or true name the item did not carry');
+    assert.ok(cards.filter((h) => h.type === 'badge').every((h) => h.text === it.badge.text));
+  }
+  assert.deepEqual(asked, [], 'names.name() never called for a safe item');
+  const hitPlan = P.plan(hit);
+  assert.equal(hitPlan.meta.place, 'bing', 'an attack on the player looks at its own city');
+  assert.ok(!hitPlan.cams.some((c) => [c.a, c.b].some((v) => typeof v !== 'function' && /longxi/.test(v.name))), 'never at the enemy origin');
+  // the spectator path is unchanged: a RuntimeEvent still shows its own text and named characters
+  const ev = fixtures.events.find((e) => e.kind === 'attack'), pl = P.plan(ev);
+  assert.ok(sample(P, pl).some((f) => f.hud.some((h) => h.type === 'event' && h.text === ev.text)));
+  assert.ok(asked.length > 0, 'spectator cards name characters');
+});

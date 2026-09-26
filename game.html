@@ -25,10 +25,11 @@
 <script src="src/world/player-ui.js"></script>
 <script src="src/world/demo.js"></script>
 <script>
-// Tam Quốc Loạn Nhập, autumn 219. Engine → RuntimeEvent v1 → EventPresenter → WorldRuntime + HUD (docs/architecture.md).
-//   default   play: choose one of the four emperors, one order a season, the real engine resolves every turn
+// Tam Quốc Loạn Nhập, autumn 219 (docs/architecture.md).
+//   default   play: choose one of the four emperors, one order a season, the real engine resolves every turn; the player
+//             sees what the engine lets them know: DecisionContext → menus, TurnObservation → shots, log, world news
 //             (&seed=N fixes the game; &speed=N the playback speed)
-//   ?demo=1   RuntimeEvent showcase on fixtures or one server turn (src/world/demo.js)
+//   ?demo=1   spectator: RuntimeEvent truth on fixtures or one server turn (src/world/demo.js)
 (async () => {
   const params = new URLSearchParams(location.search);
   const DEMO = params.has('demo');
@@ -53,6 +54,7 @@
   // the player UI reads only ctrl.view(): own realm exact, other factions through Engine.projectPerception
   const ui = DEMO ? null : PlayerUI.create({
     meta: world.meta, roster: ctrl.roster(), colors, actions: Engine.ACTIONS, bandText: GameController.BAND_TEXT,
+    pressureText: GameController.PRESSURE_TEXT, statHelp: GameController.STAT_HELP, intelWords: GameController.intelWords,
     makeDecision: ctrl.decision, validate: ctrl.validate,
     onChoose: (fid) => loop.choose(fid), onSubmit: (d) => loop.submit(d).catch(fail), onSkip: () => presenter.skip(),
     onMark: (m) => { // a faction target lights its provinces on the public map
@@ -76,7 +78,7 @@
   idle();
   if (DEMO) return WorldDemo.run({ rt, presenter, hud, world, gates, fixtures, params, idle, titleOf });
 
-  loop = GameController.bind(ctrl, { rt, presenter, hud, ui, titleOf });
+  loop = GameController.bind(ctrl, { rt, presenter, hud, ui });
   window.__game.loop = loop;
   ui.ready();
   window.__game.ready = true;

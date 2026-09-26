@@ -58,11 +58,12 @@
         cardEl.classList.toggle('on', !!card);
         if (card) {
           cardEl.style.setProperty('--c', card.fid ? col(card.fid) : '#b8a27a');
-          q('.card .k').textContent = card.fid ? (o.names ? o.names.name(card.fid) : card.fid) : 'Thiên hạ';
+          // a safe (playable) card brings its own public kicker; a spectator card is named after the faction leader
+          q('.card .k').textContent = card.kicker != null ? card.kicker : card.fid ? (o.names ? o.names.name(card.fid) : card.fid) : 'Thiên hạ';
           q('.card .t').textContent = card.title; q('.card .x').textContent = card.text || '';
           q('.card .cl').innerHTML = (card.clauses || []).map((c) => '<span>' + esc(CLAUSE[c] || c) + '</span>').join('');
         }
-        actorsEl.innerHTML = act ? act.actors.map((a) => `<div class="actor" style="--c:${col(a.fid)}"><div class="g">${esc(glyphs[a.fid] || '士')}</div><div><div class="n">${esc(a.name)}</div><div class="f">${esc([a.role, a.faction].filter(Boolean).join(' · '))}</div></div></div>`).join('') : '';
+        actorsEl.innerHTML = act ? act.actors.map((a) => `<div class="actor" style="--c:${col(a.fid)}"><div class="g">${esc(a.glyph != null ? a.glyph : glyphs[a.fid] || '士')}</div><div><div class="n">${esc(a.name)}</div><div class="f">${esc([a.role, a.faction].filter(Boolean).join(' · '))}</div></div></div>`).join('') : '';
         badgeEl.className = 'badge' + (badge ? ' on ' + (badge.win ? 'win' : 'loss') : '');
         badgeEl.textContent = badge ? badge.text : '';
       }

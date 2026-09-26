@@ -1,5 +1,6 @@
-// Browser QA for the playable loop (game.html): choose an emperor → order → Engine.fillDecisions → Engine.resolveTurn →
-// RuntimeEvent v1 queue → EventPresenter → state sync → next turn, over several turns in one page, then to game over.
+// Browser QA for the playable loop (game.html), gameplay contract v1.1: choose an emperor → order → Engine.preparePlayerTurn
+// (once) → envoys answered on the same envelope → Engine.resolvePrepared → TurnObservation → safe shots + world news →
+// state sync → next turn, over several turns in one page, then to game over.
 // Needs `npm start` running. Screenshots and a JSON report: test-results/game-*.
 // Local: PUPPETEER_EXECUTABLE_PATH=/path/to/chromium xvfb-run -a node tests/e2e/game-loop.mjs
 import puppeteer from 'puppeteer';
@@ -21,6 +22,7 @@ const browser = await puppeteer.launch({
 const report = { turns: [], memory: [], checks: [], errors: [] };
 const check = (ok, what, detail) => { report.checks.push({ ok: !!ok, what, detail }); console.log((ok ? 'ok   ' : 'FAIL ') + what + (detail !== undefined ? ' ' + JSON.stringify(detail) : '')); };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+let reactions = 0;
 try {
   const page = await browser.newPage();
   await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
@@ -35,6 +37,17 @@ try {
   page.on('console', (m) => { if (m.type() === 'error') { report.errors.push(m.text()); console.error('CONSOLE_ERROR', m.text()); } });
   const shot = (name) => page.screenshot({ path: path.join(OUT, `game-${name}.png`) });
   const click = async (sel) => { await page.waitForSelector(sel, { visible: true, timeout: 60000 }); await page.click(sel); };
+  // wait for the turn in play to finish, answering any envoy card (reject) on the way; `until` ends the wait earlier
+  const finishTurn = async (until = () => !window.__game.loop.playing, timeout = 1500000) => {
+    const t0 = Date.now();
+    for (;;) {
+      const s = await page.evaluate((u) => ({ done: eval(u)(), react: !document.querySelector('.pui .react').classList.contains('hide') }), until.toString());
+      if (s.react) { reactions++; await page.click('.pui .react [data-react=reject]'); continue; }
+      if (s.done) return;
+      if (Date.now() - t0 > timeout) throw new Error('turn did not finish');
+      await sleep(300);
+    }
+  };
   // GPU memory: buffers of every mesh in the scene (K.stats), and what three.js still holds on the GPU
   const memory = async (label) => {
     const m = await page.evaluate(() => { const s = window.__game.measure(), i = window.__game.rt.renderer.info.memory; return { bufferMB: s.bufferMB, triangles: s.triangles, calls: s.calls, geometries: i.geometries, textures: i.textures }; });
@@ -85,7 +98,7 @@ try {
     const choice = await page.evaluate((action) => {
       const op = window.__game.ctrl.options();
       const rank = { weak: 0, unknown: 1, medium: 2, strong: 3, very_strong: 4 }; // perceived troop bands only
-      if (action === 'attack') { const t = op.attack.slice().sort((a, b) => rank[a.troopBand] - rank[b.troopBand])[0]; return { target: t.pid, betray: t.pact }; }
+      if (action === 'attack') { const t = op.attack.slice().sort((a, b) => rank[a.intel.troopBand] - rank[b.intel.troopBand])[0]; return { target: t.pid, betray: t.pact }; }
       if (action === 'diplomacy') return op.diplomacy.annex.length ? { sub: 'annex', target: op.diplomacy.annex[0].pid } : { sub: 'pact', target: (op.diplomacy.pact.find((x) => !x.full) || op.diplomacy.pact[0]).fid };
       if (action === 'stratagem') return { sub: 'burn', target: op.stratagem.targets.slice().sort((a, b) => rank[b.troopBand] - rank[a.troopBand])[0].fid };
       if (action === 'fortify') return { target: op.fortify[0].pid };
@@ -98,12 +111,12 @@ try {
     const ready = await page.$eval('.pui .orders [data-role=submit]', (b) => !b.disabled);
     check(ready, `turn ${k + 1}: ${action} order complete`, choice);
     if (k === 0) await shot('order-attack');
-    // spies: the loop must go through the engine's own entry points
+    // spies: the loop must go through the engine's own entry points, preparing the turn exactly once
     await page.evaluate(() => {
-      const E = window.__game.Engine; window.__spy = { fill: [], resolve: 0 };
-      if (!E.__orig) E.__orig = { fillDecisions: E.fillDecisions, resolveTurn: E.resolveTurn };
-      E.fillDecisions = function (g, fid, d) { const r = E.__orig.fillDecisions.apply(this, arguments); window.__spy.fill.push({ fid, d: d && { action: d.action, sub: d.sub, target: d.target, betray: d.betray }, out: r.map((x) => ({ fid: x.fid, action: x.action })) }); return r; };
-      E.resolveTurn = function () { window.__spy.resolve++; return E.__orig.resolveTurn.apply(this, arguments); };
+      const E = window.__game.Engine; window.__spy = { fill: [], prepare: 0, resolve: 0 };
+      if (!E.__orig) E.__orig = { preparePlayerTurn: E.preparePlayerTurn, resolvePrepared: E.resolvePrepared };
+      E.preparePlayerTurn = function (g, fid, d) { window.__spy.prepare++; const r = E.__orig.preparePlayerTurn.apply(this, arguments); window.__spy.fill.push({ fid, d: d && { action: d.action, sub: d.sub, target: d.target, betray: d.betray }, out: r.decisions.map((x) => ({ fid: x.fid, action: x.action })) }); return r; };
+      E.resolvePrepared = function () { window.__spy.resolve++; return E.__orig.resolvePrepared.apply(this, arguments); };
     });
     if (k === 2) await page.evaluate(() => { window.__game.presenter.speed = 1; }); // slow enough to skip mid-turn
     await click('.pui .orders [data-role=submit]');
@@ -112,20 +125,26 @@ try {
     check(locked.orders, `turn ${k + 1}: orders locked during playback`);
     if (k === 0) { await sleep(2500); await shot('playing'); }
     if (k === 2) { // the viewer skips the rest of this turn once its first shot is on screen
-      await page.waitForFunction(() => { const h = window.__game.ctrl.history; return h.length && h[h.length - 1].played.length >= 1; }, { timeout: 600000, polling: 200 });
-      await sleep(500); await shot('skip'); await click('.pui .bar [data-role=skip]');
+      await finishTurn(() => { const h = window.__game.ctrl.history; return !window.__game.loop.playing || (h.length && h[h.length - 1].played.length >= 1); }, 600000);
+      if (await page.evaluate(() => window.__game.loop.playing)) { await sleep(500); await shot('skip'); await click('.pui .bar [data-role=skip]'); }
       await page.evaluate(() => { window.__game.presenter.speed = 64; });
     }
-    await page.waitForFunction(() => !window.__game.loop.playing, { timeout: 1500000, polling: 1000 });
+    await finishTurn();
     const r = await page.evaluate((prevTurn) => {
       const G = window.__game, c = G.ctrl, e = c.history[c.history.length - 1];
       const stateOwners = {}; for (const [pid, p] of Object.entries(c.game.state.provinces)) if (p.owner !== 'neutral') stateOwners[pid] = p.owner;
-      const seen = e.played.concat(e.skipped);
+      const seen = e.played.concat(e.skipped), S = e.presentation.shots;
+      // every line of the event log is the turn header or a presentation item: nothing from the raw events
+      const said = new Set(e.presentation.items.map((it) => it.title + ': ' + it.text));
+      const log = [...document.querySelectorAll('.hud .log div')].map((d) => d.textContent);
+      const news = [...document.querySelectorAll('.pui .news li')].map((d) => d.textContent);
       return {
         spy: window.__spy, player: c.player, turn: c.game.state.turn, prevTurn, entryTurn: e.turn,
         n: e.events.length, v1: e.events.every((ev) => ev.v === 1 && ev.defender === undefined), kinds: e.events.map((ev) => ev.kind),
-        once: seen.length === e.events.length && e.played.every((ev, i) => ev === e.events[i]) && e.skipped.every((ev, i) => ev === e.events[e.played.length + i]),
+        shots: S.length, once: seen.length === S.length && e.played.every((it, i) => it === S[i]) && e.skipped.every((it, i) => it === S[e.played.length + i]),
         played: e.played.length, skipped: e.skipped.length,
+        logSafe: log.every((t) => said.has(t) || /^Lượt \d+ · /.test(t)) && !log.some((t) => e.events.some((ev) => ev.text && t.includes(ev.text))),
+        newsSafe: JSON.stringify(news) === JSON.stringify(e.presentation.news ? e.presentation.news.items.map((x) => x.text) : []),
         unmutated: JSON.stringify(e.events) === e.frozen,
         owners: JSON.stringify(G.rt.owners()) === JSON.stringify(stateOwners),
         view: G.rt.view().name, busy: c.busy,
@@ -137,18 +156,19 @@ try {
     }, prevTurn);
     report.turns.push(r);
     const T = `turn ${k + 1} (${action})`;
-    check(r.spy.fill.length === 1 && r.spy.fill[0].fid === PLAYER && r.spy.fill[0].d.action === action, `${T}: Engine.fillDecisions(game, player, order)`, r.spy.fill[0] && r.spy.fill[0].d);
+    check(r.spy.prepare === 1 && r.spy.fill[0].fid === PLAYER && r.spy.fill[0].d.action === action, `${T}: Engine.preparePlayerTurn(game, player, order) exactly once`, r.spy.fill[0] && r.spy.fill[0].d);
     check(r.spy.fill[0].out.length > 1 && r.spy.fill[0].out.filter((x) => x.fid !== PLAYER).every((x) => x.action), `${T}: AI factions got decisions`, r.spy.fill[0].out);
-    check(r.spy.resolve === 1, `${T}: Engine.resolveTurn once`, r.spy.resolve);
-    check(r.v1 && r.n > 0, `${T}: RuntimeEvent v1 events`, r.kinds);
-    check(r.once, `${T}: each event played once, in order`, { played: r.played, skipped: r.skipped, n: r.n });
+    check(r.spy.resolve === 1, `${T}: Engine.resolvePrepared once`, r.spy.resolve);
+    check(r.v1 && r.n > 0, `${T}: RuntimeEvent v1 kept for replay`, r.kinds);
+    check(r.shots <= 2 && r.once, `${T}: observable shots played once, in order (own result + at most one reaction)`, { played: r.played, skipped: r.skipped, shots: r.shots });
+    check(r.logSafe && r.newsSafe, `${T}: log and world news come from the observation only`);
     check(r.unmutated, `${T}: events not mutated by the presentation`);
     check(r.owners, `${T}: world owners = engine state`);
     check(r.view === 'campaign', `${T}: back to the campaign camera`, r.view);
     check(r.turn === prevTurn + 1 && r.entryTurn === prevTurn && !r.busy, `${T}: engine turn advanced`, { before: prevTurn, after: r.turn });
     check(r.statusTurn.includes(`LƯỢT ${r.turn}/`), `${T}: HUD shows the new turn`, r.statusTurn);
     check(r.unlocked, `${T}: orders open for the next turn`);
-    if (k === 2) check(r.skipped > 0, `${T}: skip logs the rest without shots`, { played: r.played, skipped: r.skipped });
+    if (k === 2) check(r.played + r.skipped === r.shots, `${T}: skip ends the observable playback`, { played: r.played, skipped: r.skipped });
     prevTurn = r.turn;
     await memory('after turn ' + (k + 1));
     await shot(`turn${k + 1}`);
@@ -159,7 +179,7 @@ try {
   // UI, to see the game-over screen and that no more orders are taken.
   const ff = await page.evaluate(() => {
     const G = window.__game, c = G.ctrl, max = c.game.def.rules.maxTurns;
-    while (!c.game.state.over && c.game.state.turn < max) { c.resolve(c.game.state.factions[c.player].alive ? c.decision('internal') : null); c.finish(); }
+    while (!c.game.state.over && c.game.state.turn < max) { c.resolve(c.game.state.factions[c.player].alive ? c.decision('internal') : null, 'reject'); c.finish(); }
     G.loop.sync();
     return { turn: c.game.state.turn, over: !!c.game.state.over };
   });
@@ -167,7 +187,7 @@ try {
     const alive = await page.evaluate(() => window.__game.ctrl.status().player.alive);
     if (alive) { await click('.pui .orders [data-action=internal]'); await click('.pui .orders [data-role=submit]'); }
     else await click('.pui .orders [data-role=submit]');
-    await page.waitForFunction(() => window.__game.ctrl.history.length && !window.__game.loop.playing, { timeout: 1500000, polling: 1000 });
+    await finishTurn();
   }
   const over = await page.evaluate(() => {
     const G = window.__game, s = G.ctrl.status();
@@ -208,6 +228,7 @@ try {
   report.checks.push({ ok: false, what: 'run', detail: String(e.stack || e) });
   console.error(e);
 } finally {
+  report.reactions = reactions;
   fs.writeFileSync(path.join(OUT, 'game-loop.json'), JSON.stringify(report, null, 1));
   await browser.close();
 }

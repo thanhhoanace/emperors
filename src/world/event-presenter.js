@@ -7,6 +7,11 @@
 //   const plan = P.plan(ev);            // { ev, duration, cams[], marks[], hud[] }
 //   P.show(plan, t);                    // put the frame at time t (seconds) on screen
 //   await P.play(ev, { speed: 2 });     // real time, 1×/2×/4×; resolves back on the campaign view
+//
+// Two inputs, two policies. Demo/spectator: the RuntimeEvent itself (full truth: names from characters.json, raw text).
+// Playable: a display item from GameController.presentationOf(TurnObservation), marked `safe: true` — it carries its own
+// title, text, labels and badge, and the plan uses nothing else (no names.name(), no raw text, no hidden actor, no
+// origin the observation did not give).
 (function (root) {
   const EP = {};
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
@@ -74,14 +79,19 @@
 
     // ---------------------------------------------------------------- attack (docs/product/march.md)
     // origin → attacker → march → destination → defender → result (from ev.win) → back to the campaign
-    const planAttack = (ev) => {
+    // look: what the cards say. Omitted for a RuntimeEvent (spectator: names and raw text); given for a safe item.
+    const planAttack = (ev, look) => {
       const pl = newPlan(ev), camp = rt.viewCampaign();
       const path = rt.pathBetween(ev.from, ev.to), len = path.length > 1 ? path.reduce((a, p, k) => (k ? a + Math.hypot(p[0] - path[k - 1][0], p[2] - path[k - 1][2]) : 0), 0) : 0;
       const at = (u) => rt.pointAlong(path, u);
       const U0 = 0.06, U1 = 0.86; // the army leaves the origin's walls, and halts before the target's
       const seatFrom = rt.seatOf(ev.from), seatTo = rt.seatOf(ev.to), p1 = at(U1);
-      const attacker = actorCard(ev.actorChar, ev.fid, 'Bên đánh'), defender = actorCard(ev.defenderChar, ev.defenderFid === 'neutral' ? null : ev.defenderFid, 'Bên thủ');
-      const title = KIND_TITLE.attack + ' · ' + (provName[ev.from] || {}).city + ' → ' + (provName[ev.to] || {}).city;
+      const route = ' · ' + (provName[ev.from] || {}).city + ' → ' + (provName[ev.to] || {}).city;
+      const L = look || {
+        attacker: actorCard(ev.actorChar, ev.fid, 'Bên đánh'), defender: actorCard(ev.defenderChar, ev.defenderFid === 'neutral' ? null : ev.defenderFid, 'Bên thủ'),
+        title: KIND_TITLE.attack + route, text: ev.text, tone: ev.tone, win: !!ev.win, badge: { win: !!ev.win, text: ev.win ? 'Thắng' : 'Bại' },
+      };
+      const attacker = L.attacker, defender = L.defender, title = L.title, win = !!L.win;
 
       // 1. origin: the attacker's province, the general and his army at the gates
       const vFrom = rt.viewProvince(ev.from, { d: 60, az: azFrom(seatFrom, seatTo, Math.PI + 0.5), el: 0.7, auto: true });
@@ -109,19 +119,19 @@
         at: (t) => {
           if (t < tMarch) return { p: at(U0), dir: dA };
           if (t < tArrive) { const u = U0 + (U1 - U0) * ((t - tMarch) / dMarch); return { p: at(u), dir: dMarchAt(u) }; }
-          if (t < tResult || ev.win) return { p: p1, dir: dirOf(p1, cityT) };
+          if (t < tResult || win) return { p: p1, dir: dirOf(p1, cityT) };
           const e = clamp((t - tResult) / 2.4, 0, 1), u = U1 - Math.min(0.1, 4 / Math.max(1, len)) * smooth(e); // falls back a few units along the road, still in frame
           return { p: at(u), dir: dMarchAt(u).map((x) => -x) };
         } });
-      mark(pl, { id: 'defender', kind: 'general', fid: defender.fid, t0: tArrive + 0.4, t1: ev.win ? tResult + 0.6 : tBack + 0.4, at: () => ({ p: defPt, dir: dirOf(defPt, p1) }) });
+      mark(pl, { id: 'defender', kind: 'general', fid: defender.fid, t0: tArrive + 0.4, t1: win ? tResult + 0.6 : tBack + 0.4, at: () => ({ p: defPt, dir: dirOf(defPt, p1) }) });
       const battlePt = [(p1[0] + defPt[0]) / 2, 0, (p1[2] + defPt[2]) / 2];
       mark(pl, { id: 'dust', kind: 'dust', t0: tBattle, t1: tResult + 0.8, at: () => ({ p: battlePt, dir: [1, 0] }) });
-      if (ev.win) mark(pl, { id: 'standard', kind: 'standard', fid: ev.fid, t0: tResult + 0.5, t1: tBack + 1.2, at: () => ({ p: rt.palaceOf(ev.to), dir: [1, 0], fixed: true }) });
+      if (win) mark(pl, { id: 'standard', kind: 'standard', fid: ev.fid, t0: tResult + 0.5, t1: tBack + 1.2, at: () => ({ p: rt.palaceOf(ev.to), dir: [1, 0], fixed: true }) });
 
-      card(pl, 0, tBack, { type: 'event', title, text: ev.text, tone: ev.tone, fid: ev.fid });
+      card(pl, 0, tBack, { type: 'event', title, text: L.text, tone: L.tone, fid: ev.fid, kicker: L.kicker });
       card(pl, tOrigin + 1.0, tArrive, { type: 'actors', actors: [attacker] });
       card(pl, tArrive, tBack, { type: 'actors', actors: [attacker, defender] });
-      card(pl, tResult, tBack, { type: 'badge', win: !!ev.win, text: ev.win ? 'Thắng' : 'Bại', fid: ev.fid });
+      card(pl, tResult, tBack, { type: 'badge', win: L.badge.win, text: L.badge.text, fid: ev.fid });
       card(pl, tOrigin + 1.2, tBack, { type: 'label', text: (provName[ev.from] || {}).city, at: seatFrom });
       card(pl, tMarch, tBack, { type: 'label', text: (provName[ev.to] || {}).city, at: seatTo });
       pl.meta = { path, from: ev.from, to: ev.to, arrive: tArrive, result: tResult, back: tBack, marchEnd: p1 };
@@ -184,7 +194,28 @@
       return pl;
     };
 
-    P.plan = (ev) => (ev.kind === 'attack' && ev.from && ev.to ? planAttack(ev) : ev.kind === 'gate' ? planGate(ev) : planGeneric(ev));
+    // ---------------------------------------------------------------- playable: a safe display item (TurnObservation)
+    // A march only when the observation gave both ends (the player's own attack); otherwise the camera looks at the
+    // place the item names (an attack on the player: its own city, never the enemy's origin). Cards carry the item's
+    // labels only.
+    const planSafe = (it) => {
+      if (it.shot === 'march' && it.from && it.to && provName[it.from] && provName[it.to]) {
+        const [a, d] = it.actors || [];
+        return planAttack(it, { attacker: a, defender: d || { id: 'actor:def', name: '', fid: null, role: 'Bên thủ' }, title: it.title + ' · ' + provName[it.from].city + ' → ' + provName[it.to].city, text: it.text, tone: it.tone, kicker: it.kicker, win: it.win, badge: it.badge || { win: !!it.win, text: it.win ? 'Thắng' : 'Bại' } });
+      }
+      const pl = newPlan(it), camp = rt.viewCampaign(), pid = it.prov && provName[it.prov] ? it.prov : null;
+      const v = pid ? (it.view === 'city' ? rt.viewCity(pid) : rt.viewProvince(pid)) : camp;
+      move(pl, camp, v, pid ? 2.0 : 0.6); const tShot = pl.t; hold(pl, v, pid ? 3.2 : 2.4); const tBack = pl.t; toCampaign(pl, pid ? drifted(v, 0.06) : camp, pid ? 2.2 : 0.4);
+      pl.duration = pl.t;
+      card(pl, 0, tBack, { type: 'event', title: it.title + (pid ? ' · ' + provName[pid].city : ''), text: it.text, tone: it.tone, fid: it.fid, kicker: it.kicker });
+      if (it.actors && it.actors.length) card(pl, Math.max(0, tShot - 0.8), tBack, { type: 'actors', actors: it.actors });
+      if (it.badge) card(pl, tShot + 0.6, tBack, { type: 'badge', win: it.badge.win, text: it.badge.text, fid: it.fid });
+      if (it.dust && pid) { const s = rt.seatOf(pid), r = (rt.MC && rt.MC[pid] && rt.MC[pid].r) || 3, p = [s[0] + r * 1.2, 0, s[2] + r * 1.2]; mark(pl, { id: 'dust', kind: 'dust', t0: Math.max(0, tShot - 0.4), t1: tBack, at: () => ({ p, dir: [1, 0] }) }); }
+      pl.meta = { place: pid, shot: tShot, back: tBack };
+      return pl;
+    };
+
+    P.plan = (ev) => (ev.safe ? planSafe(ev) : ev.kind === 'attack' && ev.from && ev.to ? planAttack(ev) : ev.kind === 'gate' ? planGate(ev) : planGeneric(ev));
 
     // ---------------------------------------------------------------- one frame of a plan (pure)
     P.frameAt = (pl, t) => {
@@ -242,7 +273,8 @@
       };
       requestAnimationFrame(step);
     });
-    // the queue of one turn, strictly in order, each event once; onSkip gets the events left when the viewer skips
+    // the queue of one turn (RuntimeEvents in the demo, safe items in play), strictly in order, each once; onSkip gets the
+    // items left when the viewer skips
     P.playAll = async (events, op = {}) => {
       skipping = false;
       for (const ev of events) {
