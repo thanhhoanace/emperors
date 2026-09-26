@@ -1,6 +1,7 @@
 /* Perception layer: truth → DecisionContext. Attach onto the UMD engine.
  * projectPerception is pure. Observations update once per turn, before any decision.
  * DecisionContext has no RNG seed and no bandValues.
+ * It is the internal MOCK/UI context. Faction ids inside it are not an LLM-safe projection.
  */
 'use strict';
 
@@ -304,7 +305,7 @@ function pactCountOf(g, fid) {
   return Object.keys(f.pacts || {}).filter((o) => f.pacts[o] >= g.state.turn).length;
 }
 
-function pendingReactions(g, playerFid, decisions) {
+function listPactOffers(g, playerFid, decisions) {
   const turns = g.def.rules.pact.turns;
   const max = g.def.rules.pact.max;
   const out = [];
@@ -316,7 +317,7 @@ function pendingReactions(g, playerFid, decisions) {
     const to = g.state.factions[playerFid];
     if (!from || !to || !from.alive || !to.alive) continue;
     if (from.pacts && from.pacts[playerFid] >= g.state.turn) continue;
-    if (pactCountOf(g, d.fid) >= max || pactCountOf(g, playerFid) >= max) continue;
+    if (pactCountOf(g, d.fid) >= max) continue;
     const id = reactionId(g.state.turn, d.fid, playerFid);
     if (seen.has(id)) continue;
     seen.add(id);
@@ -326,17 +327,65 @@ function pendingReactions(g, playerFid, decisions) {
   return out;
 }
 
-function answerReaction(g, playerFid, id, answer) {
-  if (answer !== 'accept' && answer !== 'reject') throw new Error('reaction answer must be accept or reject');
-  if (!g.state.reactionAnswers) g.state.reactionAnswers = {};
-  g.state.reactionAnswers[id] = { answer, playerFid };
-  return { id, answer, playerFid };
+function splitPlayerOffers(g, playerFid, decisions) {
+  const max = g.def.rules.pact.max;
+  const offers = listPactOffers(g, playerFid, decisions);
+  const slots = Math.max(0, max - pactCountOf(g, playerFid));
+  return {
+    pendingReactions: offers.slice(0, slots),
+    declinedOffers: offers.slice(slots).map((o) => Object.assign({ reason: 'pact_full' }, o)),
+  };
 }
 
-function answered(g, id) {
-  const rec = (g.state.reactionAnswers || {})[id];
-  const answer = rec && typeof rec === 'object' ? rec.answer : rec;
-  return answer === 'accept' || answer === 'reject';
+function pendingReactions(g, playerFid, decisions) {
+  return splitPlayerOffers(g, playerFid, decisions).pendingReactions;
+}
+
+function turnEnvelope(g, playerFid, decisions) {
+  const split = splitPlayerOffers(g, playerFid, decisions);
+  return {
+    v: 1,
+    playerFid,
+    turn: g.state.turn,
+    decisions: (decisions || []).slice(),
+    pendingReactions: split.pendingReactions,
+    declinedOffers: split.declinedOffers,
+    answers: {},
+  };
+}
+
+function isEnvelopeOffer(envelope, id) {
+  if (!envelope || typeof id !== 'string' || !Array.isArray(envelope.decisions)) return false;
+  for (const d of envelope.decisions) {
+    if (!d || d.fid === envelope.playerFid) continue;
+    if (d.action !== 'diplomacy' || d.target !== envelope.playerFid) continue;
+    if (d.sub && d.sub !== 'pact') continue;
+    if (reactionId(envelope.turn, d.fid, envelope.playerFid) === id) return true;
+  }
+  return false;
+}
+
+function answerReaction(envelope, id, answer) {
+  if (!envelope || envelope.v !== 1 || !Array.isArray(envelope.pendingReactions)) {
+    throw new Error('answerReaction requires a turn envelope from preparePlayerTurn');
+  }
+  if (answer !== 'accept' && answer !== 'reject') throw new Error('reaction answer must be accept or reject');
+  if ((envelope.declinedOffers || []).some((r) => r.id === id)) {
+    throw new Error('reaction id is not a pending offer on this turn');
+  }
+  if (!envelope.pendingReactions.some((r) => r.id === id) || !isEnvelopeOffer(envelope, id)) {
+    throw new Error('reaction id is not a pending offer on this turn');
+  }
+  if (!envelope.answers) envelope.answers = {};
+  envelope.answers[id] = answer;
+  return envelope;
+}
+
+function selfGuest(g, fid) {
+  const ids = g.def.emperorIds;
+  if (!ids || ids.indexOf(fid) === -1) return null;
+  if (!EngineRef.guestProtectionStatus) return null;
+  return EngineRef.guestProtectionStatus(g, fid);
 }
 
 function projectPerception(g, fid) {
@@ -391,10 +440,6 @@ function projectPerception(g, fid) {
     return !(EngineRef.guestProtected && EngineRef.guestProtected(g, fid, owner));
   });
   const R = g.def.rules;
-  const guestProtection = {};
-  if (EngineRef.guestProtectionStatus && g.def.emperorIds) {
-    for (const id of g.def.emperorIds) guestProtection[id] = EngineRef.guestProtectionStatus(g, id);
-  }
 
   return {
     v: 1,
@@ -409,8 +454,9 @@ function projectPerception(g, fid) {
       weights: Object.assign({}, F.weights), traits: Object.assign({}, F.traits),
       name: F.persona.name, short: F.persona.short, quotes: F.persona.quotes,
       homeCity: g.def.P[f.seat].city,
+      guestProtection: selfGuest(g, fid),
     },
-    world: { owners, neighbors, strategic, emperorAt: g.state.emperorAt, cities, publicLabels, guestProtection, pacts: activePactEdges(g) },
+    world: { owners, neighbors, strategic, emperorAt: g.state.emperorAt, cities, publicLabels, pacts: activePactEdges(g) },
     others,
     diplomaticPressure: diplomaticPressure(g, fid),
     legal: {
@@ -806,6 +852,7 @@ function attach(Engine) {
   Engine.ownersSnapshot = ownersSnapshot;
   Engine.projectTurnObservation = projectTurnObservation;
   Engine.pendingReactions = pendingReactions;
+  Engine.turnEnvelope = turnEnvelope;
   Engine.answerReaction = answerReaction;
   Engine.projectPerception = function (g, fid) { return projectPerception(g, fid); };
   Engine.collectContexts = collectContexts;
@@ -874,12 +921,6 @@ function attach(Engine) {
 
   const resolveTurn = Engine.resolveTurn;
   Engine.resolveTurn = function (g, decisions) {
-    if (g.state.playerFid) {
-      const pending = pendingReactions(g, g.state.playerFid, decisions).filter((r) => !answered(g, r.id));
-      if (pending.length) {
-        return { turn: g.state.turn, blocked: true, pendingReactions: pending, events: [], deltas: [], winner: g.state.winner || null };
-      }
-    }
     const result = resolveTurn(g, decisions);
     if (result && result.blocked) return result;
     const seenTurn = result && result.turn != null ? result.turn : g.state.turn;
@@ -891,6 +932,40 @@ function attach(Engine) {
     const ids = Engine.aliveIds(g);
     const contexts = collectContexts(g, ids);
     return commitDecisions(g, ids, contexts, playerFid, playerDecision);
+  };
+
+  Engine.preparePlayerTurn = function (g, playerFid, playerDecision) {
+    return turnEnvelope(g, playerFid, Engine.fillDecisions(g, playerFid, playerDecision));
+  };
+
+  Engine.resolvePrepared = function (g, envelope) {
+    if (!envelope || envelope.v !== 1 || !Array.isArray(envelope.decisions)) {
+      throw new Error('resolvePrepared requires a turn envelope');
+    }
+    if (envelope.turn !== g.state.turn) throw new Error('stale turn envelope');
+    if (!envelope.playerFid || !g.state.factions[envelope.playerFid]) {
+      throw new Error('turn envelope has no player faction');
+    }
+    const split = splitPlayerOffers(g, envelope.playerFid, envelope.decisions);
+    const answers = envelope.answers || {};
+    const pending = split.pendingReactions.filter((r) => answers[r.id] !== 'accept' && answers[r.id] !== 'reject');
+    if (pending.length) {
+      return { turn: g.state.turn, blocked: true, pendingReactions: pending, events: [], deltas: [], winner: g.state.winner || null };
+    }
+    const managed = {};
+    const kept = {};
+    for (const r of split.pendingReactions) {
+      managed[r.id] = true;
+      kept[r.id] = answers[r.id];
+    }
+    const declined = {};
+    for (const r of split.declinedOffers) declined[r.id] = r.reason || 'pact_full';
+    g._reaction = { playerFid: envelope.playerFid, answers: kept, managed, declined };
+    try {
+      return Engine.resolveTurn(g, envelope.decisions);
+    } finally {
+      delete g._reaction;
+    }
   };
 
   Engine.playTurn = function (g) {

@@ -173,8 +173,10 @@ Ba lớp:
 { active, remainingTurns, protectedFrom: [...], brokenAgainst: [...] }
 ```
 
-Không field `time_displaced`. Đây là chế độ pháp lý công khai.
-DecisionContext mang `world.guestProtection[emperorFid]` cùng hình đó.
+Không field `time_displaced`. Đây là chế độ pháp lý của **chính phe đó**, không phải danh sách đế.
+`Engine.guestProtectionStatus(game, fid)` là API nội bộ.
+DecisionContext chỉ có `self.guestProtection` của observer (null nếu phe không có chế độ này).
+Không `world.guestProtection`, không `emperorIds` / `warlordIds` trong context. Tam Quốc biết mục tiêu hợp lệ qua `legal.attackTargets`.
 
 ## D — Phản ứng minh ước tới người chơi
 
@@ -182,21 +184,27 @@ AI chọn ngoại giao → pact → người chơi: AI đã tiêu main action.
 Người chơi nhận reaction, không tiêu main action của mình.
 Engine không được roll thay người chơi.
 
-`state.playerFid` đánh dấu người chơi. Phiên chơi (Claude, khi đã có modal) phải ghi field này trước `resolveTurn`.
-`fillDecisions` không tự bật chặn — HUD hiện tại chưa trả lời reaction. Không có `playerFid` thì pact AI–AI và pact nhằm phe chưa đánh dấu vẫn roll như cũ. Có `playerFid` thì offer tới đúng phe đó không được roll.
-
-`Engine.pendingReactions(game, playerFid, decisions)` →
+Danh tính người chơi là ngữ cảnh lượt, không phải truth thế giới. UI không ghi `state.playerFid` hay `state.reactionAnswers`.
 
 ```
-[{ id, kind: "pact_offer", from, to, turns: 6 }]
+envelope = preparePlayerTurn(game, playerFid, playerDecision)
+         = { v, playerFid, turn, decisions, pendingReactions, declinedOffers, answers }
+answerReaction(envelope, id, "accept" | "reject")
+resolvePrepared(game, envelope)
 ```
 
-`id` = `pact:{turn}:{from}:{to}`, ổn định, sort theo id. Nhiều sứ một lượt thì nhiều id.
+`preparePlayerTurn` gọi `fillDecisions` đúng một lần. Modal chỉ đọc `envelope.pendingReactions`. Trả lời không sinh lại AI. `resolvePrepared` resolve đúng `envelope.decisions`.
 
-`Engine.answerReaction(game, playerFid, id, "accept" | "reject")` ghi `state.reactionAnswers`. Không tự resolve cả lượt.
+`turnEnvelope(game, playerFid, decisions)` tạo cùng phong bì khi quyết định đã có sẵn.
 
-`resolveTurn`: còn offer tới `playerFid` chưa trả lời → `{ blocked: true, pendingReactions, events: [], turn }` và **không** đổi state, không tăng lượt.
-Đã trả lời thì resolve bình thường.
+`answerReaction` chỉ nhận id đang nằm trong `pendingReactions` của đúng envelope và khớp một quyết định pact trong envelope đó. Id giả, id đã bị `pact_full`, hoặc envelope sai lượt thì ném lỗi / không đổi state.
+
+`resolvePrepared` tính lại pending và declined từ `envelope.decisions` cùng số slot pact hiện tại. Không tin một list pending đã bị sửa. Offer tới người chơi không roll. Còn offer chưa trả lời → `{ blocked: true, pendingReactions, events: [], turn }`, không tăng lượt.
+Envelope `turn` khác `game.state.turn` thì ném lỗi, không đổi truth.
+
+Sim / server không có người chơi vẫn `decideAll` + `resolveTurn`. Pact AI–AI vẫn roll.
+
+Nếu cùng lượt có nhiều offer và người chơi hết slot (`rules.pact.max` trừ pact đang sống): sort id, chỉ bấy nhiêu offer vào `pendingReactions`. Phần dư là `declinedOffers` với `reason: "pact_full"`, resolve thành event `code: "pact_full"`, không cho Accept.
 
 Accept: pact thường, `untilTurn = turn + rules.pact.turns` (data = 6), hai chiều, event `pact` `ok: true`.
 Reject: không pact, không phạt uy toàn cục, AI vẫn mất action vì lượt vẫn resolve. Event `pact` `ok: false`, `code: "rejected"`.

@@ -29,9 +29,10 @@ Sau khi `perception.js` đã attach:
   fid, turn,
   calendar: { year, season },
   self: { troops, grain, loyalty, prestige, seat, provinces[], pacts, last, grudge,
-          weights, traits, name, short, quotes, homeCity },
+          weights, traits, name, short, quotes, homeCity,
+          guestProtection: null | { active, remainingTurns, protectedFrom, brokenAgainst } },
   world: { owners, neighbors, strategic, emperorAt, cities, publicLabels,
-           guestProtection, pacts: [{ a, b, untilTurn, remainingTurns }] },
+           pacts: [{ a, b, untilTurn, remainingTurns }] },
   others: { [fid]: { publicLabel, claimedIdentity, alive, troopBand,
                      lastAction, lastSeenTurn, adjacent, provinces } },
   diplomaticPressure: { [fid]: "none" | "watch" | "high" },
@@ -97,3 +98,11 @@ Không copy `ev.text`. Spectator vẫn dùng `result.events`.
 `Engine.observeProvinces(g, turn?)`
 `Engine.projectTurnObservation(g, fid, turnResult, beforeSnapshot)`
 `Engine.ownersSnapshot(g)`
+`Engine.preparePlayerTurn(g, playerFid, playerDecision)` → envelope, không ghi `state.playerFid`
+`Engine.turnEnvelope(g, playerFid, decisions)` → cùng envelope khi quyết định đã có
+`Engine.answerReaction(envelope, id, "accept"|"reject")`
+`Engine.resolvePrepared(g, envelope)`
+
+## Không phải hộp cát LLM
+
+Context này là cho MOCK và UI. Khóa `qin_shihuang`, `li_shimin`, `zhu_yuanzhang`, `liu_che` trong `owners`, `provinceIntel.owner`, `world.pacts`, `diplomaticPressure`, `actorId` vẫn là id nội bộ — chính id đã lộ danh tính ẩn. `publicLabel` đủ cho người chơi. Đừng `JSON.stringify(projectPerception)` gửi LLM cho đến khi có lớp chiếu id công khai. Xem `agent-sandbox.md`.

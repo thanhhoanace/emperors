@@ -1,23 +1,27 @@
 # Hộp cát agent trong game
 
 > Hợp đồng bắt buộc khi sau này cắm LLM. Round A chưa implement adapter mạng.
-> `DecisionContext` = toàn bộ thế giới mà một phe được phép biết.
+> `DecisionContext` hiện tại là context nội bộ cho MOCK và UI, chưa phải payload LLM.
 
-## LLM / MOCK một phe chỉ được nhận
+## MOCK / UI một phe được nhận
 
 1. `DecisionContext` của đúng `fid` (`Engine.projectPerception(game, fid)`).
 2. Persona **của phe đó** (`data/personas/<fid>.json`).
 3. Schema lệnh hợp lệ (`ACTIONS`, `STRATAGEMS`, đích nằm trong `context.legal`).
 4. Intel đã nhớ của đúng phe (`state.intelLog.lastSeen[fid]`, `claims` đã chiếu vào context).
 
-Gọi tương lai:
+Context **không** chứa `seed`, `bandValues`, quân đúng của phe ẩn, `type`, `time_displaced`, `emperorIds`, `warlordIds`, hay `world.guestProtection`.
+Đình chiến khách của chính phe nằm ở `self.guestProtection` (null nếu phe không có chế độ đó).
 
-```
-JSON.stringify(projectPerception(game, fid))
-+ persona[fid]
-```
+## Chưa được gửi thẳng cho LLM
 
-Adapter **không** nhận `game`. Context **không** chứa `seed`, `bandValues`, hay quân đúng phe ẩn.
+Id nội bộ vẫn nằm trong context và trong TurnObservation:
+
+`qin_shihuang`, `li_shimin`, `zhu_yuanzhang`, `liu_che` xuất hiện ở `world.owners`, `provinceIntel.owner`, `world.pacts`, `diplomaticPressure`, `actorId` / `otherId` / `ownerId`.
+
+Những id này **chính là** danh tính lịch sử ẩn. `publicLabel` an toàn cho UI người chơi. `JSON.stringify(projectPerception(...))` **không** phải payload LLM.
+
+Lớp chiếu sau này phải đổi id ẩn thành ref công khai trước khi gọi model. Chưa làm adapter đó. Đừng cắm LLM bằng context thô.
 
 ## Cấm
 
@@ -33,4 +37,4 @@ Adapter **không** nhận `game`. Context **không** chứa `seed`, `bandValues`
 
 RuntimeEvent = sự thật spectator / clip. **Không** tự biến thành tai AI.
 
-Khi có provider LLM: gọi không web, không search, không browser, không tools.
+Khi có provider LLM: gọi không web, không search, không browser, không tools, và chỉ sau lớp remap id.

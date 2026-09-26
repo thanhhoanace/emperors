@@ -8,7 +8,8 @@
 
 Một main action / phe / lượt.
 
-- AI gửi pact cho người chơi: phiên phải đặt `state.playerFid` trước `resolveTurn`. Khi đó engine không roll. `pendingReactions` → `answerReaction` accept/reject. Reaction không tiêu main action. Chưa trả lời thì `resolveTurn` trả `{ blocked: true }` và không đổi state. HUD hiện chưa đặt `playerFid`, nên chưa chặn — Claude phải gắn cùng modal.
+- AI gửi pact cho người chơi: `preparePlayerTurn(game, playerFid, order)` sinh AI **một lần** và trả envelope `{ decisions, pendingReactions, declinedOffers }`. UI không ghi `state.playerFid`. `answerReaction(envelope, id, accept|reject)` chỉ nhận id đang pending và khớp quyết định trong envelope. `resolvePrepared(game, envelope)` tính lại slot từ đúng các quyết định đó, không tin list đã sửa, không roll offer của người chơi. Chưa trả lời thì `{ blocked: true }`. Id giả hoặc envelope sai lượt không đổi truth.
+- Hết slot `pact.max`: offer sort theo id, chỉ slot còn lại là pending. Offer dư `reason: pact_full`, không bấm Accept được.
 - Accept tạo pact hai chiều, `untilTurn = turn + 6`. Reject: không pact, không phạt uy toàn cục, lượt AI vẫn đã tiêu.
 - Pact AI–AI hoặc người chơi gửi cho AI: engine roll như cũ. Ký rồi thì sống trên đồng hồ 6.
 - `world.pacts` trên DecisionContext là đồ thị công khai `{ a, b, untilTurn, remainingTurns }`.

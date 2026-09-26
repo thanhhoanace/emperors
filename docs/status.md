@@ -6,10 +6,10 @@
 
 ## Đang chờ
 
-- **Claude — playability:** wire tiếp observation (`projectTurnObservation`), bỏ ratio/quân/win% nếu còn, `?` / stale / band theo `provinceIntel`. Không vẽ countdown đình chiến khách từ intro — đọc `guestProtectionStatus` (engine đã enforce).
-- **Claude — diplomacy UI:** đặt `state.playerFid`, rồi `pendingReactions` + `answerReaction` trước `resolveTurn`. Khi `playerFid` đã đặt, `resolveTurn` trả `blocked: true` nếu chưa trả lời. Đừng đặt `playerFid` trước khi có modal — lượt sẽ đứng. Chưa đặt thì pact nhằm người chơi vẫn roll cũ.
+- **Claude — playability:** wire tiếp observation (`projectTurnObservation`), bỏ ratio/quân/win% nếu còn, `?` / stale / band theo `provinceIntel`. Countdown đình chiến khách của chính người chơi: `self.guestProtection`, không đọc danh sách đế.
+- **Claude — diplomacy UI:** `preparePlayerTurn` → modal trên `pendingReactions` → `answerReaction(envelope, id)` → `resolvePrepared`. Không ghi `game.state`. Chưa trả lời thì `blocked`. Offer dư slot là `declinedOffers`, không hiện Accept. HUD hiện vẫn `fillDecisions` + `resolveTurn` (pact AI–AI roll); modal mới dùng envelope.
 - **Claude — bàn cờ:** tint / biên khối / frontier. Chưa làm.
-- **Grok A.5:** bốn máy statecraft — chưa. Officers — chưa.
+- **Grok A.5:** bốn máy statecraft — chưa. Officers — chưa. LLM adapter remap id — chưa. `projectPerception` thô không phải payload LLM.
 
 ## Contract v1.1 (Grok, 2026-09-26)
 
@@ -41,6 +41,6 @@ Node và server cùng compose: `engine.js` → `attach-219.js` → `perception.j
 
 ## Chặn còn
 
-1. HUD chưa vẽ observation / accept-reject / guest status / province card. Chưa đặt `state.playerFid` nên game.html chưa chặn pact; khi Claude đặt cờ mà chưa có modal, `resolveTurn` đứng lượt.
+1. HUD chưa vẽ observation / accept-reject / `self.guestProtection` / province card. Pact tới người chơi trên HUD cũ vẫn roll vì chưa gọi `preparePlayerTurn`.
 2. Menu đánh của HUD vẫn có thể đi từ frontier, không từ `legal.attackTargets`. Referee từ chối đánh trái đình chiến khách; UI có thể vẫn hiện mục tiêu đó cho đến khi Claude đọc legal.
-3. A.5 / Officers chưa.
+3. A.5 / Officers chưa. Context nội bộ còn id đế ẩn — không gửi LLM cho đến khi có lớp remap.

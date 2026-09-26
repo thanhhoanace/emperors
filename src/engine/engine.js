@@ -482,15 +482,15 @@
     }
     const other = st.factions[d.target];
     if (!other || !other.alive || hasPact(g, d.fid, d.target)) return;
-    if (pactCount(g, d.fid) >= R.pact.max || pactCount(g, d.target) >= R.pact.max) {
-      events.push({ kind: 'pact', fid: d.fid, other: d.target, ok: false, tone: 'neutral', text: `${g.def.F[d.target].persona.name} đã đủ minh hữu, không tiếp sứ giả của ${name}.` });
-      return;
-    }
     const O = g.def.F[d.target];
-    if (g.state.playerFid && d.target === g.state.playerFid && d.fid !== g.state.playerFid) {
+    const session = g._reaction;
+    if (session && d.target === session.playerFid && d.fid !== session.playerFid) {
       const id = 'pact:' + st.turn + ':' + d.fid + ':' + d.target;
-      const rec = (g.state.reactionAnswers || {})[id];
-      const answer = rec && typeof rec === 'object' ? rec.answer : rec;
+      if (session.declined && session.declined[id]) {
+        events.push({ kind: 'pact', fid: d.fid, other: d.target, ok: false, code: 'pact_full', turns: R.pact.turns, tone: 'neutral', text: `${O.persona.name} đã đủ minh hữu, không nhận thêm sứ giả của ${name}.` });
+        return;
+      }
+      const answer = session.managed && session.managed[id] ? session.answers[id] : null;
       if (answer === 'accept') {
         const until = st.turn + R.pact.turns;
         f.pacts[d.target] = until;
@@ -504,7 +504,13 @@
         events.push({ kind: 'pact', fid: d.fid, other: d.target, ok: false, code: 'rejected', turns: R.pact.turns, tone: 'neutral', text: `${O.persona.name} từ chối minh ước của ${name}.` });
         return;
       }
-      events.push({ kind: 'pact', fid: d.fid, other: d.target, ok: false, code: 'unanswered', tone: 'neutral', text: `${name} chờ trả lời minh ước.` });
+      if (pactCount(g, d.fid) < R.pact.max && pactCount(g, d.target) < R.pact.max) {
+        events.push({ kind: 'pact', fid: d.fid, other: d.target, ok: false, code: 'unanswered', tone: 'neutral', text: `${name} chờ trả lời minh ước.` });
+        return;
+      }
+    }
+    if (pactCount(g, d.fid) >= R.pact.max || pactCount(g, d.target) >= R.pact.max) {
+      events.push({ kind: 'pact', fid: d.fid, other: d.target, ok: false, tone: 'neutral', text: `${g.def.F[d.target].persona.name} đã đủ minh hữu, không tiếp sứ giả của ${name}.` });
       return;
     }
     const bully = other.troops > f.troops * 2 ? 0.1 : 0;

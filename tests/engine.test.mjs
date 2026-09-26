@@ -152,8 +152,16 @@ test('guest protection hides one-province emperors from Three Kingdoms legal tar
     assert.equal(Engine.guestProtected(g, 'cao_cao', g.state.provinces[pid].owner), true, pid);
     assert.equal(ctx.legal.attackTargets.includes(pid), false, pid);
   }
-  assert.equal(ctx.world.guestProtection.li_shimin.remainingTurns, 8);
-  assert.equal(JSON.stringify(ctx.world.guestProtection).includes('time_displaced'), false);
+  assert.equal(ctx.world.guestProtection, undefined);
+  assert.equal(ctx.self.guestProtection, null);
+  assert.equal(JSON.stringify(ctx).includes('time_displaced'), false);
+  assert.equal(JSON.stringify(ctx).includes('emperorIds'), false);
+  assert.equal(JSON.stringify(ctx).includes('warlordIds'), false);
+  const li = Engine.projectPerception(g, 'li_shimin');
+  assert.equal(li.world.guestProtection, undefined);
+  assert.equal(li.self.guestProtection.remainingTurns, 8);
+  assert.equal(li.self.guestProtection.active, true);
+  assert.ok(li.self.guestProtection.protectedFrom.includes('cao_cao'));
 });
 
 test('referee rejects a protected attack without changing ownership', () => {
@@ -181,6 +189,8 @@ test('emperor attack breaks guest protection only against that Three Kingdoms fa
   if (Engine.frontier(g, 'cao_cao').includes('bing')) assert.equal(cao.legal.attackTargets.includes('bing'), true);
   assert.equal(liu.legal.attackTargets.includes('bing'), false);
   assert.deepEqual(Engine.guestProtectionStatus(g, 'li_shimin').brokenAgainst, ['cao_cao']);
+  assert.deepEqual(Engine.projectPerception(g, 'li_shimin').self.guestProtection.brokenAgainst, ['cao_cao']);
+  assert.equal(Engine.projectPerception(g, 'cao_cao').self.guestProtection, null);
 });
 
 test('guest protection expires on turn 9 and when the emperor owns two provinces', () => {
@@ -204,4 +214,7 @@ test('guest protection expires on turn 9 and when the emperor owns two provinces
   assert.equal(Engine.guestProtected(wide, 'cao_cao', 'li_shimin'), false);
   assert.equal(Engine.guestProtected(wide, 'liu_bei', 'li_shimin'), false);
   assert.equal(Engine.projectPerception(wide, 'cao_cao').legal.attackTargets.includes('bing'), true);
+  const wideSelf = Engine.projectPerception(wide, 'li_shimin').self.guestProtection;
+  assert.equal(wideSelf.active, false);
+  assert.equal(wideSelf.remainingTurns, 1);
 });
