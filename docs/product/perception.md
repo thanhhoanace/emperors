@@ -35,7 +35,8 @@ Sau khi `perception.js` đã attach:
                      lastAction, lastSeenTurn, adjacent, provinces } },
   legal: { actions, attackTargets, annexTargets, pactTargets, fortifyTargets },
   prior: null | { id, status: "active"|"obsolete", bias, focus },
-  rules: { lateWarTurn, pactMax, coalitionAt, fortMax, commitBase, commitAggression }
+  provinceIntel: { [pid]: { owner, city, troopBand, commander, fortLevel, lastSeenTurn, source } },
+  rules: { lateWarTurn, pactMax, pactTurns, coalitionAt, fortMax, commitBase, commitAggression }
 }
 ```
 
@@ -69,14 +70,28 @@ Neo active (cả bốn phải đúng; gãy một cái → obsolete):
 
 ```
 state.intelLog = {
-  lastSeen: { [observer]: { [target]: { troops, action, turn, province } } },
-  claims: { [fid]: string }
+  lastSeen: { [observer]: { [target]: { troopBand, action, turn, province } } },
+  claims: { [fid]: string },
+  provinces: { [observer]: { [pid]: { troopBand, commander, fortLevel, turn } } }
 }
 ```
+
+Bản cũ `lastSeen.*.troops` vẫn đọc được ra band. Bản mới không lưu số quân.
+
+Chi tiết tỉnh, cửa nhìn sự kiện, khách, minh ước: `GAMEPLAY-CONTRACT-v1.1.md`.
+
+## Turn observation
+
+`Engine.projectTurnObservation(game, observerFid, turnResult, beforeSnapshot)` → `{ visibleEvents, publicNews }`.
+`Engine.ownersSnapshot(game)` chụp chủ châu trước resolve.
+Không copy `ev.text`. Spectator vẫn dùng `result.events`.
 
 ## API
 
 `Engine.projectPerception(g, fid)`
-`Engine.decide(context)`
+`Engine.decide(context, rng)`
 `Engine.fillDecisions(g, playerFid, playerDecision)`
-`Engine.observeFactions(g)`
+`Engine.observeFactions(g, turn?)`
+`Engine.observeProvinces(g, turn?)`
+`Engine.projectTurnObservation(g, fid, turnResult, beforeSnapshot)`
+`Engine.ownersSnapshot(g)`

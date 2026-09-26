@@ -35,6 +35,43 @@ function bandValue(band) {
   return BAND_VALUES[band] != null ? BAND_VALUES[band] : BAND_VALUES.unknown;
 }
 
+const COMMANDER_NAMES = {
+  cao_ren: 'Tào Nhân',
+  cao_pi: 'Tào Phi',
+  zhang_he: 'Trương Hợp',
+  xiahou_dun: 'Hạ Hầu Đôn',
+  zhang_liao: 'Trương Liêu',
+  zang_ba: 'Tạng Bá',
+  li_dian: 'Lý Điển',
+  guan_yu: 'Quan Vũ',
+  wei_yan: 'Ngụy Diên',
+  lu_meng: 'Lã Mông',
+  gongsun_kang: 'Công Tôn Khang',
+  yong_kai: 'Ung Khải',
+  shi_xie: 'Sĩ Nhiếp',
+};
+
+function localTroopCount(g, pid) {
+  const pv = g.state.provinces[pid];
+  if (!pv) return null;
+  if (pv.owner === 'neutral') return pv.garrison || 0;
+  const fid = pv.owner;
+  const f = g.state.factions[fid];
+  if (!f || !f.alive) return 0;
+  let n = 0;
+  for (const id of g.def.provinceIds) if (g.state.provinces[id].owner === fid) n += 1;
+  if (!n) return 0;
+  const seatBonus = (g.def.rules.combat && g.def.rules.combat.seatBonus) || 1;
+  return Math.min(f.troops, (f.troops / n) * (f.seat === pid ? seatBonus : 1));
+}
+
+function commanderName(g, pid, observer, rules) {
+  const cid = (g.state.governors && g.state.governors[pid]) || null;
+  if (!cid) return null;
+  if (g.def.F && g.def.F[cid]) return publicLabel(g, observer, cid, rules);
+  return COMMANDER_NAMES[cid] || cid;
+}
+
 function adjacentFactions(g, a, b) {
   if (a === b) return false;
   const ownedA = g.def.provinceIds.filter((pid) => g.state.provinces[pid].owner === a);
@@ -61,15 +98,39 @@ function claimedIdentity(g, target) {
 }
 
 function ensureIntelLog(g) {
-  if (!g.state.intelLog) g.state.intelLog = { lastSeen: {}, claims: {} };
+  if (!g.state.intelLog) g.state.intelLog = { lastSeen: {}, claims: {}, provinces: {} };
   if (!g.state.intelLog.lastSeen) g.state.intelLog.lastSeen = {};
   if (!g.state.intelLog.claims) g.state.intelLog.claims = {};
+  if (!g.state.intelLog.provinces) g.state.intelLog.provinces = {};
   return g.state.intelLog;
 }
 
-function observeFactions(g) {
+function observeProvinces(g, turn) {
   const log = ensureIntelLog(g);
-  const turn = g.state.turn;
+  const rules = rulesOf(g);
+  const seenTurn = turn || g.state.turn;
+  const ids = (g.def.order || []).filter((id) => g.state.factions[id] && g.state.factions[id].alive);
+  for (const obs of ids) {
+    if (!log.provinces[obs]) log.provinces[obs] = {};
+    const mine = g.def.provinceIds.filter((pid) => g.state.provinces[pid].owner === obs);
+    const seen = new Set(mine);
+    for (const pid of mine) for (const n of g.def.P[pid].neighbors) seen.add(n);
+    for (const pid of seen) {
+      const pv = g.state.provinces[pid];
+      log.provinces[obs][pid] = {
+        troopBand: bandOf(localTroopCount(g, pid), rules),
+        commander: commanderName(g, pid, obs, rules),
+        fortLevel: pv.fort,
+        turn: seenTurn,
+      };
+    }
+  }
+}
+
+function observeFactions(g, turn) {
+  const log = ensureIntelLog(g);
+  const rules = rulesOf(g);
+  const seenTurn = turn || g.state.turn;
   const ids = (g.def.order || []).filter((id) => g.state.factions[id] && g.state.factions[id].alive);
   for (const obs of ids) {
     if (!log.lastSeen[obs]) log.lastSeen[obs] = {};
@@ -78,13 +139,14 @@ function observeFactions(g) {
       if (!adjacentFactions(g, obs, other)) continue;
       const f = g.state.factions[other];
       log.lastSeen[obs][other] = {
-        troops: f.troops,
+        troopBand: bandOf(f.troops, rules),
         action: (f.last && f.last.action) || null,
-        turn,
+        turn: seenTurn,
         province: f.seat,
       };
     }
   }
+  observeProvinces(g, seenTurn);
 }
 
 let EngineRef = null;
@@ -100,6 +162,53 @@ function priorFor(g, fid, rules) {
     bias: spec.bias || { attack: 1.35 },
     focus: spec.focus || [],
   };
+}
+
+function buildProvinceIntel(g, fid, rules) {
+  const out = {};
+  const mine = new Set(g.def.provinceIds.filter((pid) => g.state.provinces[pid].owner === fid));
+  const adjacent = new Set();
+  for (const pid of mine) for (const n of g.def.P[pid].neighbors) if (!mine.has(n)) adjacent.add(n);
+  const memory = (g.state.intelLog.provinces && g.state.intelLog.provinces[fid]) || {};
+  for (const pid of g.def.provinceIds) {
+    const pv = g.state.provinces[pid];
+    const base = { owner: pv.owner, city: g.def.P[pid].city };
+    if (mine.has(pid)) {
+      out[pid] = Object.assign(base, {
+        troopBand: bandOf(localTroopCount(g, pid), rules),
+        commander: commanderName(g, pid, fid, rules),
+        fortLevel: pv.fort,
+        lastSeenTurn: g.state.turn,
+        source: 'own',
+      });
+    } else if (adjacent.has(pid)) {
+      out[pid] = Object.assign(base, {
+        troopBand: bandOf(localTroopCount(g, pid), rules),
+        commander: commanderName(g, pid, fid, rules),
+        fortLevel: pv.fort,
+        lastSeenTurn: g.state.turn,
+        source: 'adjacent',
+      });
+    } else if (memory[pid]) {
+      const mem = memory[pid];
+      out[pid] = Object.assign(base, {
+        troopBand: mem.troopBand || 'unknown',
+        commander: mem.commander != null ? mem.commander : null,
+        fortLevel: mem.fortLevel != null ? mem.fortLevel : null,
+        lastSeenTurn: mem.turn != null ? mem.turn : null,
+        source: 'memory',
+      });
+    } else {
+      out[pid] = Object.assign(base, {
+        troopBand: 'unknown',
+        commander: null,
+        fortLevel: null,
+        lastSeenTurn: null,
+        source: 'unknown',
+      });
+    }
+  }
+  return out;
 }
 
 function projectPerception(g, fid) {
@@ -129,7 +238,7 @@ function projectPerception(g, fid) {
       lastAction = seen ? seen.action : null;
       lastSeenTurn = seen ? seen.turn : null;
     } else if (seen) {
-      troopBand = bandOf(seen.troops, rules);
+      troopBand = seen.troopBand || bandOf(seen.troops, rules);
       lastAction = seen.action || null;
       lastSeenTurn = seen.turn;
     }
@@ -175,6 +284,7 @@ function projectPerception(g, fid) {
       fortifyTargets: owned.slice(),
     },
     prior: priorFor(g, fid, rules),
+    provinceIntel: buildProvinceIntel(g, fid, rules),
     rules: {
       lateWarTurn: R.lateWarTurn, pactMax: R.pact.max, pactTurns: R.pact.turns,
       coalitionAt: R.coalitionAt, fortMax: R.combat.fortMax,
@@ -327,6 +437,211 @@ function decideFromContext(ctx, rng) {
   return d;
 }
 
+function ownersSnapshot(g) {
+  const owners = {};
+  for (const pid of g.def.provinceIds) owners[pid] = g.state.provinces[pid].owner;
+  return { owners, turn: g.state.turn };
+}
+
+function labelOf(g, observer, fid, rules) {
+  if (!fid || fid === 'neutral') return 'Trung lập';
+  return publicLabel(g, observer, fid, rules);
+}
+
+const PUBLIC_GATES = { opening: true, guest_arrival: true };
+
+function newsKey(n) {
+  return [n.kind, n.id || '', n.prov || '', n.actorId || '', n.otherId || '', n.ownerId || '', n.textKey || ''].join('|');
+}
+
+function defenderOfEvent(ev) {
+  return ev.defenderFid || ev.defender || null;
+}
+
+function observeBattle(g, observer, ev, rules) {
+  const defender = defenderOfEvent(ev);
+  const attacker = ev.fid;
+  const truce = ev.code === 'guest_truce';
+  if (attacker === observer) {
+    const visible = {
+      kind: truce ? 'guest_truce' : 'attack',
+      role: 'attacker',
+      actorId: observer,
+      actorLabel: labelOf(g, observer, observer, rules),
+      to: ev.to || null,
+      titleKey: truce ? 'guest_truce' : 'own_attack',
+      textKey: truce ? 'guest_truce' : (ev.win ? 'own_attack_win' : 'own_attack_loss'),
+    };
+    if (ev.from) visible.from = ev.from;
+    if (defender && defender !== 'neutral') {
+      visible.otherId = defender;
+      visible.otherLabel = labelOf(g, observer, defender, rules);
+    } else {
+      visible.otherLabel = 'Trung lập';
+    }
+    if (truce) visible.outcome = 'fail';
+    else {
+      visible.outcome = ev.win ? 'win' : 'loss';
+      if (ev.attLoss != null) visible.ownLoss = ev.attLoss;
+    }
+    return { visible };
+  }
+  if (defender === observer) {
+    const visible = {
+      kind: truce ? 'guest_truce' : 'attack',
+      role: 'defender',
+      actorId: attacker || null,
+      actorLabel: attacker ? labelOf(g, observer, attacker, rules) : null,
+      otherId: observer,
+      otherLabel: labelOf(g, observer, observer, rules),
+      to: ev.to || null,
+      titleKey: truce ? 'guest_truce' : 'province_attacked',
+      textKey: truce ? 'guest_truce' : 'province_attacked',
+    };
+    if (truce) visible.outcome = 'ok';
+    else {
+      visible.outcome = ev.win ? 'loss' : 'win';
+      if (ev.defLoss != null) visible.ownLoss = ev.defLoss;
+    }
+    return { visible };
+  }
+  return {};
+}
+
+function observePact(g, observer, ev, rules) {
+  const accepted = !!ev.ok;
+  const news = [];
+  if (accepted) {
+    news.push({
+      kind: 'pact',
+      actorId: ev.fid || null,
+      actorLabel: ev.fid ? labelOf(g, observer, ev.fid, rules) : null,
+      otherId: ev.other || null,
+      otherLabel: ev.other ? labelOf(g, observer, ev.other, rules) : null,
+      untilTurn: ev.until != null ? ev.until : null,
+      accepted: true,
+      titleKey: 'pact_public',
+      textKey: 'pact_public',
+    });
+  }
+  const party = ev.fid === observer || ev.other === observer;
+  if (!party) return news.length ? { news } : {};
+  const visible = {
+    kind: 'pact',
+    role: ev.fid === observer ? 'self' : 'target',
+    actorId: ev.fid || null,
+    actorLabel: ev.fid ? labelOf(g, observer, ev.fid, rules) : null,
+    otherId: ev.other || null,
+    otherLabel: ev.other ? labelOf(g, observer, ev.other, rules) : null,
+    outcome: accepted ? 'ok' : 'fail',
+    titleKey: accepted ? 'pact_signed' : 'pact_refused',
+    textKey: accepted ? 'pact_signed' : 'pact_refused',
+  };
+  if (ev.until != null) visible.untilTurn = ev.until;
+  return { visible, news };
+}
+
+function touchesObserver(observer, ev) {
+  if (!observer) return false;
+  return ev.fid === observer || ev.other === observer || ev.by === observer
+    || ev.defenderFid === observer || ev.defender === observer;
+}
+
+function classifyObservation(g, observer, ev, rules) {
+  const kind = ev.kind;
+  if (kind === 'gate') {
+    if (PUBLIC_GATES[ev.id]) {
+      return { news: [{ kind: 'gate', id: ev.id, titleKey: 'gate_' + ev.id, textKey: 'gate_' + ev.id }] };
+    }
+    return {};
+  }
+  if (kind === 'attack' || (kind === 'event' && ev.code === 'guest_truce')) return observeBattle(g, observer, ev, rules);
+  if (kind === 'pact' || (typeof kind === 'string' && kind.indexOf('deal_') === 0)) return observePact(g, observer, ev, rules);
+  if (kind === 'fall' || kind === 'realm_fall') {
+    return { news: [{
+      kind: 'fall',
+      actorId: ev.fid || null,
+      actorLabel: ev.fid ? labelOf(g, observer, ev.fid, rules) : null,
+      titleKey: 'faction_destroyed',
+      textKey: 'faction_destroyed',
+    }] };
+  }
+  if (kind === 'succession') {
+    return { news: [{
+      kind: 'succession',
+      actorId: ev.fid || null,
+      actorLabel: ev.fid ? labelOf(g, observer, ev.fid, rules) : null,
+      titleKey: 'succession',
+      textKey: 'succession',
+    }] };
+  }
+  if (kind === 'win') {
+    return { news: [{
+      kind: 'win',
+      actorId: ev.fid || null,
+      actorLabel: ev.fid ? labelOf(g, observer, ev.fid, rules) : null,
+      titleKey: 'win',
+      textKey: 'win',
+    }] };
+  }
+  if (!touchesObserver(observer, ev)) return {};
+  const visible = {
+    kind,
+    role: ev.other === observer && ev.fid !== observer ? 'target' : 'self',
+    actorId: ev.fid || null,
+    actorLabel: ev.fid ? labelOf(g, observer, ev.fid, rules) : null,
+    titleKey: (ev.fid === observer ? 'own_' : 'target_') + kind,
+    textKey: (ev.fid === observer ? 'own_' : 'target_') + kind,
+  };
+  if (ev.other) {
+    visible.otherId = ev.other;
+    visible.otherLabel = labelOf(g, observer, ev.other, rules);
+  }
+  if (ev.prov) visible.prov = ev.prov;
+  if (ev.sub) visible.sub = ev.sub;
+  if (ev.ok != null) visible.outcome = ev.ok ? 'ok' : 'fail';
+  if (ev.code) visible.code = ev.code;
+  return { visible };
+}
+
+function projectTurnObservation(g, observer, turnResult, beforeSnapshot) {
+  const rules = rulesOf(g);
+  const events = (turnResult && turnResult.events) || [];
+  const visibleEvents = [];
+  const publicNews = [];
+  const seen = new Set();
+  const pushNews = (n) => {
+    const k = newsKey(n);
+    if (seen.has(k)) return;
+    seen.add(k);
+    publicNews.push(n);
+  };
+  for (const ev of events) {
+    const part = classifyObservation(g, observer, ev, rules);
+    if (part.visible) visibleEvents.push(part.visible);
+    if (part.news) for (const n of part.news) pushNews(n);
+  }
+  const before = beforeSnapshot && beforeSnapshot.owners;
+  if (before) {
+    for (const pid of g.def.provinceIds) {
+      const prev = before[pid];
+      const now = g.state.provinces[pid].owner;
+      if (prev != null && prev !== now) {
+        pushNews({
+          kind: 'ownership',
+          prov: pid,
+          city: g.def.P[pid].city,
+          ownerId: now === 'neutral' ? null : now,
+          ownerLabel: labelOf(g, observer, now, rules),
+          titleKey: 'ownership_changed',
+          textKey: 'ownership_changed',
+        });
+      }
+    }
+  }
+  return { visibleEvents, publicNews };
+}
+
 function collectContexts(g, order) {
   observeFactions(g);
   const ids = order || EngineRef.aliveIds(g);
@@ -338,6 +653,9 @@ function attach(Engine) {
   Engine.bandOf = function (troops, rules) { return bandOf(troops, rules || DEFAULT_RULES); };
   Engine.bandValue = bandValue;
   Engine.observeFactions = observeFactions;
+  Engine.observeProvinces = observeProvinces;
+  Engine.ownersSnapshot = ownersSnapshot;
+  Engine.projectTurnObservation = projectTurnObservation;
   Engine.projectPerception = function (g, fid) { return projectPerception(g, fid); };
   Engine.collectContexts = collectContexts;
   Engine.decideFromContext = decideFromContext;
@@ -406,7 +724,9 @@ function attach(Engine) {
   const resolveTurn = Engine.resolveTurn;
   Engine.resolveTurn = function (g, decisions) {
     const result = resolveTurn(g, decisions);
-    observeFactions(g);
+    if (result && result.blocked) return result;
+    const seenTurn = result && result.turn != null ? result.turn : g.state.turn;
+    observeFactions(g, seenTurn);
     return result;
   };
 
