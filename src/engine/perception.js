@@ -257,8 +257,16 @@ function projectPerception(g, fid) {
   const mine = new Set(owned);
   const frontier = [];
   for (const pid of owned) for (const n of g.def.P[pid].neighbors) if (!mine.has(n)) frontier.push(n);
-  const attackTargets = Array.from(new Set(frontier)).filter((pid) => g.state.provinces[pid].owner !== fid);
+  const attackTargets = Array.from(new Set(frontier)).filter((pid) => {
+    const owner = g.state.provinces[pid].owner;
+    if (owner === fid) return false;
+    return !(EngineRef.guestProtected && EngineRef.guestProtected(g, fid, owner));
+  });
   const R = g.def.rules;
+  const guestProtection = {};
+  if (EngineRef.guestProtectionStatus && g.def.emperorIds) {
+    for (const id of g.def.emperorIds) guestProtection[id] = EngineRef.guestProtectionStatus(g, id);
+  }
 
   return {
     v: 1,
@@ -274,7 +282,7 @@ function projectPerception(g, fid) {
       name: F.persona.name, short: F.persona.short, quotes: F.persona.quotes,
       homeCity: g.def.P[f.seat].city,
     },
-    world: { owners, neighbors, strategic, emperorAt: g.state.emperorAt, cities, publicLabels },
+    world: { owners, neighbors, strategic, emperorAt: g.state.emperorAt, cities, publicLabels, guestProtection },
     others,
     legal: {
       actions: Object.keys(EngineRef.ACTIONS),

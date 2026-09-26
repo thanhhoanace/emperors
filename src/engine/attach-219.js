@@ -31,6 +31,27 @@ function governorOf(g, pid) {
   return (g.state.governors || {})[pid] || null;
 }
 
+function noteGuestAttack(g, attacker, defender) {
+  if (!isEmperor(g, attacker)) return;
+  if ((g.def.warlordIds || []).indexOf(defender) === -1) return;
+  if (!g.state.guestBroken) g.state.guestBroken = {};
+  if (!g.state.guestBroken[attacker]) g.state.guestBroken[attacker] = {};
+  g.state.guestBroken[attacker][defender] = true;
+  if (attacker === 'qin_shihuang' && defender === 'cao_cao') g.state.qinAttackedCao = true;
+}
+
+function guestProtectionStatus(g, emperorFid) {
+  if (!isEmperor(g, emperorFid)) return { active: false, remainingTurns: 0, protectedFrom: [], brokenAgainst: [] };
+  const until = (g.def.rules && g.def.rules.guestTruceTurns) || 0;
+  const turn = g.state.turn;
+  const remainingTurns = !until || turn > until ? 0 : (until - turn + 1);
+  const brokenMap = (g.state.guestBroken || {})[emperorFid] || {};
+  const brokenAgainst = Object.keys(brokenMap).filter((id) => brokenMap[id]).sort();
+  const active = remainingTurns > 0 && owned(g, emperorFid).length === 1;
+  const protectedFrom = active ? (g.def.warlordIds || []).filter((id) => !brokenMap[id]).sort() : [];
+  return { active, remainingTurns, protectedFrom, brokenAgainst };
+}
+
 function guestProtected(g, attacker, owner) {
   const until = (g.def.rules && g.def.rules.guestTruceTurns) || 0;
   if (!until || g.state.turn > until) return false;
@@ -131,6 +152,9 @@ function normalizeEvent(g, raw) {
   if (raw.prov) ev.prov = raw.prov;
   if (raw.other) ev.other = raw.other;
   if (raw.win != null) ev.win = raw.win;
+  if (raw.code) ev.code = raw.code;
+  if (raw.until != null) ev.until = raw.until;
+  if (raw.turns != null) ev.turns = raw.turns;
   if (raw.kind === 'attack') {
     ev.from = raw.from;
     ev.to = raw.to;
@@ -152,6 +176,9 @@ function enrichDef(g) {
   if (!g.def.charactersPack) g.def.charactersPack = world.charactersPack || { governors: {}, succession: { emperors: {}, threeKingdoms: {} } };
   if (!g.def.emperorIds) g.def.emperorIds = world.factions.filter((f) => f.type === 'time_displaced').map((f) => f.id);
   if (!g.def.warlordIds) g.def.warlordIds = world.factions.filter((f) => f.type === 'historical_warlord').map((f) => f.id);
+  g.def.guestProtected = guestProtected;
+  g.def.noteGuestAttack = noteGuestAttack;
+  g.def.guestProtectionStatus = guestProtectionStatus;
 }
 
 function enrichState(g) {
@@ -176,6 +203,8 @@ function attach(Engine) {
   Engine.normalizeEvent = normalizeEvent;
   Engine.governorOf = governorOf;
   Engine.guestProtected = guestProtected;
+  Engine.noteGuestAttack = noteGuestAttack;
+  Engine.guestProtectionStatus = guestProtectionStatus;
 
   const createGame = Engine.createGame;
   Engine.createGame = function (world, personas, seed) {

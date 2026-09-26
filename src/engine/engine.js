@@ -294,6 +294,7 @@
     let best = null;
     for (const pid of frontier(g, fid)) {
       const owner = st.provinces[pid].owner;
+      if (g.def.guestProtected && g.def.guestProtected(g, fid, owner)) continue;
       const pact = owner !== NEUTRAL && hasPact(g, fid, owner);
       if (pact && !(T.betrayal && rand(st) < T.betrayal)) continue;
       const atk = attackOf(g, fid, pid);
@@ -551,6 +552,20 @@
       return;
     }
     const defender = pv.owner;
+    if (defender !== NEUTRAL && g.def.guestProtected && g.def.guestProtected(g, d.fid, defender)) {
+      events.push({
+        kind: 'event',
+        code: 'guest_truce',
+        fid: d.fid,
+        other: defender,
+        from,
+        to: d.target,
+        ok: false,
+        tone: 'neutral',
+        text: `${name} dừng quân — đình chiến khách còn hiệu lực tại ${P.city}.`,
+      });
+      return;
+    }
     if (defender !== NEUTRAL && hasPact(g, d.fid, defender)) {
       if (!d.betray) {
         events.push({ kind: 'event', fid: d.fid, tone: 'neutral', text: `${name} hủy binh — ${g.def.F[defender].persona.name} vừa là minh hữu.` });
@@ -561,6 +576,7 @@
       f.prestige -= 6;
       events.push({ kind: 'event', fid: d.fid, other: defender, tone: 'bad', text: `${name} bội minh, trở mặt với ${g.def.F[defender].persona.name}!` });
     }
+    if (defender !== NEUTRAL && g.def.noteGuestAttack) g.def.noteGuestAttack(g, d.fid, defender);
 
     const atk = attackOf(g, d.fid, d.target);
     const dfn = defenseOf(g, d.target);

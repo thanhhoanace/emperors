@@ -30,7 +30,7 @@ Sau khi `perception.js` đã attach:
   calendar: { year, season },
   self: { troops, grain, loyalty, prestige, seat, provinces[], pacts, last, grudge,
           weights, traits, name, short, quotes, homeCity },
-  world: { owners, neighbors, strategic, emperorAt, cities, publicLabels },
+  world: { owners, neighbors, strategic, emperorAt, cities, publicLabels, guestProtection },
   others: { [fid]: { publicLabel, claimedIdentity, alive, troopBand,
                      lastAction, lastSeenTurn, adjacent, provinces } },
   legal: { actions, attackTargets, annexTargets, pactTargets, fortifyTargets },

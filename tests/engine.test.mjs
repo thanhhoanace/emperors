@@ -140,3 +140,68 @@ test('full games end with a winner and keep stats in range', () => {
     assert.ok(g.state.winner && g.state.factions[g.state.winner.fid].alive);
   }
 });
+
+test('guest protection hides one-province emperors from Three Kingdoms legal targets', () => {
+  const g = newGame(1);
+  const status = Engine.guestProtectionStatus(g, 'li_shimin');
+  assert.equal(status.active, true);
+  assert.equal(status.remainingTurns, 8);
+  assert.ok(status.protectedFrom.includes('cao_cao'));
+  const ctx = Engine.projectPerception(g, 'cao_cao');
+  for (const pid of ['bing', 'longxi', 'huai']) {
+    assert.equal(Engine.guestProtected(g, 'cao_cao', g.state.provinces[pid].owner), true, pid);
+    assert.equal(ctx.legal.attackTargets.includes(pid), false, pid);
+  }
+  assert.equal(ctx.world.guestProtection.li_shimin.remainingTurns, 8);
+  assert.equal(JSON.stringify(ctx.world.guestProtection).includes('time_displaced'), false);
+});
+
+test('referee rejects a protected attack without changing ownership', () => {
+  const g = newGame(1);
+  g.state.factions.cao_cao.troops = 500000;
+  const owner = g.state.provinces.bing.owner;
+  const r = Engine.resolveTurn(g, [{ fid: 'cao_cao', action: 'attack', target: 'bing', from: 'ji', targetKind: 'province' }]);
+  assert.equal(g.state.provinces.bing.owner, owner);
+  assert.equal(r.events.some((e) => e.kind === 'attack' && e.to === 'bing'), false);
+  const blocked = r.events.find((e) => e.code === 'guest_truce' && e.to === 'bing');
+  assert.ok(blocked);
+  assert.equal(blocked.ok, false);
+});
+
+test('emperor attack breaks guest protection only against that Three Kingdoms faction', () => {
+  const g = newGame(1);
+  g.state.factions.li_shimin.troops = 1000;
+  Engine.resolveTurn(g, [{ fid: 'li_shimin', action: 'attack', target: 'ji', from: 'bing', targetKind: 'province' }]);
+  assert.equal(g.state.guestBroken.li_shimin.cao_cao, true);
+  assert.equal(Engine.guestProtected(g, 'cao_cao', 'li_shimin'), false);
+  assert.equal(Engine.guestProtected(g, 'liu_bei', 'li_shimin'), true);
+  assert.equal(Engine.guestProtected(g, 'sun_quan', 'li_shimin'), true);
+  const cao = Engine.projectPerception(g, 'cao_cao');
+  const liu = Engine.projectPerception(g, 'liu_bei');
+  if (Engine.frontier(g, 'cao_cao').includes('bing')) assert.equal(cao.legal.attackTargets.includes('bing'), true);
+  assert.equal(liu.legal.attackTargets.includes('bing'), false);
+  assert.deepEqual(Engine.guestProtectionStatus(g, 'li_shimin').brokenAgainst, ['cao_cao']);
+});
+
+test('guest protection expires on turn 9 and when the emperor owns two provinces', () => {
+  const expired = newGame(1);
+  expired.state.turn = 9;
+  assert.equal(Engine.guestProtectionStatus(expired, 'qin_shihuang').remainingTurns, 0);
+  assert.equal(Engine.guestProtectionStatus(expired, 'qin_shihuang').active, false);
+  assert.equal(Engine.guestProtected(expired, 'cao_cao', 'qin_shihuang'), false);
+  assert.equal(Engine.projectPerception(expired, 'cao_cao').legal.attackTargets.includes('longxi'), true);
+
+  const wide = newGame(1);
+  wide.state.turn = 8;
+  assert.equal(Engine.guestProtectionStatus(wide, 'li_shimin').remainingTurns, 1);
+  assert.equal(Engine.guestProtected(wide, 'cao_cao', 'li_shimin'), true);
+  wide.state.provinces.you.owner = 'li_shimin';
+  wide.state.provinces.you.garrison = 0;
+  const status = Engine.guestProtectionStatus(wide, 'li_shimin');
+  assert.equal(status.active, false);
+  assert.equal(status.protectedFrom.length, 0);
+  assert.equal(status.remainingTurns, 1);
+  assert.equal(Engine.guestProtected(wide, 'cao_cao', 'li_shimin'), false);
+  assert.equal(Engine.guestProtected(wide, 'liu_bei', 'li_shimin'), false);
+  assert.equal(Engine.projectPerception(wide, 'cao_cao').legal.attackTargets.includes('bing'), true);
+});

@@ -20,6 +20,7 @@
 Ô kề. `from` hợp lệ (châu mình, kề đích) thì dùng; không thì `originFor`.
 Mưu: `Engine.STRATAGEMS` = discord, burn, defect.
 Ngoại giao V1: pact | annex. Deal đủ điều khoản = vòng sau.
+Đình chiến khách: Tam Quốc không đánh đế đang giữ đúng 1 châu trong lượt 1–8. Đế đánh một phe Tam Quốc thì mất bảo hộ với đúng phe đó. Lệnh trái luật bị referee từ chối, không vào combat. Chi tiết `GAMEPLAY-CONTRACT-v1.1.md`.
 
 ## Perception
 
