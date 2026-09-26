@@ -11,7 +11,7 @@ data/personas/*  ├─► src/engine/engine.js ──► tests/engine.test.mjs,
                  │        (thuần, tất định)  ──► server/server.js  POST /api/turn (agent MOCK)
                  │                           ──► result.events (RuntimeEvent v1) ──► game.html
 index.html ── Phase 1 slice cũ (three r146, tự chứa, không dùng engine)
-game.html ── trò chơi: chọn 1 trong 4 hoàng đế, mỗi mùa một lệnh; engine chạy ngay trong trình duyệt (engine.js + attach-219.js)
+game.html ── trò chơi: chọn 1 trong 4 hoàng đế, mỗi mùa một lệnh; engine chạy ngay trong trình duyệt (engine.js → attach-219.js → perception.js)
              Engine → RuntimeEvent v1 → EventPresenter → WorldRuntime (+ HUD); &seed=N cố định ván, &speed=N tốc độ diễn
              ?demo=1: trình diễn fixture chuẩn (src/world/demo.js); &live=1 một lượt POST /api/turn; &qa=1 QA gọi __game.seek(i, t)
 src/world/ ── thư viện hình dùng chung (một bản duy nhất; prototype cũng nạp từ đây):
@@ -73,16 +73,17 @@ PlayerUI ── chọn đế ──► GameController.start(fid) ── Engine.c
                           Engine.fillDecisions(game, fid, decision)   lệnh người chơi + agent MOCK cho mọi phe còn sống
                           Engine.resolveTurn(game, decisions)         → result.events = RuntimeEvent v1
          ◄── khoá ─── GameController.bind: hàng đợi event → presenter.playAll (mỗi event đúng một lần, theo thứ tự; "Bỏ qua" ghi
-                          nhật ký phần còn lại) → về view chiến dịch → sync: rt.setOwners(chủ đất từ state), HUD từ ctrl.status()
+                          nhật ký phần còn lại) → về view chiến dịch → sync: rt.setOwners(chủ đất từ state), HUD từ ctrl.view()
          ◄── mở ──── lượt mới; state.over → màn kết thúc từ state.winner + event `win`
 ```
 
 - `game-controller.js` (UMD, không DOM; `tests/game-controller.test.mjs` chạy nó với engine thật trong Node):
-  - Lựa chọn đọc từ truy vấn của engine: đánh = `Engine.frontier` (kèm `attackOf`/`defenseOf` làm ước lực, châu kề của mình làm nơi xuất quân); chiêu hàng = châu trung lập trong frontier; kết minh = phe còn sống chưa có minh (`hasPact`, trần `rules.pact.max`); mưu = `discord`/`burn`/`defect` nhắm phe còn sống; củng cố = `Engine.owned`; nội chính không cần chọn (engine dùng thủ phủ).
-  - Lệnh có đúng dạng của `decide()`: `{ fid, action, sub, target, targetKind, from: null, betray }`. Đánh châu minh hữu phải bật `betray` (engine huỷ binh nếu không).
+  - Người chơi chỉ biết phe khác qua `Engine.projectPerception(game, playerFid)` (`ctrl.perception()`; `ctrl.view()` = `{ status, options }` cho UI). Phe mình: số thật (quân, lương, dân tâm, Uy, châu, lũy, thủ phủ, minh, thu/chi). Phe khác: `publicLabel` (đế ẩn hiện "Chúa Lũng Tây"…), `claimedIdentity`, còn/mất, số châu (bản đồ công khai), `troopBand` (Yếu/Vừa/Mạnh/Rất mạnh/Chưa rõ), `lastAction`, `lastSeenTurn`, `adjacent`. Không có quân/Uy thật của địch, không có ước lực đánh. Bảng phe xếp theo số châu rồi thứ tự cố định.
+  - Lựa chọn lấy từ `context.legal`: đánh = `attackTargets` (chủ châu, band quân của chủ, nơi xuất quân = châu mình kề đích theo bản đồ công khai); chiêu hàng = `annexTargets`; kết minh = `pactTargets` (trần minh chỉ tính minh của mình); mưu = `Engine.STRATAGEMS` nhắm phe còn sống; củng cố = `fortifyTargets`; nội chính không cần chọn (engine dùng thủ phủ).
+  - Lệnh có đúng dạng của `decide()`: `{ fid, action, sub, target, targetKind, from, betray }`; `from` là châu người chơi chọn (engine dùng nếu hợp lệ) hoặc `null` (engine tự chọn). Đánh châu minh hữu phải bật `betray` (engine huỷ binh nếu không).
   - Một lượt một lần: `busy` từ `resolve` tới hết phần diễn; lệnh sai bị chặn trước khi tới engine.
-- `player-ui.js`: màn chọn đế, bảng phe (lượt, quân, lương, dân tâm, Uy, thu/chi mỗi mùa, châu, minh hữu), bảng lệnh, xếp hạng 7 phe, thanh lượt đang diễn, màn kết thúc. Mọi số lấy từ `ctrl.status()`.
-- Engine chạy trong trình duyệt đúng như server và test nạp: `engine.js` rồi `attach-219.js` (file này chỉ có `module.exports`; là script cổ điển thì hàm `attach` thành biến toàn cục).
+- `player-ui.js`: màn chọn đế, bảng phe (lượt, quân, lương, dân tâm, Uy, thu/chi mỗi mùa, châu, minh hữu), bảng lệnh, xếp hạng 7 phe, thanh lượt đang diễn, màn kết thúc. Mọi thứ lấy từ `ctrl.view()`; PlayerUI không đọc `ctrl.game`.
+- Engine chạy trong trình duyệt đúng như server và test nạp: `engine.js` → `attach-219.js` → `perception.js`; mỗi lớp tự gắn vào `window.EmperorsEngine` khi là script cổ điển, `game.html` chỉ lấy `window.EmperorsEngine` (không `attach` lại, tránh bọc hai lần). `world.intelRules` = `data/scenario/intel-rules.json` trước `createGame`. AI mọi phe đi qua `fillDecisions` → DecisionContext; RuntimeEvent vẫn là sự thật đầy đủ để diễn.
 
 Còn lại: nướng mặt nạ lõi (bớt ~16 giây `createReal` lúc mở trang), cảnh cắt trận (battle.js), tour khóa theo điểm dừng, 3 mức chất lượng, thay `index.html` bằng `game.html` (chờ chủ dự án duyệt).
 
@@ -98,7 +99,7 @@ Ranh giới:
 
 - `npm test`: dữ liệu hợp lệ, quyết định hợp lệ, replay theo seed, luật "1.000 quân không hạ được thành 10.000 quân", chạy trọn 60 ván.
 - `npm run qa`: Puppeteer tương tác thật với trang: Phase 1 slice (`index.html`) rồi `tests/e2e/runtime-slice.mjs` (`game.html?demo=1`: focus châu/thành, mở ván, khách tới, một cửa căng, hai trận thắng/thua, về chiến dịch; ngân sách tam giác; ảnh `test-results/runtime-*.png`) rồi `tests/e2e/game-loop.mjs` (ảnh `test-results/game-*.png`). three.js được phục vụ từ `node_modules` thay vì CDN để QA không phụ thuộc mạng.
-- `tests/game-controller.test.mjs`: vòng lượt với engine thật trong Node: 4 đế, lựa chọn = frontier, `fillDecisions` + `resolveTurn`, chặn lệnh sai, chơi hết ván, tất định theo seed.
+- `tests/game-controller.test.mjs`: vòng lượt với engine thật trong Node: 4 đế, lựa chọn = frontier, `fillDecisions` + `resolveTurn`, chặn lệnh sai, chơi hết ván, tất định theo seed; lớp perception: `game.html` compose đúng thứ tự (chạy thử như script trình duyệt, ra cùng ván với Node), mô hình UI không có quân/Uy/ước lực thật của phe khác, nhãn công khai, số phe mình đúng.
 - `tests/e2e/game-loop.mjs` (trong `npm run qa`): bấm thật trên `game.html`: chọn từng đế, 5 lượt với 5 hành động, spy `fillDecisions`/`resolveTurn`, event v1 diễn đúng một lần, chủ đất = state, về chiến dịch, bỏ qua, tới hết ván, bộ nhớ GPU qua các lượt.
 - `tests/runtime.test.mjs`: tên nhân vật, và kế hoạch cảnh của EventPresenter trên runtime giả (đích hành quân, `win`, không đọc `defender`, không đổi event, về chiến dịch).
 - `.github/workflows/pages.yml`: `npm test` → server → QA trình duyệt → chỉ deploy `index.html`, `game.html`, `src/`, `data/`, `assets/` lên Pages (không đưa `docs/` lên).

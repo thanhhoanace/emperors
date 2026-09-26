@@ -6,8 +6,17 @@
 
 ## Đang chờ
 
-- **Claude — HUD:** nạp `src/engine/perception.js` sau `attach-219.js`. HUD đọc `projectPerception(game, playerFid)`, không đọc truth phe khác. Không sửa luật.
+- **Claude — HUD perception:** xong, chờ chủ dự án chơi thử `game.html` (`npm start` → `/game.html`).
 - **Grok A.5:** bốn máy statecraft — chưa. Deal đầy đủ — chưa.
+
+## HUD perception (Claude, 2026-09-26)
+
+`game.html` nạp `engine.js` → `attach-219.js` → `perception.js` (tự gắn vào `window.EmperorsEngine`, không `attach` lại) và `world.intelRules` trước `createGame`. AI mọi phe qua `fillDecisions` → DecisionContext.
+
+- UI đọc `ctrl.view()`; phe khác chỉ từ `projectPerception(game, playerFid)`: `publicLabel` (+ `claimedIdentity` nếu có), còn/mất, số châu, band quân (Yếu/Vừa/Mạnh/Rất mạnh/Chưa rõ), lượt thấy cuối. Phe mình: số thật.
+- Bỏ khỏi mô hình UI: xếp hạng `Engine.ranking` (quân/Uy thật, tên thật), ước lực đánh (`defenders`, `ratio`, `commit`), quân thật của đích mưu, tên persona của đế ẩn, `seatOf` đọc thủ phủ địch từ state.
+- Bảng phe xếp theo số châu rồi thứ tự cố định. Người chơi chọn được nơi xuất quân (`from`) khi có nhiều châu kề đích.
+- RuntimeEvent không lọc: phần diễn và nhật ký vẫn là sự thật spectator (tên thật trong lời event).
 
 ## Round A (engine)
 
@@ -22,4 +31,4 @@ Node và server cùng compose: `engine.js` → `attach-219.js` → `perception.j
 ## Chặn còn
 
 1. Ngoại giao deal đủ điều khoản — vòng riêng.
-2. `game.html` chưa nạp `perception.js` — HUD vẫn truth cho đến vòng Claude.
+2. Màn kết thúc và nhật ký event hiện lời RuntimeEvent (tên thật) — đúng hợp đồng "RuntimeEvent = sự thật spectator"; nếu muốn giấu danh tính trong lời diễn thì cần quyết định luật riêng.

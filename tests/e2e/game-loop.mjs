@@ -84,9 +84,10 @@ try {
     // the input each action needs, picked from what the menu offers
     const choice = await page.evaluate((action) => {
       const op = window.__game.ctrl.options();
-      if (action === 'attack') { const t = op.attack.slice().sort((a, b) => b.ratio - a.ratio)[0]; return { target: t.pid, betray: t.pact }; }
+      const rank = { weak: 0, unknown: 1, medium: 2, strong: 3, very_strong: 4 }; // perceived troop bands only
+      if (action === 'attack') { const t = op.attack.slice().sort((a, b) => rank[a.troopBand] - rank[b.troopBand])[0]; return { target: t.pid, betray: t.pact }; }
       if (action === 'diplomacy') return op.diplomacy.annex.length ? { sub: 'annex', target: op.diplomacy.annex[0].pid } : { sub: 'pact', target: (op.diplomacy.pact.find((x) => !x.full) || op.diplomacy.pact[0]).fid };
-      if (action === 'stratagem') return { sub: 'burn', target: op.stratagem.targets.slice().sort((a, b) => b.troops - a.troops)[0].fid };
+      if (action === 'stratagem') return { sub: 'burn', target: op.stratagem.targets.slice().sort((a, b) => rank[b.troopBand] - rank[a.troopBand])[0].fid };
       if (action === 'fortify') return { target: op.fortify[0].pid };
       return {};
     }, action);

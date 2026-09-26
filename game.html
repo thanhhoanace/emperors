@@ -10,6 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/utils/BufferGeometryUtils.js"></script>
 <script src="src/engine/engine.js"></script>
 <script src="src/engine/attach-219.js"></script>
+<script src="src/engine/perception.js"></script>
 <script src="src/world/kit.js"></script>
 <script src="src/world/city.js"></script>
 <script src="src/world/hancity.js"></script>
@@ -33,25 +34,31 @@
   const DEMO = params.has('demo');
   const W = Number(params.get('w')) || innerWidth, H = Number(params.get('h')) || innerHeight;
   const json = (u) => fetch(u).then((r) => { if (!r.ok) throw new Error(u + ' ' + r.status); return r.json(); });
-  const [world, cities, characters, gates, fixtures] = await Promise.all([
+  const [world, cities, characters, gates, intelRules, fixtures] = await Promise.all([
     json('data/world.json'), json('data/cities.json').then((j) => j.cities), json('data/scenario/characters.json'),
-    json('data/scenario/gates.json'), json('data/scenario/runtime-events.v1.json'),
+    json('data/scenario/gates.json'), json('data/scenario/intel-rules.json'), json('data/scenario/runtime-events.v1.json'),
   ]);
   const personas = Object.fromEntries(await Promise.all(world.factions.map((f) => json(`data/personas/${f.id}.json`).then((p) => [f.id, p]))));
-  // the engine exactly as the server and the tests load it: engine.js (UMD) + the 219 layer (gates, RuntimeEvent v1,
-  // fillDecisions). attach-219.js has no browser export; as a classic script its `attach` function is global.
-  world.gatesPack = gates; world.charactersPack = characters;
-  const Engine = attach(window.EmperorsEngine);
+  // the engine composed exactly as the server and the tests compose it: engine.js → attach-219.js (gates, RuntimeEvent
+  // v1) → perception.js (DecisionContext, fillDecisions). Loaded as classic scripts, each layer attaches itself onto
+  // window.EmperorsEngine; composing again here would wrap createGame/resolveTurn/fillDecisions twice.
+  world.gatesPack = gates; world.charactersPack = characters; world.intelRules = intelRules;
+  const Engine = window.EmperorsEngine;
+  if (typeof Engine.projectPerception !== 'function' || typeof Engine.fillDecisions !== 'function') throw new Error('engine layers missing: engine.js → attach-219.js → perception.js');
   const colors = {}, glyphs = {};
   for (const f of world.factions) { colors[f.id] = f.color; glyphs[f.id] = personas[f.id].glyph || ''; }
   const seed = params.has('seed') ? Number(params.get('seed')) : undefined;
   const ctrl = GameController.create({ Engine, world, personas, seed });
   let loop = null;
+  // the player UI reads only ctrl.view(): own realm exact, other factions through Engine.projectPerception
   const ui = DEMO ? null : PlayerUI.create({
-    world, personas, colors, glyphs, actions: Engine.ACTIONS, stratagems: GameController.STRATAGEMS,
+    meta: world.meta, roster: ctrl.roster(), colors, actions: Engine.ACTIONS, bandText: GameController.BAND_TEXT,
     makeDecision: ctrl.decision, validate: ctrl.validate,
     onChoose: (fid) => loop.choose(fid), onSubmit: (d) => loop.submit(d).catch(fail), onSkip: () => presenter.skip(),
-    onMark: (m) => { hud.markPlaces(m); idle(); }, seatOf: (fid) => ctrl.game && ctrl.game.state.factions[fid].seat,
+    onMark: (m) => { // a faction target lights its provinces on the public map
+      if (m.faction) { const own = ctrl.owners(); m = { via: Object.keys(own).filter((pid) => own[pid] === m.faction) }; }
+      hud.markPlaces(m); idle();
+    },
   });
   window.__game = { Engine, ctrl, ui, world, ready: false };
 
