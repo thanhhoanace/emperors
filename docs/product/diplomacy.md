@@ -1,16 +1,27 @@
-# Ngoại giao — menu thỏa thuận
+# Ngoại giao
 
-> SOT cho *chọn lựa ngoại giao*. Số lượt minh / tối đa minh nằm ở data. Engine chưa đọc file này.
-> Chủ dự án 2026-09-25: không chỉ pact + chiêu trung lập; phải có màn chọn thỏa thuận.
+> Luật đang chạy: `docs/product/GAMEPLAY-CONTRACT-v1.1.md`.
+> V1.1 chỉ có **minh ước 6 mùa** (`rules.pact.turns`) và chiêu châu trung lập.
+> Bảng điều khoản bên dưới là hướng sau, **engine chưa đọc**.
+
+## V1.1 đang chạy
+
+Một main action / phe / lượt.
+
+- AI gửi pact cho người chơi: phiên phải đặt `state.playerFid` trước `resolveTurn`. Khi đó engine không roll. `pendingReactions` → `answerReaction` accept/reject. Reaction không tiêu main action. Chưa trả lời thì `resolveTurn` trả `{ blocked: true }` và không đổi state. HUD hiện chưa đặt `playerFid`, nên chưa chặn — Claude phải gắn cùng modal.
+- Accept tạo pact hai chiều, `untilTurn = turn + 6`. Reject: không pact, không phạt uy toàn cục, lượt AI vẫn đã tiêu.
+- Pact AI–AI hoặc người chơi gửi cho AI: engine roll như cũ. Ký rồi thì sống trên đồng hồ 6.
+- `world.pacts` trên DecisionContext là đồ thị công khai `{ a, b, untilTurn, remainingTurns }`.
+- `diplomaticPressure[fid]` = `none | watch | high`, suy từ pact công khai + số châu khối + biên + grudge của mình. Không ma trận quan hệ, không team cố định, không quân ẩn.
 
 ## Không copy y nguyên
 
 Civ6: một màn deal kéo 15 loại tài nguyên, favor, đô thị, đại hội.
 TW3K: deal + quan hệ tướng + hôn nhân + chư hầu.
 
-Emperors: **1 hành động / lượt**. Một lượt ngoại giao = 1 đối tác + tối đa 2 điều khoản (1 đòi + 1 cho). Đối phương: nhận / trả giá 1 điều / từ.
+Emperors sau này: **1 hành động / lượt**. Một lượt ngoại giao = 1 đối tác + tối đa 2 điều khoản (1 đòi + 1 cho). Đối phương: nhận / trả giá 1 điều / từ. **Chưa làm trong v1.1.**
 
-## Bảng điều khoản v1
+## Bảng điều khoản — chưa wire
 
 | id | Tên trên UI | A đòi / A cho | Hiệu ứng |
 | --- | --- | --- | --- |
@@ -23,32 +34,8 @@ Emperors: **1 hành động / lượt**. Một lượt ngoại giao = 1 đối t
 | `recognize` | Thừa nhận ranh | cho | +Uy họ, họ dễ nhận `truce`/`alliance` |
 | `break` | Bãi ước | — | Hủy truce/alliance. Mất Uy. `betrayal` thấp thì AI hiếm khi chọn |
 
-Chiêu châu trung lập **không** nằm ở màn này. Vẫn là ngoại giao nhưng mục tiêu là châu, không phải phe — một nhánh cũ, giữ.
+Chiêu châu trung lập vẫn là nhánh `annex`.
 
-## Lượt của người chơi (1 đế)
+## Cấm v1.1
 
-1. Chọn ⚖ Ngoại giao.
-2. Chọn đối tác (6 phe còn sống).
-3. Chọn **1 điều đòi** và tuỳ chọn **1 điều cho**.
-4. Đối phương (MOCK):
-   - `accept` → ký, event `pact`/`deal`
-   - `counter` → đổi 1 điều (vd đòi `grain` thêm). Người chơi nhận hoặc từ trong cùng lượt
-   - `refuse` → hết lượt ngoại giao, đôi bên ít Uy
-
-Không có vòng thương lượng dài. Tối đa 1 lần trả giá.
-
-## AI chấm điểm (lời)
-
-Cộng: cùng kẻ địch, đang yếu, `traits.diplomacy` cao, người đưa `grain`/`recognize`, cửa `coalition_hegemon` chống phe dẫn đầu.
-Trừ: đang giằng đất (`jing`/`han_zhong`), vừa bị đánh, `joint_war` nhắm minh hữu họ, Tần/`loyaltyDrift` âm khó ký `alliance`.
-
-Đình chiến khách 8 mùa: Tam Quốc dễ `truce` với đế 1 châu, khó `joint_war` chống đế.
-
-## Event engine phải trả
-
-`kind`: `deal_accept` | `deal_counter` | `deal_refuse` | `deal_break` | `annex` (trung lập).
-Kèm `fid`, `other`, `clauses[]`, `text`.
-
-## Cấm v1
-
-Bán châu, hôn nhân, chư hầu, favor, đại hội, đồ. Đủ clip; chưa đủ để gãy 1 action/lượt.
+Bán châu, hôn nhân, chư hầu, favor, đại hội, đồ, team A/B, điểm thù lưu.

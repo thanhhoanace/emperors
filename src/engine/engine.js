@@ -487,6 +487,26 @@
       return;
     }
     const O = g.def.F[d.target];
+    if (g.state.playerFid && d.target === g.state.playerFid && d.fid !== g.state.playerFid) {
+      const id = 'pact:' + st.turn + ':' + d.fid + ':' + d.target;
+      const rec = (g.state.reactionAnswers || {})[id];
+      const answer = rec && typeof rec === 'object' ? rec.answer : rec;
+      if (answer === 'accept') {
+        const until = st.turn + R.pact.turns;
+        f.pacts[d.target] = until;
+        other.pacts[d.fid] = until;
+        f.prestige += 3;
+        other.prestige += 2;
+        events.push({ kind: 'pact', fid: d.fid, other: d.target, ok: true, until, turns: R.pact.turns, tone: 'good', text: `${name} và ${O.persona.name} kết minh ${R.pact.turns} lượt.` });
+        return;
+      }
+      if (answer === 'reject') {
+        events.push({ kind: 'pact', fid: d.fid, other: d.target, ok: false, code: 'rejected', turns: R.pact.turns, tone: 'neutral', text: `${O.persona.name} từ chối minh ước của ${name}.` });
+        return;
+      }
+      events.push({ kind: 'pact', fid: d.fid, other: d.target, ok: false, code: 'unanswered', tone: 'neutral', text: `${name} chờ trả lời minh ước.` });
+      return;
+    }
     const bully = other.troops > f.troops * 2 ? 0.1 : 0;
     const chance = clamp(0.35 + (0.3 * f.prestige) / 100 + F.traits.diplomacy + O.traits.openness - bully, 0.1, 0.85);
     if (rand(st) < chance) {
@@ -495,7 +515,7 @@
       other.pacts[d.fid] = until;
       f.prestige += 3;
       other.prestige += 2;
-      events.push({ kind: 'pact', fid: d.fid, other: d.target, ok: true, tone: 'good', text: `${name} và ${O.persona.name} kết minh ${R.pact.turns} lượt.` });
+      events.push({ kind: 'pact', fid: d.fid, other: d.target, ok: true, until, turns: R.pact.turns, tone: 'good', text: `${name} và ${O.persona.name} kết minh ${R.pact.turns} lượt.` });
     } else {
       f.prestige -= 2;
       events.push({ kind: 'pact', fid: d.fid, other: d.target, ok: false, tone: 'neutral', text: `${O.persona.name} khước từ sứ giả của ${name}.` });

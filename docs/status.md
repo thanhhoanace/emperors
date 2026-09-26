@@ -6,8 +6,19 @@
 
 ## Đang chờ
 
-- **Claude — HUD perception:** xong, chờ chủ dự án chơi thử `game.html` (`npm start` → `/game.html`).
-- **Grok A.5:** bốn máy statecraft — chưa. Deal đầy đủ — chưa.
+- **Claude — playability:** wire tiếp observation (`projectTurnObservation`), bỏ ratio/quân/win% nếu còn, `?` / stale / band theo `provinceIntel`. Không vẽ countdown đình chiến khách từ intro — đọc `guestProtectionStatus` (engine đã enforce).
+- **Claude — diplomacy UI:** đặt `state.playerFid`, rồi `pendingReactions` + `answerReaction` trước `resolveTurn`. Khi `playerFid` đã đặt, `resolveTurn` trả `blocked: true` nếu chưa trả lời. Đừng đặt `playerFid` trước khi có modal — lượt sẽ đứng. Chưa đặt thì pact nhằm người chơi vẫn roll cũ.
+- **Claude — bàn cờ:** tint / biên khối / frontier. Chưa làm.
+- **Grok A.5:** bốn máy statecraft — chưa. Officers — chưa.
+
+## Contract v1.1 (Grok, 2026-09-26)
+
+`docs/product/GAMEPLAY-CONTRACT-v1.1.md`.
+
+- `provinceIntel` theo châu: own / adjacent / memory / unknown. Không số quân ẩn.
+- `projectTurnObservation` → `visibleEvents` + `publicNews`. Không copy `ev.text`. Spectator vẫn dùng RuntimeEvent.
+- Đình chiến khách là luật referee: legal, AI, từ chối combat. `guestProtectionStatus`. Phá ước theo từng phe Tam Quốc khi đế có cú đánh hợp lệ.
+- Pact tới người chơi là reaction. Accept = 6 mùa. `world.pacts` công khai. `diplomaticPressure` suy từ khối + biên + grudge.
 
 ## HUD perception (Claude, 2026-09-26)
 
@@ -30,5 +41,6 @@ Node và server cùng compose: `engine.js` → `attach-219.js` → `perception.j
 
 ## Chặn còn
 
-1. Ngoại giao deal đủ điều khoản — vòng riêng.
-2. Màn kết thúc và nhật ký event hiện lời RuntimeEvent (tên thật) — đúng hợp đồng "RuntimeEvent = sự thật spectator"; nếu muốn giấu danh tính trong lời diễn thì cần quyết định luật riêng.
+1. HUD chưa vẽ observation / accept-reject / guest status / province card. Chưa đặt `state.playerFid` nên game.html chưa chặn pact; khi Claude đặt cờ mà chưa có modal, `resolveTurn` đứng lượt.
+2. Menu đánh của HUD vẫn có thể đi từ frontier, không từ `legal.attackTargets`. Referee từ chối đánh trái đình chiến khách; UI có thể vẫn hiện mục tiêu đó cho đến khi Claude đọc legal.
+3. A.5 / Officers chưa.

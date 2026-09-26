@@ -182,8 +182,8 @@ AI chọn ngoại giao → pact → người chơi: AI đã tiêu main action.
 Người chơi nhận reaction, không tiêu main action của mình.
 Engine không được roll thay người chơi.
 
-`state.playerFid` đánh dấu người chơi. `fillDecisions` ghi field này.
-Không có `playerFid` (sim toàn AI) thì pact AI–AI vẫn roll như cũ.
+`state.playerFid` đánh dấu người chơi. Phiên chơi (Claude, khi đã có modal) phải ghi field này trước `resolveTurn`.
+`fillDecisions` không tự bật chặn — HUD hiện tại chưa trả lời reaction. Không có `playerFid` thì pact AI–AI và pact nhằm phe chưa đánh dấu vẫn roll như cũ. Có `playerFid` thì offer tới đúng phe đó không được roll.
 
 `Engine.pendingReactions(game, playerFid, decisions)` →
 

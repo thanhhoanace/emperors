@@ -211,6 +211,134 @@ function buildProvinceIntel(g, fid, rules) {
   return out;
 }
 
+function activePactEdges(g) {
+  const edges = [];
+  const seen = new Set();
+  const turn = g.state.turn;
+  for (const a of g.def.order) {
+    const fa = g.state.factions[a];
+    if (!fa || !fa.alive) continue;
+    for (const b of Object.keys(fa.pacts || {})) {
+      const until = fa.pacts[b];
+      if (!(until >= turn)) continue;
+      const fb = g.state.factions[b];
+      if (!fb || !fb.alive) continue;
+      const pair = [a, b].sort();
+      const key = pair.join('|');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      edges.push({ a: pair[0], b: pair[1], untilTurn: until, remainingTurns: until - turn });
+    }
+  }
+  edges.sort((x, y) => (x.a + x.b).localeCompare(y.a + y.b));
+  return edges;
+}
+
+function pactMembers(g, fid, edges) {
+  const adj = {};
+  for (const id of g.def.order) adj[id] = [];
+  for (const e of edges) {
+    adj[e.a].push(e.b);
+    adj[e.b].push(e.a);
+  }
+  const seen = new Set();
+  const stack = [fid];
+  while (stack.length) {
+    const cur = stack.pop();
+    if (!cur || seen.has(cur)) continue;
+    seen.add(cur);
+    for (const n of adj[cur] || []) if (!seen.has(n)) stack.push(n);
+  }
+  return Array.from(seen);
+}
+
+function provinceCountOf(g, fid) {
+  let n = 0;
+  for (const pid of g.def.provinceIds) if (g.state.provinces[pid].owner === fid) n += 1;
+  return n;
+}
+
+function blocBordersObserver(g, observer, members) {
+  const mine = new Set();
+  for (const pid of g.def.provinceIds) if (g.state.provinces[pid].owner === observer) mine.add(pid);
+  const set = new Set(members);
+  for (const pid of g.def.provinceIds) {
+    if (!set.has(g.state.provinces[pid].owner)) continue;
+    for (const n of g.def.P[pid].neighbors) if (mine.has(n)) return true;
+  }
+  return false;
+}
+
+function diplomaticPressure(g, observer) {
+  const edges = activePactEdges(g);
+  const out = {};
+  const self = g.state.factions[observer];
+  for (const id of g.def.order) {
+    if (id === observer) continue;
+    const f = g.state.factions[id];
+    if (!f || !f.alive) { out[id] = 'none'; continue; }
+    const members = pactMembers(g, id, edges);
+    if (members.indexOf(observer) !== -1) { out[id] = 'none'; continue; }
+    const borders = blocBordersObserver(g, observer, members);
+    let size = 0;
+    for (const m of members) size += provinceCountOf(g, m);
+    let links = 0;
+    for (const e of edges) if (members.indexOf(e.a) !== -1 && members.indexOf(e.b) !== -1) links += 1;
+    const grudge = !!(self && self.grudge && self.grudge.fid === id && g.state.turn - self.grudge.turn <= 3);
+    if (grudge && borders) out[id] = 'high';
+    else if (grudge) out[id] = 'watch';
+    else if (borders && links > 0 && size >= 4) out[id] = 'high';
+    else if (borders && links > 0) out[id] = 'watch';
+    else out[id] = 'none';
+  }
+  return out;
+}
+
+function reactionId(turn, from, to) {
+  return 'pact:' + turn + ':' + from + ':' + to;
+}
+
+function pactCountOf(g, fid) {
+  const f = g.state.factions[fid];
+  if (!f) return 0;
+  return Object.keys(f.pacts || {}).filter((o) => f.pacts[o] >= g.state.turn).length;
+}
+
+function pendingReactions(g, playerFid, decisions) {
+  const turns = g.def.rules.pact.turns;
+  const max = g.def.rules.pact.max;
+  const out = [];
+  const seen = new Set();
+  for (const d of decisions || []) {
+    if (!d || d.fid === playerFid || d.action !== 'diplomacy' || d.target !== playerFid) continue;
+    if (d.sub && d.sub !== 'pact') continue;
+    const from = g.state.factions[d.fid];
+    const to = g.state.factions[playerFid];
+    if (!from || !to || !from.alive || !to.alive) continue;
+    if (from.pacts && from.pacts[playerFid] >= g.state.turn) continue;
+    if (pactCountOf(g, d.fid) >= max || pactCountOf(g, playerFid) >= max) continue;
+    const id = reactionId(g.state.turn, d.fid, playerFid);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push({ id, kind: 'pact_offer', from: d.fid, to: playerFid, turns });
+  }
+  out.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  return out;
+}
+
+function answerReaction(g, playerFid, id, answer) {
+  if (answer !== 'accept' && answer !== 'reject') throw new Error('reaction answer must be accept or reject');
+  if (!g.state.reactionAnswers) g.state.reactionAnswers = {};
+  g.state.reactionAnswers[id] = { answer, playerFid };
+  return { id, answer, playerFid };
+}
+
+function answered(g, id) {
+  const rec = (g.state.reactionAnswers || {})[id];
+  const answer = rec && typeof rec === 'object' ? rec.answer : rec;
+  return answer === 'accept' || answer === 'reject';
+}
+
 function projectPerception(g, fid) {
   const rules = rulesOf(g);
   ensureIntelLog(g);
@@ -282,8 +410,9 @@ function projectPerception(g, fid) {
       name: F.persona.name, short: F.persona.short, quotes: F.persona.quotes,
       homeCity: g.def.P[f.seat].city,
     },
-    world: { owners, neighbors, strategic, emperorAt: g.state.emperorAt, cities, publicLabels, guestProtection },
+    world: { owners, neighbors, strategic, emperorAt: g.state.emperorAt, cities, publicLabels, guestProtection, pacts: activePactEdges(g) },
     others,
+    diplomaticPressure: diplomaticPressure(g, fid),
     legal: {
       actions: Object.keys(EngineRef.ACTIONS),
       attackTargets,
@@ -364,8 +493,11 @@ function decideFromContext(ctx, rng) {
     if (pact && !(T.betrayal && ctxRand(rng) < T.betrayal)) continue;
     const commit = f.troops * clamp((R.commitBase || 0.45) + (R.commitAggression || 0.2) * (T.aggression || 0.5), 0.3, 0.8);
     const atkPower = commit * (T.attack || 1) * moraleMul;
+    const intel = ctx.provinceIntel && ctx.provinceIntel[pid];
     const ownerN = owner === 'neutral' ? 1 : Math.max(1, (ctx.others[owner] && ctx.others[owner].provinces) || 1);
-    const defPool = owner === 'neutral' ? bandValue('weak') : estimatedTroops(ctx, owner) / ownerN;
+    const defPool = intel && intel.troopBand && intel.troopBand !== 'unknown'
+      ? bandValue(intel.troopBand)
+      : (owner === 'neutral' ? bandValue('weak') : estimatedTroops(ctx, owner) / ownerN);
     const ratio = atkPower / Math.max(1, defPool);
     let score = ratio * (owner === 'neutral' ? 1.25 : 1) * (ctx.world.strategic[pid] ? 1.15 : 1) * (ctx.world.emperorAt === pid ? 1.2 : 1);
     if (T.vengeance && f.grudge && owner === f.grudge.fid && ctx.turn - f.grudge.turn <= 3) score *= 3;
@@ -373,6 +505,7 @@ function decideFromContext(ctx, rng) {
     if (ctx.prior && ctx.prior.status === 'active' && (ctx.prior.focus || []).indexOf(pid) !== -1) {
       score *= (ctx.prior.bias && ctx.prior.bias.attack) || 1.35;
     }
+    if (owner !== 'neutral' && ctx.diplomaticPressure && ctx.diplomaticPressure[owner] === 'high') score *= 1.08;
     if (!best || score > best.score) best = { pid, ratio, score, betray: pact };
   }
   if (!best || best.ratio < minRatio) w.attack = 0;
@@ -392,6 +525,14 @@ function decideFromContext(ctx, rng) {
     if (r > threatRatio) { threatRatio = r; threatFid = id; }
   }
   if (threatRatio > 1.2) { w.fortify *= 1.8; w.diplomacy *= 1.4; w.stratagem *= 1.3; }
+  let pressureHigh = false;
+  let pressureWatch = false;
+  for (const id of Object.keys(ctx.diplomaticPressure || {})) {
+    if (ctx.diplomaticPressure[id] === 'high') pressureHigh = true;
+    else if (ctx.diplomaticPressure[id] === 'watch') pressureWatch = true;
+  }
+  if (pressureHigh) { w.fortify *= 1.12; w.diplomacy *= 1.08; w.stratagem *= 1.08; }
+  else if (pressureWatch) w.fortify *= 1.05;
   const myPacts = Object.keys(f.pacts).filter((o) => hasPactCtx(ctx, o)).length;
   const neutralAdj = ctx.legal.annexTargets;
   const others = ctx.legal.pactTargets.filter((id) => ctx.others[id] && ctx.others[id].alive);
@@ -664,6 +805,8 @@ function attach(Engine) {
   Engine.observeProvinces = observeProvinces;
   Engine.ownersSnapshot = ownersSnapshot;
   Engine.projectTurnObservation = projectTurnObservation;
+  Engine.pendingReactions = pendingReactions;
+  Engine.answerReaction = answerReaction;
   Engine.projectPerception = function (g, fid) { return projectPerception(g, fid); };
   Engine.collectContexts = collectContexts;
   Engine.decideFromContext = decideFromContext;
@@ -731,6 +874,12 @@ function attach(Engine) {
 
   const resolveTurn = Engine.resolveTurn;
   Engine.resolveTurn = function (g, decisions) {
+    if (g.state.playerFid) {
+      const pending = pendingReactions(g, g.state.playerFid, decisions).filter((r) => !answered(g, r.id));
+      if (pending.length) {
+        return { turn: g.state.turn, blocked: true, pendingReactions: pending, events: [], deltas: [], winner: g.state.winner || null };
+      }
+    }
     const result = resolveTurn(g, decisions);
     if (result && result.blocked) return result;
     const seenTurn = result && result.turn != null ? result.turn : g.state.turn;
