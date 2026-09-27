@@ -12,6 +12,8 @@
 | `cities219-east.md` | Chung Ly, Giang Lăng; Lạc Dương và Trường An năm 219 (hồi sinh một phần, cung vẫn là phế tích) |
 | `cities219-diff.md` | Mười hai thành còn lại: thay đổi từ 200 tới 219 (Tam Đài ở Nghiệp, Quan Vũ vây Phàn Thành, Bộ Chất ở Phiên Ngung…) |
 | `periphery.md` | Vùng biên Trung Quốc năm 200 và lợi thế có căn cứ lịch sử cho từng hoàng đế |
-| `gameplay-interview-2026-09-27.md` | Vòng 9 (tiếng Việt): hiện trạng gameplay / game feel, số đo `tests/sim.mjs` + `tests/playthrough.mjs`, 14 phát hiện, bản đồ pending / unknown và 16 câu interview chờ chủ dự án trả lời |
+| `tw3k-civ-win-defeat.md` | Vòng 9 (tiếng Việt): TW3K và Civ VI — điều kiện thắng, khi nào bị loại, đường trở lại (lưu vong, chư hầu, giải phóng), thông tin trước trận, khởi đầu yếu; hàm ý mốc thắng và cơ chế lật lại |
+| `tw3k-civ-buildup-economy-generals.md` | Vòng 9 (tiếng Việt): TW3K và Civ VI — giữ đất (đồn trú, vây thành, trung thành), 20 lượt đầu, mộ binh và kinh tế trong ngân sách ít lệnh, lớp tướng, từ vựng tương tác bản đồ (dat.city, TW3K) |
+| `gameplay-interview-2026-09-27.md` | Vòng 9 (tiếng Việt): hiện trạng gameplay / game feel, số đo `tests/sim.mjs` + `tests/playthrough.mjs`, 14 phát hiện, bản đồ pending / unknown và 25 câu interview đã trả lời (mục 9) |
 
 Ảnh chụp TW3K và dữ liệu TWDB mà các báo cáo nhắc tới **không có trong repo**. Đó là tư liệu của game thương mại, chỉ dùng để tham khảo (`AGENTS.md`).

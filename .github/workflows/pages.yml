@@ -6,6 +6,7 @@ on:
     paths:
       - 'index.html'
       - 'game.html'
+      - 'phase1.html'
       - 'src/**'
       - 'data/**'
       - 'assets/**'
@@ -18,6 +19,7 @@ on:
     paths:
       - 'index.html'
       - 'game.html'
+      - 'phase1.html'
       - 'src/**'
       - 'data/**'
       - 'server/**'
@@ -79,7 +81,7 @@ jobs:
       - name: Assemble site (runtime files only)
         run: |
           mkdir _site
-          cp -r index.html game.html src data assets _site/
+          cp -r index.html game.html phase1.html src data assets _site/
       - uses: actions/upload-pages-artifact@v4
         with:
           path: _site

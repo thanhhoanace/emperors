@@ -10,7 +10,8 @@ data/world.json ─┐
 data/personas/*  ├─► src/engine/engine.js ──► tests/engine.test.mjs, tests/sim.mjs
                  │        (thuần, tất định)  ──► server/server.js  POST /api/turn (agent MOCK)
                  │                           ──► result.events (RuntimeEvent v1) ──► game.html
-index.html ── Phase 1 slice cũ (three r146, tự chứa, không dùng engine)
+index.html ── chuyển hướng sang game.html (Pages, 2026-09-27)
+phase1.html ── Phase 1 slice cũ (three r146, tự chứa, không dùng engine), giữ để so sánh
 game.html ── trò chơi: chọn 1 trong 4 hoàng đế, mỗi mùa một lệnh; engine chạy ngay trong trình duyệt (engine.js → attach-219.js → perception.js)
              Engine → RuntimeEvent v1 → EventPresenter → WorldRuntime (+ HUD); &seed=N cố định ván, &speed=N tốc độ diễn
              ?demo=1: trình diễn fixture chuẩn (src/world/demo.js); &live=1 một lượt POST /api/turn; &qa=1 QA gọi __game.seek(i, t)
@@ -96,7 +97,7 @@ PlayerUI ── chọn đế ──► GameController.start(fid) ── Engine.c
 - Bản đồ (`world-runtime.js` MODES, `terrain.js` applyBorders, `terrain-real.js` setOwners/setHighlight): ở view chiến dịch màu chủ đậm hơn (`tint` 0,22 trên đất, 0,18 trên rừng; cận cảnh giữ như cũ), biên giữa hai phe có quầng tối + dải màu chủ rộng 4 đơn vị phía trong, đường giữa hai châu cùng chủ mờ. Chọn Tấn công: mọi đích hợp lệ gạch chéo ấm (`tBord.a`, `rt.setFrontier`), đích đã chọn gạch vàng; nhãn thành viền đỏ.
 - Engine chạy trong trình duyệt đúng như server và test nạp: `engine.js` → `attach-219.js` → `perception.js`; mỗi lớp tự gắn vào `window.EmperorsEngine`, `game.html` chỉ lấy `window.EmperorsEngine`. `?demo=1` vẫn diễn `result.events` thô.
 
-Còn lại: nướng mặt nạ lõi (bớt ~16 giây `createReal` lúc mở trang), cảnh cắt trận (battle.js), tour khóa theo điểm dừng, 3 mức chất lượng, thay `index.html` bằng `game.html` (chờ chủ dự án duyệt).
+Còn lại: nướng mặt nạ lõi (bớt ~16 giây `createReal` lúc mở trang), cảnh cắt trận (battle.js), tour khóa theo điểm dừng, 3 mức chất lượng, (`index.html` đã trỏ sang `game.html` từ 2026-09-27).
 
 Hiệu năng: mọi thứ trong `src/world` phải nằm trong ngân sách của `decisions/0005`. `tests/e2e/runtime-slice.mjs` đo tam giác từng khung; ảnh duyệt design vẫn đo bằng `render.mjs`.
 
@@ -113,4 +114,4 @@ Ranh giới:
 - `tests/game-controller.test.mjs`: vòng lượt với engine thật trong Node theo contract v1.1: `preparePlayerTurn` đúng một lần, sứ giả chấp nhận/từ chối trên cùng envelope, không ghi `state.playerFid`, bảo hộ khách từ `self.guestProtection`, thẻ châu từ `provinceIntel` (hiện tại / cũ / chưa rõ, lũy 0 ≠ ?), chữ chơi chỉ từ TurnObservation (không tên thật, không quân/thương vong địch, trận xa không hiện), tin công khai, demo vẫn RuntimeEvent. `tests/e2e/playable-smoke.mjs`: smoke trình duyệt ngắn (5 lượt, sứ giả, trận xa, `?demo=1`), ảnh `test-results/smoke-*.png`.
 - `tests/e2e/game-loop.mjs` (trong `npm run qa`): bấm thật trên `game.html`: chọn từng đế, 5 lượt với 5 hành động, spy `preparePlayerTurn` (một lần) / `resolvePrepared`, sứ giả tự từ chối, cảnh quan sát được diễn đúng một lần, nhật ký và tin chỉ từ observation, chủ đất = state, về chiến dịch, bỏ qua, tới hết ván, bộ nhớ GPU qua các lượt.
 - `tests/runtime.test.mjs`: tên nhân vật, và kế hoạch cảnh của EventPresenter trên runtime giả (đích hành quân, `win`, không đọc `defender`, không đổi event, về chiến dịch).
-- `.github/workflows/pages.yml`: `npm test` → server → QA trình duyệt → chỉ deploy `index.html`, `game.html`, `src/`, `data/`, `assets/` lên Pages (không đưa `docs/` lên).
+- `.github/workflows/pages.yml`: `npm test` → server → QA trình duyệt → chỉ deploy `index.html`, `game.html`, `phase1.html`, `src/`, `data/`, `assets/` lên Pages (không đưa `docs/` lên).

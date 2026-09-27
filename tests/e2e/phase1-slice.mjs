@@ -1,4 +1,4 @@
-// Browser QA for the current Phase 1 slice (index.html). Needs `npm start` running.
+// Browser QA for the old Phase 1 slice (phase1.html; index.html now redirects to game.html). Needs `npm start` running.
 // three.js is served from node_modules instead of the CDN so the run is offline-safe.
 // Local: PUPPETEER_EXECUTABLE_PATH=/path/to/chromium npm run qa
 import puppeteer from 'puppeteer';
@@ -32,7 +32,7 @@ try {
   page.on('console', m => { if (m.type() === 'error') { pageErrors.push(m.text()); console.error('CONSOLE_ERROR', m.text()); } });
 
   console.log('QA goto', BASE_URL);
-  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  await page.goto(BASE_URL + 'phase1.html', { waitUntil: 'domcontentloaded', timeout: 30000 });
   console.log('QA domcontentloaded');
   await page.waitForFunction(() => window.__sliceReady === true, { timeout: 30000 });
   console.log('QA scene ready');

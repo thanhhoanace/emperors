@@ -11,7 +11,7 @@
 - Thế giới **quá loạn**: trung bình 1,6–2,0 châu đổi chủ mỗi lượt; Hứa Xương (thủ phủ Tào) đổi chủ 7–17 lần một ván. Tin "X nay thuộc Y" thành nhiễu, không đọc được thế cục.
 - Bảy trên chín cửa kịch bản (Quan Vũ vây Phàn, Ngô nhìn Kinh, Nghiệp lộ sườn…) **không bao giờ tới người chơi** — chỉ diễn ở `?demo=1`.
 - Hán Vũ Đế ở Hà Tây chỉ kề đúng một châu (Lũng Tây của Tần): "Viễn chinh" không có đâu để đi.
-- Phần lớn việc còn lại **không phải unknown kỹ thuật** mà là **pending quyết định của chủ dự án** (mục 6). Mục 7 là 16 câu hỏi (Q0–Q15) để chốt.
+- Phần lớn việc còn lại **không phải unknown kỹ thuật** mà là **pending quyết định của chủ dự án** (mục 6). Mục 7 là 16 câu hỏi (Q0–Q15) để chốt; **mục 9 là kết quả interview** (đã trả lời 25 câu trong chat cùng ngày).
 
 ## 2. Đã đo bằng gì
 
@@ -147,28 +147,28 @@ Trả lời bằng chữ cái, hoặc ghi ý riêng. "Đề xuất" là ý của
 ### A. Hướng và thước đo
 
 **Q0. Anh đã chơi thử `game.html` chưa?** Nếu rồi: ba khoảnh khắc nhớ nhất (một chỗ thích, một chỗ khó chịu, một chỗ không hiểu). Nếu chưa: `npm start` → `/game.html?seed=219`, chơi 10 lượt bằng Lý Thế Dân rồi trả lời.
-Trả lời:
+Trả lời: Đã chơi, chưa ổn. Nguyên văn: đang *xem* game chứ không được *chơi*; thao tác cho người chơi không nhiều; tấn công chỉ được xem cảnh quân chạy; không tương tác với bản đồ như dat.city; không tương tác với quân và đất của mình; câu chuyện về tướng, buff/nerf chưa có.
 
 **Q1. Ưu tiên bây giờ là gì?** Kịch bản gốc nói "trọng tâm: xem và quay clip"; anh vừa nói gameplay/game feel gần như chưa có.
 - A. *Chơi* là chính cho `game.html`; clip ở `?demo=1` và cảnh diễn trong lúc chơi.
 - B. Clip là chính; `game.html` chỉ cần chơi được để quay.
 - C. Hai sản phẩm tách hẳn (trang chơi, trang xem).
 Đề xuất: A — cảnh diễn đang có đã phục vụ clip; cái thiếu là phía chơi.
-Trả lời:
+Trả lời: A. Chơi là chính; clip ở `?demo=1` và cảnh diễn trong lúc chơi.
 
 **Q2. "Chơi được" đo bằng gì?** Freeze nói "đo đường thắng, không chỉ win %" nhưng chưa có mốc.
 - A. Người chơi biết luật thắng 25–40 % ván; ván 20–30 phút; sống qua lượt 16 ở 80 % ván.
 - B. Sống sót và giữ hạng là mục tiêu; thắng thật hiếm (như hiện nay).
 - C. Mốc khác: ____
 Đề xuất: A, và ghi vào freeze để `tests/playthrough.mjs` đo mỗi vòng.
-Trả lời:
+Trả lời: Research TW3K/Civ trước (đã làm: `tw3k-civ-win-defeat.md`). Sau research chốt: người chơi hợp lý thắng **20–30 %** (khó hơn đề xuất), bị loại trước lượt 16 dưới 5 %, sống tới lượt 48 trên 75 %, ván 20–40 phút.
 
 **Q3. Mất hết châu là chết ngay?** Hiện 1 châu thua 1 trận thủ = diệt vong, không cảnh báo (F2).
 - A. Giữ, nhưng UI cảnh báo rõ trước lệnh rủi ro và sau trận thủ thua.
 - B. Thêm đường lui một lần: mất thủ phủ khi còn 1 châu → chạy sang châu kề còn trống hoặc trung lập với nửa quân (lưu vong), rồi mới chết nếu mất tiếp.
 - C. Giữ nguyên, không cảnh báo (chủ ý khắc nghiệt).
 Đề xuất: B, vì cả 3 chính sách đều chết ở lượt 7–26 mà không có "hồi hai".
-Trả lời:
+Trả lời: Research trước; nghiêng về lưu vong / có cách lật lại. Sau research chọn **cả ba**: lưu vong có hạn (như Lưu Bị không đất trong TW3K), xưng thần (chư hầu), phục quốc / trung thành (như Civ VI).
 
 ### B. Luật cần anh quyết (Grok sửa)
 
@@ -177,35 +177,35 @@ Trả lời:
 - B. Giữ luật, chỉ lọc tin (gộp "X nay thuộc Y" thành một dòng tổng).
 - C. Khác: ____
 Đề xuất: A. Lọc tin không sửa được cảm giác bản đồ nhấp nháy.
-Trả lời:
+Trả lời: Research TW3K/Civ trước (đã làm: `tw3k-civ-buildup-economy-generals.md`, mục 1). Hướng: đồn trú theo châu thay vì chia đều, thành phải vây nhiều lượt, hồi quân chỉ ở đất mình.
 
 **Q5. Bảo hộ khách nên là gì?**
 - A. Giữ luật, thêm giới hạn phản công: phe bị đế đánh chỉ được đánh trả *một* lần trong 8 mùa, rồi bảo hộ lại có hiệu lực.
 - B. Bảo hộ theo *thủ phủ đế* chứ không theo "đúng 1 châu": thủ phủ được bảo hộ tới hết lượt 8 dù đế đã có 2 châu; châu mới không được bảo.
 - C. Giữ nguyên: bẫy là chủ ý, đế hiếu chiến phải trả giá.
 Đề xuất: B — cho đế một cửa sổ mở rộng thật sự (43 % Lý có 2 châu trước lượt 8 rồi mất sạch).
-Trả lời:
+Trả lời: Research thêm. Ý chính: vừa vào ván đã được cho 1 châu + quân là sai cảm giác; muốn **đi từ đầu như Civ**: châu nhỏ, quân ít, xây dần (Q7 vòng chat).
 
 **Q6. Hán Vũ Đế ở ngõ cụt (F3).**
 - A. Thêm cạnh graph: `hexi`–`bing` (thảo nguyên) hoặc `hexi`–`guan`.
 - B. Thêm ô trung lập "Tây Vực / Đại Uyển" kề `hexi` để chiêu hoặc đánh (nhãn cửa Hán đã có trên bản đồ, ADR 0006).
 - C. Giữ: Vũ là đế ngoại giao/mưu; cần deal "mượn đường" (F13) mới đi được.
 Đề xuất: B — khớp "khai hoang rìa" của kịch bản; A đổi địa lý, C phụ thuộc deal chưa có.
-Trả lời:
+Trả lời: Đúng, thêm Tây Vực, Giao Chỉ / Đại Việt, Tây Tạng. Vai trò: **vùng chiêu binh và buôn bán**, không chiếm được, không tính vào 20 châu (giữ ADR 0006). Mục tiêu: thể hiện được việc chiêu binh và kinh doanh.
 
 **Q7. Người chơi được biết gì trước khi đánh (F4)?**
 - A. Chỉ band + tướng + lũy như hiện nay (giữ contract).
 - B. Thêm địa hình và thủ phủ của châu đích (đều là địa lý công khai) và một chữ ước lượng do *UI* tính từ quân mình + band + lũy + địa hình: "Bất lợi / Ngang / Có lợi". Không đưa vào DecisionContext, AI không dùng.
 - C. Hiện tỉ lệ số (như Civ).
 Đề xuất: B. Không lộ quân địch, nhưng người chơi hết "học bằng cách chết".
-Trả lời:
+Trả lời: B. Ước lượng bằng chữ, tính từ tình báo và do thám; tin có thể bị mưu kế làm sai lệch. Liên minh phải có hỗ trợ thủ và cùng đánh (xem Q14 vòng chat).
 
 **Q8. Cửa kịch bản tới người chơi (F5)?**
 - A. Mọi cửa tension thành tin đồn công khai cho cả 7 phe (chỉ chữ + nhãn công khai, không actor ẩn).
 - B. Chỉ phe kề hoặc được nêu tên trong cửa mới thấy (Lý thấy "Nghiệp lộ sườn", Tần không).
 - C. Giữ: cửa chỉ cho spectator/demo.
 Đề xuất: B. Cốt 219 là lý do chọn mốc này; người chơi phải thấy nó.
-Trả lời:
+Trả lời: B. Phe kề hoặc được nêu tên trong cửa thấy cảnh; phe khác nhận tin đồn trễ.
 
 ### C. Cảm giác chơi và tương tác (Claude làm)
 
@@ -213,29 +213,29 @@ Trả lời:
 - A. Làm ngay vòng tới.
 - B. Sau khi luật (Q4–Q7) ổn.
 Đề xuất: A — độc lập với luật, đổi hẳn cảm giác "chơi trên bản đồ".
-Trả lời:
+Trả lời: A. Làm ngay: tương tác bản đồ như dat.city là điểm chủ dự án nêu đầu tiên.
 
 **Q10. Kết quả lượt (F8).**
 - A. Thẻ tổng kết cuối lượt: delta Quân/Lương/Dân/Uy có chuyển động, lý do thắng/thua bằng chữ (thành cao, địa hình hiểm, quân đông), tên kế địch dùng, nội dung "biến cố". Cần Grok gắn `code`/`sub` (chặn 1–3).
 - B. Chỉ delta số, chưa cần lý do.
 - C. Giữ.
 Đề xuất: A; phần delta làm được ngay, phần lý do chờ chặn 1–3.
-Trả lời:
+Trả lời: A. Thẻ tổng kết có delta và lý do; thêm: chọn tướng và số quân đem, chọn cách đánh, cắt cảnh trận có diễn biến; cả phòng thủ (quân đông không tự thắng).
 
 **Q11. Xếp thứ tự ba việc hình (F11):** cắt cảnh trận 3–5 s (ADR 0004) · chân dung 7 lãnh đạo + tướng chính · âm thanh (nhạc nền, trống trận, sứ giả). Ghi thứ tự, hoặc gạch cái không cần.
 Đề xuất: cắt cảnh trận → chân dung → âm thanh.
-Trả lời:
+Trả lời: Cắt cảnh trận → chân dung → âm thanh.
 
 **Q12. Mục tiêu và onboarding (F9):** hiện điều kiện thắng và đồng hồ 48 lượt trên bảng trạng thái; cảnh báo "đánh phe này = mất bảo hộ với phe này" ngay trong thẻ đích; ba gợi ý lượt đầu.
 - A. Làm ngay (rẻ, không đụng luật).
 - B. Sau.
 Đề xuất: A.
-Trả lời:
+Trả lời: Để vào v2.
 
 **Q13. Lưu ván (F12):** tự lưu vào trình duyệt sau mỗi lượt, nút "Tiếp tục" ở màn đầu, seed hiện để chia sẻ.
 - A. Làm ngay. B. Sau.
 Đề xuất: A khi ván dài 20–30 phút.
-Trả lời:
+Trả lời: Để vào v2.
 
 ### D. Phạm vi vòng tới
 
@@ -244,14 +244,14 @@ Trả lời:
 - B. A.5 (bốn máy) trước.
 - C. Song song: Grok làm Q4–Q7 + chặn 1–3 + tướng đổi chủ; Claude làm Q9–Q13.
 Đề xuất: C — hai lane không đụng file nhau; A.5 chỉ có nghĩa khi đế sống qua lượt 16.
-Trả lời:
+Trả lời: Giữ hai lane. Claude viết đề xuất Gameplay v2 + prototype duyệt trước; Grok làm engine, luật, test, cân bằng theo v2 đã duyệt. A.5 gộp vào v2.
 
 **Q15. Phát hành và LLM (F14).**
 - A. Pages trỏ `game.html` sau khi Q4–Q5 xong; LLM sau launch.
 - B. Trỏ `game.html` ngay (chấp nhận hiện trạng), LLM sau.
 - C. LLM là điều kiện launch.
 Đề xuất: A.
-Trả lời:
+Trả lời: Trỏ Pages sang `game.html` ngay (đã làm 2026-09-27: `index.html` chuyển hướng, clip cũ thành `phase1.html`); LLM sau.
 
 ## 8. Làm được ngay, không cần chờ trả lời
 
@@ -309,3 +309,32 @@ L12 Hạ 222 · lệnh attack → han_zhong
 ```
 
 Đọc lại 12 lượt này thấy ngay bốn thứ: Hứa Xương đổi chủ 9 lần trong 12 lượt; lệnh đánh lượt 1 thua vì Trường An "yếu" theo band nhưng là đất đồi có hệ số thủ cao, và người chơi không được biết điều đó; "Biến cố trong nước." xuất hiện ba lần không nói gì; và không có dòng nào nói người chơi đang cách chiến thắng bao xa.
+
+## 9. Kết quả interview (2026-09-27, trong chat)
+
+Chủ dự án trả lời 25 câu (16 câu ở mục 7 cộng các câu nảy sinh). Quyết định, theo chủ đề:
+
+| Chủ đề | Quyết định | Đi vào đâu |
+| --- | --- | --- |
+| Cảm nhận chơi thử | "Đang xem chứ không chơi": ít thao tác; đánh chỉ xem quân chạy; không tương tác bản đồ như dat.city; không tương tác quân/đất mình; chưa có chuyện tướng, buff/nerf | Định hướng cả vòng v2 |
+| Ưu tiên | Chơi là chính; clip ở `?demo=1` và cảnh diễn trong lúc chơi | Freeze v2 |
+| Mốc "chơi được" | Người chơi hợp lý thắng 20–30 %; bị loại trước lượt 16 dưới 5 %; sống tới lượt 48 trên 75 %; ván 20–40 phút; độ khó là núm riêng | Freeze v2, đo bằng `npm run play` |
+| Lật lại khi sắp chết | Cả ba: lưu vong có hạn, xưng thần (chư hầu), phục quốc / trung thành | Luật v2 |
+| Thế giới loạn | Sửa theo mô hình research: đồn trú theo châu, vây thành nhiều lượt, hồi quân ở nhà; mốc dưới 0,7 châu đổi chủ mỗi lượt | Luật v2 |
+| Mở ván | Không nhận sẵn đại quân: châu nhỏ, quân ít, xây dần ("đi từ đầu như Civ"); bảo hộ khách 8 mùa thiết kế lại theo đó | Luật v2 |
+| Vùng rìa | Thêm Tây Vực, Giao Chỉ / Đại Việt, Tây Tạng như vùng chiêu binh và buôn bán, không chiếm, không tính vào 20 châu | Luật v2, giữ ADR 0006 |
+| Việc trong châu | Quản dân, tiền, lương; mộ binh, luyện quân; xây; điều quân, đồn trú; bổ nhiệm tướng; buôn bán; việc kéo 2–3 lượt. Ngân sách lệnh theo TW3K/Civ: một lệnh triều đình + mỗi châu một việc | Luật v2 |
+| Nhịp chơi | Theo lượt, cùng lúc như nay; nhưng phải có tình báo và độ trễ tin (tin từ A tới B mất cả tháng) | Research `intel-delay.md` → luật v2 |
+| Trận đánh | Chọn tướng và số quân đem, cách đánh, cắt cảnh có diễn biến, kết quả có lý do; cả phòng thủ; yếu tố bắt buộc: tướng, địa hình và sông (thủy quân), đồn trú theo châu + số quân đem, hành quân xa và tiếp tế. Quân đông không tự thắng | Luật v2 |
+| Trước trận | Ước lượng bằng chữ từ tình báo và do thám; mưu kế có thể làm sai tin | Luật v2 |
+| Liên minh | Như Civ (tầm nhìn chung, cứu nhau, cùng đánh) + tham khảo TW3K; deal có nghĩa vụ chấp nhận được | Research `alliances-civ-tw3k.md` → luật v2 |
+| Tướng | Cả bốn lớp: 3 chỉ số + 1 thẻ; sự kiện cá nhân (chết, hàng, phản, kế vị); người chơi bổ nhiệm; quan hệ, kinh nghiệm, lên cấp | Luật v2 (Round B gộp vào) |
+| Cửa kịch bản | Phe kề hoặc được nêu tên thấy cảnh; phe khác nhận tin đồn trễ | Luật v2 |
+| Việc hình | Cắt cảnh trận trước, rồi chân dung, rồi âm thanh | Claude |
+| Onboarding, lưu ván | Để vào v2 | v2 |
+| Freeze | Mở `GAMEPLAY-FREEZE` v2 "Civ nhẹ" kèm ADR; v1 thành log; không code luật mới trước khi v2 được duyệt | Claude viết đề xuất |
+| Bước tiếp | Claude gộp research + câu trả lời thành đề xuất Gameplay v2 (luật, vòng lặp một lượt, mở ván 8 lượt, màn hình) + prototype tương tác trên canvas để duyệt trước khi code | Vòng 10 |
+| Phân vai | Giữ hai lane: Claude viết đề xuất và làm hình/UI; Grok làm engine, luật, test, cân bằng theo v2 đã duyệt | `lanes.md` giữ |
+| Phát hành, LLM | Pages trỏ `game.html` ngay (đã làm); LLM sau khi luật ổn | Đã làm |
+
+Research kèm theo (tiếng Việt, có nguồn): `tw3k-civ-win-defeat.md`, `tw3k-civ-buildup-economy-generals.md`, `intel-delay.md`, `alliances-civ-tw3k.md`.

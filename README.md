@@ -2,7 +2,7 @@
 
 Bốn hoàng đế xuyên không về năm 200 tranh thiên hạ với Tào Tháo, Lưu Bị, Tôn Quyền. Mô phỏng theo lượt trong một thế giới 3D Three.js, làm ra để xem và quay clip: mỗi lượt kể rõ ai nghĩ gì, làm gì, và trọng tài phán ra sao.
 
-> **Trạng thái (2026-09-24):** engine luật chơi mới đã xong và có test. Giao diện và thế giới 3D đang chờ chủ dự án chọn phương án design ([canvas duyệt](https://claude.ai/artifact/958ZoQxAFcGPKTUNGVdWeV)). Trang đang phát hành vẫn là bản Phase 1 cũ. Chi tiết: [`docs/status.md`](docs/status.md).
+> **Trạng thái (2026-09-27):** trang phát hành đã trỏ sang `game.html` (chọn một trong bốn hoàng đế, mỗi mùa một lệnh, engine 219 chạy trong trình duyệt). Interview gameplay vòng 9 đã xong; bước tiếp là đề xuất Gameplay v2 "Civ nhẹ" chờ chủ dự án duyệt ([`docs/research/gameplay-interview-2026-09-27.md`](docs/research/gameplay-interview-2026-09-27.md)). Chi tiết: [`docs/status.md`](docs/status.md).
 
 ## Bảy thế lực
 
@@ -34,7 +34,9 @@ Server có `POST /api/turn` để chạy một lượt phía server (hiện dùn
 ## Cấu trúc
 
 ```text
-index.html        entry (GitHub Pages)
+index.html        entry (GitHub Pages): chuyển hướng sang game.html
+game.html         trò chơi (chọn đế, ra lệnh, xem lượt); ?demo=1 là bản xem clip
+phase1.html       clip Phase 1 cũ, giữ để so sánh
 src/engine/       luật chơi, chạy cả trình duyệt lẫn Node
 data/             bản đồ, thế lực, số liệu cân bằng, giọng nhân vật
 server/           server local + /api/turn

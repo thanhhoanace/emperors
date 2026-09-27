@@ -6,19 +6,17 @@
 
 ## Đang chờ
 
-- **Chủ dự án — interview gameplay (vòng 9):** trả lời 16 câu trong `docs/research/gameplay-interview-2026-09-27.md` (Q0–Q15). Câu trả lời quyết hướng cả hai lane; chưa có thì chưa nên làm A.5 hay đổi luật.
-- **Claude — HUD v1.1 + bàn cờ:** xong, chờ chủ dự án chơi thử `game.html` (`npm start` → `/game.html`; smoke `tests/e2e/playable-smoke.mjs`, ảnh `test-results/smoke-*.png`).
-- **Grok A.5:** bốn máy statecraft — chưa. Officers — chưa. LLM adapter remap id — chưa. `projectPerception` thô không phải payload LLM.
+- **Claude — vòng 10, đề xuất Gameplay v2 "Civ nhẹ":** gộp research + 25 câu trả lời interview (`docs/research/gameplay-interview-2026-09-27.md`, mục 9) thành bản đề xuất luật v2 (mở ván xây dần, việc trong châu, đồn trú theo châu, tình báo có trễ, liên minh có nghĩa vụ, tướng, lưu vong / chư hầu / phục quốc, vùng rìa chiêu binh và buôn bán) + prototype tương tác trên canvas. Chờ chủ dự án duyệt rồi Grok mới làm engine. Không code luật mới trước đó.
+- **Grok:** chờ v2 được duyệt. Việc nhỏ làm được ngay không chờ: chặn 1–3 dưới, `governors` đổi theo chủ châu.
+- LLM adapter remap id: sau khi luật v2 ổn.
 
-## Vòng 9 — research gameplay / game feel (Claude, 2026-09-27)
+## Vòng 9 — research gameplay + interview (Claude, 2026-09-27)
 
-`docs/research/gameplay-interview-2026-09-27.md`. Đo bằng `node tests/sim.mjs 300` và `tests/playthrough.mjs` mới (`npm run play -- 30 reasonable|turtle|hothead`: chơi N seed mỗi đế qua đúng vòng lượt của `game.html`, in ra thứ người chơi sống qua).
+`docs/research/gameplay-interview-2026-09-27.md` (mục 9 = quyết định). Research kèm: `tw3k-civ-win-defeat.md`, `tw3k-civ-buildup-economy-generals.md`, `intel-delay.md`, `alliances-civ-tw3k.md`. Đo bằng `node tests/sim.mjs 300` và `tests/playthrough.mjs` mới (`npm run play -- 30 reasonable|turtle|hothead`).
 
-- 88 test xanh. AI-only 300 ván: Lý 29 % · Tào 25 % · Lưu Bị 20 % · Tôn 8 % · Chu 7 % · Tần 6 % · Vũ 4 %; 65 % ván kết thúc "xưng bá" ở lượt 48.
-- Người chơi hợp lý: thắng 0–3 %, chết trung bình lượt 12–26; rùa thì sống nhưng hạng 4–5; đánh liên tục chết trước lượt 20.
-- Bản đồ đổi chủ 1,6–2,0 châu mỗi lượt; Hứa Xương 7–17 lần một ván. Đánh châu band "yếu" thua 25–40 %.
-- Vũ Đế ở Hà Tây chỉ kề một châu (Lũng Tây). 7/9 cửa kịch bản không tới người chơi. `governors` không đổi khi châu đổi chủ. `succession` / `realm_fall` chưa có code bắn.
-- Việc làm được ngay không cần chờ trả lời: mục 8 của bản research (Grok: chặn 1–3 + `governors`; Claude: điều kiện thắng, cảnh báo phá ước, delta số, chạy lại `game-loop.mjs`).
+- 88 test xanh. AI-only 300 ván: Lý 29 % · Tào 25 % · Lưu Bị 20 % · Tôn 8 % · Chu 7 % · Tần 6 % · Vũ 4 %. Người chơi hợp lý thắng 0–3 %, chết trung bình lượt 12–26; bản đồ đổi chủ 1,6–2,0 châu mỗi lượt.
+- Chủ dự án chơi thử: "đang xem chứ không chơi". Quyết định lớn: chơi là chính; mở freeze v2 "Civ nhẹ"; mốc thắng 20–30 %; cả ba đường lật lại; mở ván xây dần; vùng rìa chiêu binh và buôn bán; tướng đủ bốn lớp; liên minh kiểu Civ; giữ hai lane; Pages trỏ `game.html` ngay.
+- Đã làm: `index.html` chuyển hướng sang `game.html`, clip cũ thành `phase1.html` (QA `phase1-slice.mjs` và workflow Pages đã trỏ theo).
 
 ## Contract v1.1 (Grok, 2026-09-26)
 
