@@ -12,5 +12,6 @@
 | `cities219-east.md` | Chung Ly, Giang Lăng; Lạc Dương và Trường An năm 219 (hồi sinh một phần, cung vẫn là phế tích) |
 | `cities219-diff.md` | Mười hai thành còn lại: thay đổi từ 200 tới 219 (Tam Đài ở Nghiệp, Quan Vũ vây Phàn Thành, Bộ Chất ở Phiên Ngung…) |
 | `periphery.md` | Vùng biên Trung Quốc năm 200 và lợi thế có căn cứ lịch sử cho từng hoàng đế |
+| `gameplay-interview-2026-09-27.md` | Vòng 9 (tiếng Việt): hiện trạng gameplay / game feel, số đo `tests/sim.mjs` + `tests/playthrough.mjs`, 14 phát hiện, bản đồ pending / unknown và 16 câu interview chờ chủ dự án trả lời |
 
 Ảnh chụp TW3K và dữ liệu TWDB mà các báo cáo nhắc tới **không có trong repo**. Đó là tư liệu của game thương mại, chỉ dùng để tham khảo (`AGENTS.md`).

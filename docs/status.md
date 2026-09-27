@@ -2,12 +2,23 @@
 
 > **Vai trò:** tài liệu sống duy nhất về *đang ở đâu và làm gì tiếp*.
 
-**Cập nhật:** 2026-09-26 · nhánh `claude/gracious-pasteur-6s8fmk`
+**Cập nhật:** 2026-09-27 · nhánh `claude/gracious-pasteur-6s8fmk`
 
 ## Đang chờ
 
+- **Chủ dự án — interview gameplay (vòng 9):** trả lời 16 câu trong `docs/research/gameplay-interview-2026-09-27.md` (Q0–Q15). Câu trả lời quyết hướng cả hai lane; chưa có thì chưa nên làm A.5 hay đổi luật.
 - **Claude — HUD v1.1 + bàn cờ:** xong, chờ chủ dự án chơi thử `game.html` (`npm start` → `/game.html`; smoke `tests/e2e/playable-smoke.mjs`, ảnh `test-results/smoke-*.png`).
 - **Grok A.5:** bốn máy statecraft — chưa. Officers — chưa. LLM adapter remap id — chưa. `projectPerception` thô không phải payload LLM.
+
+## Vòng 9 — research gameplay / game feel (Claude, 2026-09-27)
+
+`docs/research/gameplay-interview-2026-09-27.md`. Đo bằng `node tests/sim.mjs 300` và `tests/playthrough.mjs` mới (`npm run play -- 30 reasonable|turtle|hothead`: chơi N seed mỗi đế qua đúng vòng lượt của `game.html`, in ra thứ người chơi sống qua).
+
+- 88 test xanh. AI-only 300 ván: Lý 29 % · Tào 25 % · Lưu Bị 20 % · Tôn 8 % · Chu 7 % · Tần 6 % · Vũ 4 %; 65 % ván kết thúc "xưng bá" ở lượt 48.
+- Người chơi hợp lý: thắng 0–3 %, chết trung bình lượt 12–26; rùa thì sống nhưng hạng 4–5; đánh liên tục chết trước lượt 20.
+- Bản đồ đổi chủ 1,6–2,0 châu mỗi lượt; Hứa Xương 7–17 lần một ván. Đánh châu band "yếu" thua 25–40 %.
+- Vũ Đế ở Hà Tây chỉ kề một châu (Lũng Tây). 7/9 cửa kịch bản không tới người chơi. `governors` không đổi khi châu đổi chủ. `succession` / `realm_fall` chưa có code bắn.
+- Việc làm được ngay không cần chờ trả lời: mục 8 của bản research (Grok: chặn 1–3 + `governors`; Claude: điều kiện thắng, cảnh báo phá ước, delta số, chạy lại `game-loop.mjs`).
 
 ## Contract v1.1 (Grok, 2026-09-26)
 
