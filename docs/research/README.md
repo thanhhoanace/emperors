@@ -14,6 +14,8 @@
 | `periphery.md` | Vùng biên Trung Quốc năm 200 và lợi thế có căn cứ lịch sử cho từng hoàng đế |
 | `tw3k-civ-win-defeat.md` | Vòng 9 (tiếng Việt): TW3K và Civ VI — điều kiện thắng, khi nào bị loại, đường trở lại (lưu vong, chư hầu, giải phóng), thông tin trước trận, khởi đầu yếu; hàm ý mốc thắng và cơ chế lật lại |
 | `tw3k-civ-buildup-economy-generals.md` | Vòng 9 (tiếng Việt): TW3K và Civ VI — giữ đất (đồn trú, vây thành, trung thành), 20 lượt đầu, mộ binh và kinh tế trong ngân sách ít lệnh, lớp tướng, từ vựng tương tác bản đồ (dat.city, TW3K) |
+| `alliances-civ-tw3k.md` | Vòng 9 (tiếng Việt): liên minh, phòng thủ chung, cùng đánh trong Civ VI, TW3K, Koei RTK; đề xuất ba điều khoản `truce` / `defend` / `joint_war` cho một lệnh mỗi lượt, AI nhận/từ chối chỉ từ tin công khai, cờ bội ước |
+| `intel-delay.md` | Vòng 9 (tiếng Việt): sương mù, tình báo, tin đồn, tin giả và độ trễ trong Civ VI, TW3K, Koei ROTK, Kriegsspiel, Diplomacy, Dominions, Command Ops; tốc độ tin thời Hán áp lên bản đồ; mô hình nguồn tin / tuổi tin / nhiễu / do thám đề xuất cho luật v2 |
 | `gameplay-interview-2026-09-27.md` | Vòng 9 (tiếng Việt): hiện trạng gameplay / game feel, số đo `tests/sim.mjs` + `tests/playthrough.mjs`, 14 phát hiện, bản đồ pending / unknown và 25 câu interview đã trả lời (mục 9) |
 
 Ảnh chụp TW3K và dữ liệu TWDB mà các báo cáo nhắc tới **không có trong repo**. Đó là tư liệu của game thương mại, chỉ dùng để tham khảo (`AGENTS.md`).
