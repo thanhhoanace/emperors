@@ -1,7 +1,7 @@
 # V2 Gameplay — Working state
 
 > Cập nhật: 2026-09-28 · synthesis bởi Claude · nguồn: `_research/claude.md` (mục A–I). `_research/chatgpt.md`, `_research/grok.md` chưa có trong repo.
-> Luật dùng file này: `docs/phases/README.md`. Chưa có `DECISION.md`: chưa chốt gì về luật v2.
+> Luật dùng file này: `AGENTS.md`, mục phase. Chưa có `DECISION.md`: chưa chốt gì về luật v2.
 
 ## Problem
 
@@ -79,5 +79,5 @@ Chỉ những GAP còn lại; tối đa một vòng nữa (vòng 2 trên 2).
 
 - **ChatGPT:** dán research đã có vào `_research/chatgpt.md` (nguyên văn, ghi ngày và câu hỏi). Nếu chạy tiếp: game có vòng phiên tương tự (Thronefall, 9 Kings, Polytopia) và cách chúng tạo cảm giác tiến triển trong ván ngắn.
 - **Grok:** cảm nhận cộng đồng về strategy ngắn và chiến dịch dài (Reddit, X, diễn đàn Việt), đặc biệt lời than về ván ngắn "cụt" và chiến dịch "bỏ dở".
-- **Claude:** không research thêm; làm spike thay tài liệu (luật 8): prototype một ván ngắn trên canvas để chủ dự án bấm thử, kết quả ghi lại đây.
-- Synthesis lượt sau: tool khác Claude (luật 4).
+- **Claude:** không research thêm; làm spike thay tài liệu (luật 8 trong `AGENTS.md`): prototype một ván ngắn trên canvas để chủ dự án bấm thử, kết quả ghi lại đây.
+- Synthesis lượt sau: tool khác Claude (luật 4 trong `AGENTS.md`).

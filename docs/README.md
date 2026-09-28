@@ -12,7 +12,7 @@
 | `architecture.md` | Thêm module, đổi luồng dữ liệu | Ồn định |
 | `decisions/` | Muốn biết vì sao, hoặc sắp đổi một quyết định | Chỉ thêm, không sửa |
 | `status.md` | Bắt đầu hoặc kết thúc một phiên làm việc | Sống |
-| `phases/` | Câu hỏi lớn đang mở: `WORKING.md` (đang tin gì), `DECISION.md` (đã quyết gì), `_research/` (inbox của từng tool). Rule: `phases/README.md` | Sống theo phase |
+| `phases/` | Câu hỏi lớn đang mở: `WORKING.md` (đang tin gì), `DECISION.md` (đã quyết gì), `_research/` (inbox của từng tool). Rule: `AGENTS.md` | Sống theo phase |
 | `research/` | Tư liệu tra cứu thô có nguồn, ngoài các phase (thành, bản đồ, TW3K) | Tham chiếu |
 
 Quy tắc chung nằm ở `../AGENTS.md`.

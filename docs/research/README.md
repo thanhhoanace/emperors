@@ -1,7 +1,7 @@
 # Báo cáo tra cứu gốc
 
 > **Vai trò:** tư liệu tra cứu thô, kèm nguồn. Không phải SOT: kết luận đã được chép sang `docs/design/history.md`, `docs/product/proposal-all-china.md` và các ADR.
-> Research gameplay v2 (vòng 9, 27–28/9) không ở đây: nằm ở `docs/phases/v2-gameplay/_research/claude.md` theo rule `docs/phases/README.md`.
+> Research gameplay v2 (vòng 9, 27–28/9) không ở đây: nằm ở `docs/phases/v2-gameplay/_research/claude.md` theo rule phase trong `AGENTS.md`.
 > Các báo cáo do agent viết bằng tiếng Anh (ngày 2026-09-25, sau khi môi trường mở mạng), giữ nguyên để không mất nguồn trích dẫn.
 
 | File | Nội dung |

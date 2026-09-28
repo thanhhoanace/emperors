@@ -11,7 +11,7 @@ description: Kết thúc phiên làm việc trên Tam Quốc Loạn Nhập — c
    - **Đã xong:** 3–6 gạch đầu dòng của phiên này, nêu kết quả chứ không kể quá trình. Gộp hoặc xoá mục của các phiên cũ đã hết giá trị.
    - **Việc tiếp theo:** danh sách có thứ tự, mỗi mục làm được ngay (nêu file hoặc lệnh).
    - **Vấn đề đã biết:** kèm số đo nếu có (ví dụ kết quả `npm run sim`).
-2. Nếu phiên thuộc một phase (`docs/phases/<phase>/`): research mới vào `_research/<tool>.md` (sửa file sẵn có, không tạo file mới); chỉ cập nhật `WORKING.md` khi làm lượt synthesis; `DECISION.md` chỉ khi chủ dự án chốt. `status.md` chỉ trỏ tới phase, không chép nội dung. Rule: `docs/phases/README.md`.
+2. Nếu phiên thuộc một phase (`docs/phases/<phase>/`): research mới vào `_research/<tool>.md` (sửa file sẵn có, không tạo file mới); chỉ cập nhật `WORKING.md` khi làm lượt synthesis; `DECISION.md` chỉ khi chủ dự án chốt. `status.md` chỉ trỏ tới phase, không chép nội dung. Rule: `AGENTS.md`, mục phase.
 3. Nếu phiên này có quyết định khó đảo ngược ngoài phase: thêm ADR vào `docs/decisions/` và cập nhật bảng trong `docs/decisions/README.md`.
 4. Nếu agent vừa mắc một lỗi đáng nhớ: thêm một dòng vào mục "Bài học" của `AGENTS.md`.
 5. Không chép số liệu từ `data/` vào docs; dẫn link.

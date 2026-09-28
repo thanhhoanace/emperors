@@ -12,7 +12,7 @@
 
 ## Vòng 9 (Claude, 27–28/9)
 
-- Research gameplay, interview 25 câu, phân tích thị trường "vào là chơi hay chiến dịch": gom vào `docs/phases/v2-gameplay/_research/claude.md`; trạng thái chung ở `WORKING.md` cùng thư mục. Quy trình phase mới: `docs/phases/README.md` (dẫn từ `AGENTS.md`).
+- Research gameplay, interview 25 câu, phân tích thị trường "vào là chơi hay chiến dịch": gom vào `docs/phases/v2-gameplay/_research/claude.md`; trạng thái chung ở `WORKING.md` cùng thư mục. Quy trình phase: `AGENTS.md`, mục "Research và quyết định lớn".
 - Công cụ đo mới: `tests/playthrough.mjs` (`npm run play -- 30 reasonable|turtle|hothead`) chơi qua đúng vòng lượt của `game.html`. Số đo 27/9: người chơi hợp lý thắng 0–3 %, chết trung bình lượt 12–26; bản đồ đổi chủ 1,6–2,0 châu mỗi lượt. AI-only 300 ván: Lý 29 % · Tào 25 % · Lưu Bị 20 % · Tôn 8 % · Chu 7 % · Tần 6 % · Vũ 4 %. 88 test xanh.
 - Đã làm: `index.html` chuyển hướng sang `game.html`; clip cũ thành `phase1.html` (QA và workflow Pages trỏ theo).
 

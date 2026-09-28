@@ -1,6 +1,6 @@
 # Research của Claude — phase v2-gameplay
 
-> **Inbox, không phải knowledge base** (`docs/phases/README.md`). Trạng thái hiện tại nằm ở `../WORKING.md`; quyết định nằm ở `../DECISION.md` khi có.
+> **Inbox, không phải knowledge base** (`AGENTS.md`, mục phase). Trạng thái hiện tại nằm ở `../WORKING.md`; quyết định nằm ở `../DECISION.md` khi có.
 > Một file duy nhất của Claude cho phase này: chạy lại thì sửa file này, không tạo file mới. Git giữ lịch sử.
 > Gom từ chín báo cáo vòng 9 (27–28/9/2026) từng nằm ở `docs/research/`. Nội dung và nguồn giữ nguyên; chỗ ghi "chưa kiểm chứng" / "(TT)" / "(F)" là thật sự chưa kiểm chứng. Tham chiếu chéo cũ kiểu "`market-player-demand.md`" nay là mục tương ứng bên dưới.
 > Công cụ đo đi kèm: `tests/playthrough.mjs` (`npm run play -- 30 reasonable|turtle|hothead`) và `tests/sim.mjs`.

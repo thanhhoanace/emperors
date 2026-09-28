@@ -34,13 +34,49 @@ Chi tiết + cô lập kiến thức: `docs/product/lanes.md`.
 | Câu hỏi lớn đang mở (phase) | `docs/phases/<phase>/WORKING.md` |
 | Quyết định của một phase | `docs/phases/<phase>/DECISION.md` |
 
-## Research và quyết định lớn
+## Research và quyết định lớn (phase)
 
-Theo `docs/phases/README.md`, cho mọi tool (Claude, Codex, Grok, ChatGPT):
+Áp dụng cho mọi tool: Claude, Codex, Grok, ChatGPT, người. **Research dài bao nhiêu cũng được. Bộ nhớ chung phải gọn. Quyết định phải bền.**
 
-- Research ghi vào `docs/phases/<phase>/_research/<tool>.md`, mỗi tool **một file** cho một phase; chạy lại thì sửa chính file đó. Đây là inbox, không phải sự thật.
-- `WORKING.md` = đang tin gì (gọn, một lượt synthesis cập nhật, không tool nào sửa trong lúc research). `DECISION.md` = đã quyết gì, chỉ viết khi chủ dự án chốt; luật đã chốt vẫn chép vào SOT.
-- Tối đa 2 vòng research + 1 synthesis + 1 quyết định. Không thêm tool nếu nó không giảm bất định. Code đọc `DECISION.md`, không đọc `_research/`.
+Mở phase khi có câu hỏi lớn chưa chốt mà nhiều tool cùng nghĩ (đổi hướng gameplay, kiến trúc, visual). Việc nhỏ, sửa lỗi, thí nghiệm tạm: không mở phase.
+
+```
+docs/phases/<phase>/
+├── WORKING.md     chúng ta đang tin gì      2–5 màn hình, chỉ lượt synthesis sửa
+├── DECISION.md    chúng ta đã quyết gì      1–2 màn hình, chỉ khi chủ dự án chốt
+└── _research/     mỗi tool tìm ra gì        inbox, không giới hạn độ dài
+    ├── claude.md  chatgpt.md  grok.md  codex.md
+```
+
+Luật:
+
+1. Mỗi tool **tối đa một file** `_research/<tool>.md` cho một phase. Chạy lại thì sửa hoặc ghi đè chính file đó. Không `-v2`, `-final`, `-review` trong tên file; Git giữ lịch sử.
+2. `_research/` là inbox, không phải sự thật. Code không đọc `_research/`.
+3. Không tool nào sửa `WORKING.md` trong lúc research. Một lượt synthesis duy nhất cập nhật nó.
+4. Tool vừa research không làm synthesis nếu tool khác làm được; xoay vòng giữa các phase.
+5. Chỉ thêm một tool khi nó giảm được bất định (cảm nhận cộng đồng → Grok/ChatGPT; thiết kế hệ thống → Claude).
+6. Tối đa 2 vòng research + 1 synthesis + 1 quyết định. Muốn thêm vòng phải ghi lý do trong `WORKING.md`.
+7. `DECISION.md` nói *vì sao*; luật đã chốt vẫn chép vào SOT (`GAMEPLAY-FREEZE.md`, `rules.md`, `design/direction.md`…). `DECISION.md` thay ADR cho quyết định của phase; `docs/decisions/` cho quyết định ngoài phase.
+8. Câu hỏi "có vui không?" trả lời bằng spike (prototype nhỏ), không bằng báo cáo; kết quả ghi vào `WORKING.md`.
+9. Tool không commit được (ChatGPT…): dán **nguyên văn** output vào `_research/<tool>.md`, ghi ngày và câu hỏi ở đầu file.
+
+Vòng đời: EXPLORE (`_research/`) → MERGE (`WORKING.md`) → CHALLENGE (chỉ research GAP) → COMPACT (viết lại `WORKING.md`) → DECIDE (chủ dự án) → FREEZE (`DECISION.md` + SOT) → BUILD (đọc `DECISION.md` + SOT + code). Implementation không mở lại research trừ khi lộ giả định sai; khi đó ghi vào `WORKING.md`.
+
+Lệnh cho lượt synthesis (dán nguyên):
+
+```
+You are not another researcher. Compress docs/phases/<phase>/_research/*.md into
+docs/phases/<phase>/WORKING.md. Preserve: supported findings, disagreements between
+tools, uncertainty, open questions, the owner's stated inputs. Remove: duplicated
+explanations, rhetoric, outdated hypotheses. Do NOT resolve disagreements without
+evidence. Keep it to 2–5 screens. Link the research file and section for every
+non-obvious claim.
+```
+
+Khung `WORKING.md`: Problem · Owner inputs · Evidence we trust · Contradictions (tool nào nói gì) · Current hypothesis · Open questions · Next research (tool nào, GAP nào).
+Khung `DECISION.md`: Decision · Why · Rejected · Preserve / Defer · Assumptions that matter · Revisit when · Written into (SOT nào).
+
+Phase đang mở: `docs/phases/README.md`.
 
 ## Lệnh
 
