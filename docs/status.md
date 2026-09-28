@@ -2,13 +2,18 @@
 
 > **Vai trò:** tài liệu sống duy nhất về *đang ở đâu và làm gì tiếp*.
 
-**Cập nhật:** 2026-09-27 · nhánh `claude/gracious-pasteur-6s8fmk`
+**Cập nhật:** 2026-09-28 · nhánh `claude/gracious-pasteur-6s8fmk`
 
 ## Đang chờ
 
-- **Claude — vòng 10, đề xuất Gameplay v2 "Civ nhẹ":** gộp research + 25 câu trả lời interview (`docs/research/gameplay-interview-2026-09-27.md`, mục 9) thành bản đề xuất luật v2 (mở ván xây dần, việc trong châu, đồn trú theo châu, tình báo có trễ, liên minh có nghĩa vụ, tướng, lưu vong / chư hầu / phục quốc, vùng rìa chiêu binh và buôn bán) + prototype tương tác trên canvas. Chờ chủ dự án duyệt rồi Grok mới làm engine. Không code luật mới trước đó.
+- **Chủ dự án — chốt ngã rẽ v2** theo `docs/research/market-simple-vs-campaign.md` (đề xuất: cờ Tam Quốc có máy sinh chuyện). Rồi:
+- **Claude — vòng 10, đề xuất Gameplay v2:** gộp research + 25 câu trả lời interview (`docs/research/gameplay-interview-2026-09-27.md`, mục 9) thành bản đề xuất luật v2 (mở ván xây dần, việc trong châu, đồn trú theo châu, tình báo có trễ, liên minh có nghĩa vụ, tướng, lưu vong / chư hầu / phục quốc, vùng rìa chiêu binh và buôn bán) + prototype tương tác trên canvas. Chờ chủ dự án duyệt rồi Grok mới làm engine. Không code luật mới trước đó.
 - **Grok:** chờ v2 được duyệt. Việc nhỏ làm được ngay không chờ: chặn 1–3 dưới, `governors` đổi theo chủ châu.
 - LLM adapter remap id: sau khi luật v2 ổn.
+
+## Vòng 9b — phân tích thị trường cho ngã rẽ v2 (Claude, 2026-09-28)
+
+`docs/research/market-simple-vs-campaign.md` (+ ba báo cáo nguồn `market-*.md`). Câu hỏi của chủ dự án: v2 nên "vào là chơi" như cờ hay "chiến dịch sâu"? Kết luận: ngã rẽ 1 ở dạng **cờ Tam Quốc có máy sinh chuyện** (ván 32 mùa 20–30 phút, 1 lệnh chính + 1 việc phụ, mở ván 8–12 lượt từ tay trắng, tướng có tính cách và quan hệ, liên minh có nghĩa vụ, một dạng do thám, lưu vong), cắt sổ sách (thuế, hậu cần, loại lính, hàng đợi). Chờ chủ dự án chốt trước khi viết đề xuất Gameplay v2.
 
 ## Vòng 9 — research gameplay + interview (Claude, 2026-09-27)
 

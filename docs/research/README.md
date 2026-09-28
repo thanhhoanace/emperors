@@ -16,6 +16,10 @@
 | `tw3k-civ-buildup-economy-generals.md` | Vòng 9 (tiếng Việt): TW3K và Civ VI — giữ đất (đồn trú, vây thành, trung thành), 20 lượt đầu, mộ binh và kinh tế trong ngân sách ít lệnh, lớp tướng, từ vựng tương tác bản đồ (dat.city, TW3K) |
 | `alliances-civ-tw3k.md` | Vòng 9 (tiếng Việt): liên minh, phòng thủ chung, cùng đánh trong Civ VI, TW3K, Koei RTK; đề xuất ba điều khoản `truce` / `defend` / `joint_war` cho một lệnh mỗi lượt, AI nhận/từ chối chỉ từ tin công khai, cờ bội ước |
 | `intel-delay.md` | Vòng 9 (tiếng Việt): sương mù, tình báo, tin đồn, tin giả và độ trễ trong Civ VI, TW3K, Koei ROTK, Kriegsspiel, Diplomacy, Dominions, Command Ops; tốc độ tin thời Hán áp lên bản đồ; mô hình nguồn tin / tuổi tin / nhiễu / do thám đề xuất cho luật v2 |
+| `market-simple-vs-campaign.md` | Vòng 9b (tiếng Việt): phân tích thị trường cho ngã rẽ v2 "vào là chơi" hay "chiến dịch sâu": kết luận, bằng chứng, so sánh chín tiêu chí, hình dạng đề xuất "cờ Tam Quốc có máy sinh chuyện", đối chiếu interview, thước đo |
+| `market-player-demand.md` | Vòng 9b: nhu cầu người chơi chiến thuật, tỉ lệ chơi hết chiến dịch (achievement Steam), game phiên ngắn và game trình duyệt đang thắng, SLG Tam Quốc mùa giải, thị trường Việt Nam |
+| `market-roots-trends.md` | Vòng 9b: các game Loạn 12 Sứ Quân 2007–2026, trend xuyên không và chủng điền văn, IP Tam Quốc ở Việt Nam, nội dung "xem AI đánh nhau", indie chiến thuật Việt |
+| `market-design-evidence.md` | Vòng 9b: lý thuyết thiết kế (Meier, Johnson, Midjiwan, Subset, Knizia, Burgun, Koster), hoàn thành và giữ chân, game nhanh mà sâu, bài học game sâu đội nhỏ, xem và clip |
 | `gameplay-interview-2026-09-27.md` | Vòng 9 (tiếng Việt): hiện trạng gameplay / game feel, số đo `tests/sim.mjs` + `tests/playthrough.mjs`, 14 phát hiện, bản đồ pending / unknown và 25 câu interview đã trả lời (mục 9) |
 
 Ảnh chụp TW3K và dữ liệu TWDB mà các báo cáo nhắc tới **không có trong repo**. Đó là tư liệu của game thương mại, chỉ dùng để tham khảo (`AGENTS.md`).
