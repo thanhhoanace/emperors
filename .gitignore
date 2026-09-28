@@ -16,6 +16,7 @@ test-results/
 .omx/
 .claude/settings.local.json
 .codex/
+.claude/worktrees/
 
 # Downloaded map sources (tools/bake-map.mjs)
 .cache/
