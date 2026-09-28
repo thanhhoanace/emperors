@@ -6,22 +6,15 @@
 
 ## Đang chờ
 
-- **Chủ dự án — chốt ngã rẽ v2** theo `docs/research/market-simple-vs-campaign.md` (đề xuất: cờ Tam Quốc có máy sinh chuyện). Rồi:
-- **Claude — vòng 10, đề xuất Gameplay v2:** gộp research + 25 câu trả lời interview (`docs/research/gameplay-interview-2026-09-27.md`, mục 9) thành bản đề xuất luật v2 (mở ván xây dần, việc trong châu, đồn trú theo châu, tình báo có trễ, liên minh có nghĩa vụ, tướng, lưu vong / chư hầu / phục quốc, vùng rìa chiêu binh và buôn bán) + prototype tương tác trên canvas. Chờ chủ dự án duyệt rồi Grok mới làm engine. Không code luật mới trước đó.
-- **Grok:** chờ v2 được duyệt. Việc nhỏ làm được ngay không chờ: chặn 1–3 dưới, `governors` đổi theo chủ châu.
+- **Phase `v2-gameplay`** (`docs/phases/v2-gameplay/WORKING.md`): đang ở bước CHALLENGE. Cần (1) research của ChatGPT dán vào `_research/chatgpt.md`, Grok nếu có vào `_research/grok.md`; (2) một lượt synthesis bởi tool khác Claude; (3) chủ dự án chọn ngã rẽ (vào là chơi / chiến dịch / lai) rồi mới có `DECISION.md`. Claude có thể làm spike: prototype một ván ngắn trên canvas để bấm thử. Không code luật mới trước `DECISION.md`.
+- **Grok:** việc nhỏ làm được ngay không chờ phase: chặn 1–3 dưới, `governors` đổi theo chủ châu.
 - LLM adapter remap id: sau khi luật v2 ổn.
 
-## Vòng 9b — phân tích thị trường cho ngã rẽ v2 (Claude, 2026-09-28)
+## Vòng 9 (Claude, 27–28/9)
 
-`docs/research/market-simple-vs-campaign.md` (+ ba báo cáo nguồn `market-*.md`). Câu hỏi của chủ dự án: v2 nên "vào là chơi" như cờ hay "chiến dịch sâu"? Kết luận: ngã rẽ 1 ở dạng **cờ Tam Quốc có máy sinh chuyện** (ván 32 mùa 20–30 phút, 1 lệnh chính + 1 việc phụ, mở ván 8–12 lượt từ tay trắng, tướng có tính cách và quan hệ, liên minh có nghĩa vụ, một dạng do thám, lưu vong), cắt sổ sách (thuế, hậu cần, loại lính, hàng đợi). Chờ chủ dự án chốt trước khi viết đề xuất Gameplay v2.
-
-## Vòng 9 — research gameplay + interview (Claude, 2026-09-27)
-
-`docs/research/gameplay-interview-2026-09-27.md` (mục 9 = quyết định). Research kèm: `tw3k-civ-win-defeat.md`, `tw3k-civ-buildup-economy-generals.md`, `intel-delay.md`, `alliances-civ-tw3k.md`. Đo bằng `node tests/sim.mjs 300` và `tests/playthrough.mjs` mới (`npm run play -- 30 reasonable|turtle|hothead`).
-
-- 88 test xanh. AI-only 300 ván: Lý 29 % · Tào 25 % · Lưu Bị 20 % · Tôn 8 % · Chu 7 % · Tần 6 % · Vũ 4 %. Người chơi hợp lý thắng 0–3 %, chết trung bình lượt 12–26; bản đồ đổi chủ 1,6–2,0 châu mỗi lượt.
-- Chủ dự án chơi thử: "đang xem chứ không chơi". Quyết định lớn: chơi là chính; mở freeze v2 "Civ nhẹ"; mốc thắng 20–30 %; cả ba đường lật lại; mở ván xây dần; vùng rìa chiêu binh và buôn bán; tướng đủ bốn lớp; liên minh kiểu Civ; giữ hai lane; Pages trỏ `game.html` ngay.
-- Đã làm: `index.html` chuyển hướng sang `game.html`, clip cũ thành `phase1.html` (QA `phase1-slice.mjs` và workflow Pages đã trỏ theo).
+- Research gameplay, interview 25 câu, phân tích thị trường "vào là chơi hay chiến dịch": gom vào `docs/phases/v2-gameplay/_research/claude.md`; trạng thái chung ở `WORKING.md` cùng thư mục. Quy trình phase mới: `docs/phases/README.md` (dẫn từ `AGENTS.md`).
+- Công cụ đo mới: `tests/playthrough.mjs` (`npm run play -- 30 reasonable|turtle|hothead`) chơi qua đúng vòng lượt của `game.html`. Số đo 27/9: người chơi hợp lý thắng 0–3 %, chết trung bình lượt 12–26; bản đồ đổi chủ 1,6–2,0 châu mỗi lượt. AI-only 300 ván: Lý 29 % · Tào 25 % · Lưu Bị 20 % · Tôn 8 % · Chu 7 % · Tần 6 % · Vũ 4 %. 88 test xanh.
+- Đã làm: `index.html` chuyển hướng sang `game.html`; clip cũ thành `phase1.html` (QA và workflow Pages trỏ theo).
 
 ## Contract v1.1 (Grok, 2026-09-26)
 

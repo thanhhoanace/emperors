@@ -31,6 +31,16 @@ Chi tiết + cô lập kiến thức: `docs/product/lanes.md`.
 | Phân vai / cô lập | `docs/product/lanes.md` |
 | Số đang chạy | `data/world.json` |
 | Đang ở đâu | `docs/status.md` |
+| Câu hỏi lớn đang mở (phase) | `docs/phases/<phase>/WORKING.md` |
+| Quyết định của một phase | `docs/phases/<phase>/DECISION.md` |
+
+## Research và quyết định lớn
+
+Theo `docs/phases/README.md`, cho mọi tool (Claude, Codex, Grok, ChatGPT):
+
+- Research ghi vào `docs/phases/<phase>/_research/<tool>.md`, mỗi tool **một file** cho một phase; chạy lại thì sửa chính file đó. Đây là inbox, không phải sự thật.
+- `WORKING.md` = đang tin gì (gọn, một lượt synthesis cập nhật, không tool nào sửa trong lúc research). `DECISION.md` = đã quyết gì, chỉ viết khi chủ dự án chốt; luật đã chốt vẫn chép vào SOT.
+- Tối đa 2 vòng research + 1 synthesis + 1 quyết định. Không thêm tool nếu nó không giảm bất định. Code đọc `DECISION.md`, không đọc `_research/`.
 
 ## Lệnh
 

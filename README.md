@@ -2,7 +2,7 @@
 
 Bốn hoàng đế xuyên không về năm 200 tranh thiên hạ với Tào Tháo, Lưu Bị, Tôn Quyền. Mô phỏng theo lượt trong một thế giới 3D Three.js, làm ra để xem và quay clip: mỗi lượt kể rõ ai nghĩ gì, làm gì, và trọng tài phán ra sao.
 
-> **Trạng thái (2026-09-27):** trang phát hành đã trỏ sang `game.html` (chọn một trong bốn hoàng đế, mỗi mùa một lệnh, engine 219 chạy trong trình duyệt). Interview gameplay vòng 9 đã xong; bước tiếp là đề xuất Gameplay v2 "Civ nhẹ" chờ chủ dự án duyệt ([`docs/research/gameplay-interview-2026-09-27.md`](docs/research/gameplay-interview-2026-09-27.md)). Chi tiết: [`docs/status.md`](docs/status.md).
+> **Trạng thái (2026-09-27):** trang phát hành đã trỏ sang `game.html` (chọn một trong bốn hoàng đế, mỗi mùa một lệnh, engine 219 chạy trong trình duyệt). Interview gameplay vòng 9 đã xong; bước tiếp là đề xuất Gameplay v2 "Civ nhẹ" chờ chủ dự án duyệt ([`docs/phases/v2-gameplay/WORKING.md`](docs/phases/v2-gameplay/WORKING.md)). Chi tiết: [`docs/status.md`](docs/status.md).
 
 ## Bảy thế lực
 
