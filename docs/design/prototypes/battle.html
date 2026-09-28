@@ -2,8 +2,8 @@
 <!-- Dev harness for src/world/battle.js (docs/design/visual-build.md §5): one siege from data/cities.json at 1 unit = 1 m.
      Serve the repo root and open /docs/design/prototypes/battle.html?city=huai&mode=assault|stand|camp&result=win|loss
      &shot=approach|gate|wall|camp|field|result &tier=high|mid|low &w=&h=&dpr= &measure=1 &trees=0 &labels=0 &play=1
-     &atk=<fid> &bo=&ky=&thuy= (attacker troops). The land is a stand-in for nature.js Nature.land(spec) built here round
-     the city's real outline (the prototype's SGN.land() is fixed to Thọ Xuân's 420 m square); terrain, water, rocks and
+     &atk=<fid> &bo=&ky=&thuy= (attacker troops). The land is Battle.land(def, side, Nature): the Thọ Xuân land of the
+     prototype rebuilt round the city's real outline (Nature.land(spec) keeps a 420 m square city); terrain, water, rocks and
      trees are the prototype's sg-nature.js. -->
 <style>html,body{margin:0;background:#1a1712;overflow:hidden;font-family:"Be Vietnam Pro",system-ui,sans-serif}canvas{display:block}
 #labels{position:fixed;inset:0;pointer-events:none}
@@ -75,9 +75,8 @@
     if (TQ.shadow) { sun.shadow.mapSize.set(TQ.shadow, TQ.shadow); sun.shadow.bias = -0.00025; sun.shadow.normalBias = 0.6; }
     scene.add(sun, sun.target, new T.HemisphereLight(new T.Color(0.5, 0.6, 0.8), new T.Color(0.3, 0.24, 0.16), 0.42));
 
-    // the land: Nature.land(spec) when nature.js knows the spec, else the stand-in round the real outline
     const plan = Battle.plan(def);
-    const L = window.Nature && Nature.land.length ? Nature.land(Battle.landSpec(desc)) : standInLand(N, def, plan, atkSide);
+    const L = Battle.land(def, atkSide, N); // the land round the city's real outline
     const tLand = performance.now();
     const colors = { [atkF.id]: parseInt(atkF.color.slice(1), 16), [owner.id]: parseInt(owner.color.slice(1), 16) };
     const HM = HanModels.create({ recv: (m) => m, renderer, colors });
@@ -148,73 +147,5 @@
     if (q.get('play')) { let last = performance.now(); const loop = (now) => { render((now - last) / 1000); last = now; drawLabels(); requestAnimationFrame(loop); }; requestAnimationFrame(loop); }
   } catch (e) { console.error(e); window.__error = String(e.stack || e); }
 
-  // ---------------------------------------------------------------- the stand-in land (sg-nature.js SGN.land, generalised)
-  // The prototype's land round Thọ Xuân, with the square city (cheb < HC) replaced by the real outline: cheb(x, z) is
-  // HC + the signed distance to the wall line, so every "c < MOAT1 + 20" test of sg-nature.js still means "near the
-  // walls". The moat follows the outline on the sides cities.json gives; the big river runs along the first river side
-  // ~450 m out, a smaller one along the second; the siege ground and the camp lie on the attacker's side.
-  function standInLand(N, def, plan, side) {
-    const { h2, fbm2, ridged2 } = N.noise, { clamp, lerp, sstep } = N.util;
-    const poly = plan.poly, n = poly.length, HC = 210, WATER = -1.0;
-    const inPoly = (x, z) => { let c = false; for (let i = 0, j = n - 1; i < n; j = i++) { const [xi, zi] = poly[i], [xj, zj] = poly[j]; if ((zi > z) !== (zj > z) && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) c = !c; } return c; };
-    const SIDE = (dx, dz) => (Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 'e' : 'w') : dz > 0 ? 's' : 'n');
-    const cx0 = poly.reduce((a, p) => a + p[0], 0) / n, cz0 = poly.reduce((a, p) => a + p[1], 0) / n;
-    // signed distance to the outline (positive outside) and the side the nearest edge faces
-    const NRM = poly.map((a, i) => { const b = poly[(i + 1) % n]; let nx = -(b[1] - a[1]), nz = b[0] - a[0]; if (((a[0] + b[0]) / 2 - cx0) * nx + ((a[1] + b[1]) / 2 - cz0) * nz < 0) { nx = -nx; nz = -nz; } return SIDE(nx, nz); });
-    const sdS = (x, z) => { let d = 1e9, s = 'n'; for (let i = 0; i < n; i++) { const [ax, az] = poly[i], [bx, bz] = poly[(i + 1) % n], dx = bx - ax, dz = bz - az, t = clamp(((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz || 1), 0, 1), e = Math.hypot(x - ax - dx * t, z - az - dz * t); if (e < d) { d = e; s = NRM[i]; } } return [inPoly(x, z) ? -d : d, s]; };
-    const sd = (x, z) => sdS(x, z)[0], cheb = (x, z) => HC + sd(x, z);
-    const DIRS = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] }, ext = (s) => Math.max(...poly.map((p) => p[0] * DIRS[s][0] + p[1] * DIRS[s][1]));
-    const moatW = def.moat ? clamp((def.moat.width || 0.03) * plan.S, 20, 60) : 0, moatSides = def.moat ? def.moat.sides || 'nesw' : '';
-    const MOAT0 = HC + 26, MOAT1 = HC + 26 + (moatW || 28);
-    const dMoat = (x, z) => { if (!moatW) return 1e9; const [d, s] = sdS(x, z); if (!moatSides.includes(s)) return 1e9; return Math.max(26 - d, d - 26 - moatW); };
-    // rivers in a side's frame: v out from the city, u along
-    const rs = ((def.river && def.river.sides) || '').split('');
-    const frame = (s) => { const d = DIRS[s]; return (x, z) => [x * d[1] * -1 + z * d[0], x * d[0] + z * d[1]]; }; // [u, v]
-    const R0 = rs[0] ? { f: frame(rs[0]), v0: ext(rs[0]) + 450 } : null, R1 = rs[1] ? { f: frame(rs[1]), v0: ext(rs[1]) + 270 } : null;
-    const bigV = (u) => R0.v0 + 95 * Math.sin(u / 540) + 42 * Math.sin(u / 215 + 1.3), bigD = (u) => (95 / 540) * Math.cos(u / 540) + (42 / 215) * Math.cos(u / 215 + 1.3);
-    const smlV = (u) => R1.v0 + 85 * Math.sin(u / 340 + 0.4) + 28 * Math.sin(u / 150), smlD = (u) => (85 / 340) * Math.cos(u / 340 + 0.4) + (28 / 150) * Math.cos(u / 150);
-    const riverSD = (x, z) => {
-      let d = 1e9;
-      if (R0) { const [u, v] = R0.f(x, z); d = Math.abs(v - bigV(u)) / Math.sqrt(1 + bigD(u) ** 2) - 90; }
-      if (R1) { const [u, v] = R1.f(x, z), [, v0] = R0.f(x, z); if (v0 < bigV(R0.f(x, z)[0]) + 30) d = Math.min(d, Math.abs(v - smlV(u)) / Math.sqrt(1 + smlD(u) ** 2) - 31); }
-      return d;
-    };
-    const waterSD = (x, z) => Math.min(riverSD(x, z), dMoat(x, z));
-    // hills north-east (Bagong), pushed out with the city
-    const push = Math.max(0, plan.half - 210), HX = 900 + push, HZ = -230 - push * 0.4;
-    const hills = (x, z) => { const a = Math.hypot((x - HX) / 560, (z - HZ) / 360), b = Math.hypot((x - HX - 450) / 330, (z - HZ - 390) / 260); const m = Math.max(0, 1 - a) ** 1.25 * 120 + Math.max(0, 1 - b) ** 1.4 * 60; return m * (0.62 + 0.75 * ridged2(x / 190 + 3, z / 190)); };
-    const farMtn = (x, z) => { const r = Math.hypot(x * 0.85, z), k = sstep(2300, 4300, r); return k * (140 + 520 * ridged2(x / 700 + 9, z / 700, 5) ** 1.6 + 60 * ridged2(x / 160, z / 160)); };
-    const land = (x, z) => 3.4 + 6.5 * (fbm2(x / 480, z / 480) - 0.5) + 1.2 * (fbm2(x / 95, z / 95) - 0.5) + hills(x, z) + farMtn(x, z);
-    const h = (x, z) => { let y = land(x, z); const d = sd(x, z); y = lerp(2.0, y, sstep(16, 24, d)); y = lerp(-5.5, y, sstep(-8, 34, riverSD(x, z))); if (moatW) y = lerp(-4.0, y, sstep(-2, 4, dMoat(x, z))); return y; };
-    // roads from the middle of each side, out to the edge (or the river bank)
-    const wavy = (pts, amp, s0) => { const out = []; for (let i = 0; i < pts.length - 1; i++) { const [ax, az] = pts[i], [bx, bz] = pts[i + 1], Ln = Math.hypot(bx - ax, bz - az), m = Math.max(2, Math.round(Ln / 20)), nx = -(bz - az) / Ln, nz = (bx - ax) / Ln; for (let k = 0; k < m; k++) { const t = k / m, w = amp * (fbm2(s0 + (i + t) * 1.7, s0) - 0.5) * Math.sin(Math.PI * Math.min(1, t * 4)); out.push([ax + (bx - ax) * t + nx * w, az + (bz - az) * t + nz * w]); } } out.push(pts[pts.length - 1]); return out; };
-    const roads = ['s', 'e', 'w', 'n'].map((s, i) => { const d = DIRS[s], e0 = ext(s) + 60, e1 = rs.includes(s) ? (s === rs[0] ? R0.v0 - 90 : R1.v0 - 30) : 2600; const tn = [-d[1], d[0]]; return wavy([[d[0] * e0, d[1] * e0], [d[0] * (e0 + e1) / 2 + tn[0] * 60, d[1] * (e0 + e1) / 2 + tn[1] * 60], [d[0] * e1 + tn[0] * 120, d[1] * e1 + tn[1] * 120]], 40, i + 1); });
-    const segD = (px, pz, ax, az, bx, bz) => { const dx = bx - ax, dz = bz - az, t = clamp(((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz || 1), 0, 1); return Math.hypot(px - ax - dx * t, pz - az - dz * t); };
-    const roadD = (x, z) => { let d = 1e9; for (const r of roads) for (let i = 0; i < r.length - 1; i++) { const a = r[i], b = r[i + 1]; if (Math.abs(a[0] - x) > 80 && Math.abs(b[0] - x) > 80 && Math.sign(a[0] - x) === Math.sign(b[0] - x)) continue; d = Math.min(d, segD(x, z, a[0], a[1], b[0], b[1])); } return d; };
-    // the siege ground on the attacker's side, the camp beyond it and off to one flank (as the prototype's)
-    const ad = DIRS[side], at = [ad[1], -ad[0]], aExt = ext(side), lat = plan.half + 440, out = aExt + 675;
-    const ccx = ad[0] * out + at[0] * lat, ccz = ad[1] * out + at[1] * lat, CAMP_R = { x0: ccx - 180, x1: ccx + 180, z0: ccz - 125, z1: ccz + 125 };
-    const campIn = (x, z) => Math.min(x - CAMP_R.x0, CAMP_R.x1 - x, z - CAMP_R.z0, CAMP_R.z1 - z);
-    const trampled = (x, z) => { const u = x * at[0] + z * at[1], v = x * ad[0] + z * ad[1] - aExt; return Math.max(sstep(plan.half + 260, plan.half + 170, Math.abs(u)) * sstep(54, 80, v) * sstep(560, 380, v) * (0.55 + 0.45 * fbm2(x / 40, z / 40)), sstep(-34, -6, campIn(x, z))); };
-    const EXT = Math.max(1600, Math.ceil(out + 400)), RES = 512, data = new Uint8Array(RES * RES * 4), wood = new Float32Array(RES * RES), field = new Float32Array(RES * RES);
-    const ang = 0.13, ca = Math.cos(ang), sa = Math.sin(ang);
-    for (let j = 0; j < RES; j++) for (let i = 0; i < RES; i++) {
-      const x = -EXT + ((i + 0.5) / RES) * 2 * EXT, z = -EXT + ((j + 0.5) / RES) * 2 * EXT, qq = (j * RES + i) * 4, wsd = waterSD(x, z), c = cheb(x, z), hl = hills(x, z);
-      const rd = c > MOAT1 ? roadD(x, z) : 1e9, road = sstep(7, 2.5, rd), tr = trampled(x, z), city = c < HC - 8 ? 1 : 0;
-      let w = Math.max(sstep(0.56, 0.68, fbm2(x / 310 + 11, z / 310 + 4)) * sstep(1500, 1100, Math.hypot(x, z)), hl > 6 ? sstep(6, 22, hl) * 0.95 : 0, wsd > 6 && wsd < 26 && riverSD(x, z) < 26 ? 0.45 : 0);
-      if (wsd < 4 || c < MOAT1 + 30 || rd < 12 || tr > 0.3) w = 0;
-      let f = 0;
-      if (!w && wsd > 20 && c > MOAT1 + 24 && hl < 2 && rd > 9 && tr < 0.2 && Math.hypot(x, z) < 1500) {
-        const u = x * ca - z * sa, v = x * sa + z * ca, cu = Math.floor(u / 72), cvv = Math.floor(v / 34), hh = h2(cu, cvv), fu = u / 72 - cu, fv = v / 34 - cvv;
-        if (hh < 0.82 && Math.min(fu, 1 - fu) * 72 > 1.5 && Math.min(fv, 1 - fv) * 34 > 1.5) f = 0.2 + 0.8 * h2(cu + 7, cvv + 3);
-      }
-      wood[j * RES + i] = w; field[j * RES + i] = f;
-      data[qq] = w * 255; data[qq + 1] = f * 255; data[qq + 2] = road * 255; data[qq + 3] = Math.max(tr, city) * 255;
-    }
-    const tex = new T.DataTexture(data, RES, RES, T.RGBAFormat); tex.magFilter = T.LinearFilter; tex.minFilter = T.LinearFilter; tex.needsUpdate = true;
-    const atA = (arr, x, z) => { const i = Math.floor(((x + EXT) / (2 * EXT)) * RES), j = Math.floor(((z + EXT) / (2 * EXT)) * RES); return i < 0 || j < 0 || i >= RES || j >= RES ? 0 : arr[j * RES + i]; };
-    return { HC, MOAT0, MOAT1, WATER, h, cheb, riverSD, waterSD, dMoat, hills, feiX: () => -1e5, roads, roadD, trampled, CAMP_R, CAMP: [ccx, ccz, 180], CAMP_GATE: 6.5, campIn, EXT, landTex: tex,
-      woodAt: (x, z) => atA(wood, x, z), fieldAt: (x, z) => atA(field, x, z), slope: (x, z) => { const e = 3; return Math.hypot(h(x + e, z) - h(x - e, z), h(x, z + e) - h(x, z - e)) / (2 * e); } };
-  }
 })();
 </script></body></html>

@@ -56,7 +56,7 @@ try {
   };
 
   const t0 = Date.now();
-  await page.goto(BASE_URL + 'game.html?seed=219&speed=64&w=1440&h=900&dpr=1', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.goto(BASE_URL + 'game.html?seed=219&speed=64&cut=0&w=1440&h=900&dpr=1', { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.waitForFunction(() => (window.__game && window.__game.ready) || !!window.__error, { timeout: 600000, polling: 1000 });
   const err = await page.evaluate(() => window.__error);
   if (err) throw new Error('game failed: ' + err);

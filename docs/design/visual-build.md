@@ -80,7 +80,27 @@ Chuyển từ `docs/design/prototypes/siege/sg-nature.js`, giữ tên hàm để
 | Mô-đun | Agent | Trạng thái |
 | --- | --- | --- |
 | quality.js | A | xong (`995d3c0`): pick/detect/monitor/hud, 10 test; `game.html` dò GPU trước khi dựng, `?tier=`, `?hud=1`, tự hạ SSAO/DOF khi khung chậm và nhớ mức cho lần sau |
-| nature.js | B | đang làm |
-| han-models.js + battle.js | C | đang làm |
-| crowd.js | D | đang làm |
-| nối vào game, e2e | Claude (chính) | chờ 1–5 |
+| nature.js | B | xong (`145e54c`): `Nature.land(spec)`, ô gộp theo khối có vùng bao và loại theo khung nhìn, ba mức; atlas lá và cây mẫu cache theo trang, `Nature.warm(q)` (`f0e7b6d`) |
+| han-models.js + battle.js | C | xong (`6ac9c11`, `dd97bd2`): thành theo `cities.json` (đường tường thật, cổng, khuyết, hào, sông), quân theo số binh, doanh trại, lửa khói instanced, sáu góc máy; `Battle.land(def, side, Nature)` dựng đất quanh đường tường thật |
+| crowd.js | D | xong (`9e28c71`): khung tư thế nướng vào texture float, một InstancedMesh mỗi thân, hai mức chi tiết, bóng chạy cùng cử động; lính nhẹ xa hơn `shadowReach` không đổ bóng |
+| nối vào game, e2e | Claude (chính) | `src/world/battle-cut.js` + `EventPresenter` (`plan.cut`, `P.cut`) + `game.html`; `tests/e2e/battle-cut.mjs` |
+
+## Đo (28/9, GPU giả lập, 1280×720, DPR 1, cả lượt bóng)
+
+| Cảnh trận (cổng) | Mức cao | Mức vừa | Mức thấp |
+| --- | --- | --- | --- |
+| Chung Ly | 3,10 triệu · 300 lệnh vẽ | 1,76 triệu | 0,87 triệu |
+| Tương Dương | 3,26 triệu | 1,83 triệu | – |
+| Lạc Dương | 2,94 triệu | 1,85 triệu | – |
+| Trường An | – | 2,06 triệu | 0,98 triệu |
+| Dựng một trận (Chung Ly) | 4,4 giây | 3,8 giây | 2,9 giây |
+
+Trước khi ghép: 8,2 / 7,9 / 4,1 triệu tam giác, dựng 7,7 / 7,2 / 3,1 giây. Mức cao dành cho card rời nên cho vượt trần tích hợp tới 10 %; mức vừa, thấp dung sai 5 % (kinh đô lớn là nặng nhất). Số này không nói gì về fps thật: phải đo trên máy của chủ dự án (`game.html?hud=1`).
+
+## Nợ còn lại
+
+- Dựng trận còn chặn luồng chính 3–4 giây (thẻ "Đang dựng trận…"): phải dựng dần theo khung (dat.city: ≤ 5 ms mỗi khung) hoặc dựng trong lúc quân hành quân.
+- Chia quân bộ / kỵ / thủy trong cắt cảnh là đoán theo đặc tính phe và sông (`BattleCut.troopsOf`), chờ bộ mô tả trận của engine (ASSIGN.md mục 1).
+- `season`, `hour`, `deps.sun` của `Battle.siege` chưa dùng; doanh trại luôn quay bắc; ngoài tường (Linh Đài…) chưa dựng.
+- Vân bump trên vách đá nhấp nháy khối 2×2 ở GPU giả lập (kế thừa bản mẫu); mức thấp đã tắt bump đá.
+- Cảnh dựng bằng `nature.js` + `battle.js` + `crowd.js` tải thêm ~260 KB script (chưa nén) ở `game.html`; chưa tải lười.

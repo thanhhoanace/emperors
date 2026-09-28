@@ -35,7 +35,7 @@ try {
   const click = async (sel) => { await page.waitForSelector(sel, { visible: true, timeout: 60000 }); await page.click(sel); };
   const text = () => page.evaluate(() => document.querySelector('.pui').innerText + '\n' + document.querySelector('.hud').innerText);
 
-  await page.goto(BASE_URL + 'game.html?seed=219&speed=64&w=1440&h=900&dpr=1', { waitUntil: 'load', timeout: 600000 });
+  await page.goto(BASE_URL + 'game.html?seed=219&speed=64&cut=0&w=1440&h=900&dpr=1', { waitUntil: 'load', timeout: 600000 });
   await page.waitForFunction(() => window.__game && (window.__game.ready || window.__error), { timeout: 900000, polling: 1000 });
   check(!(await page.evaluate(() => window.__error)), 'game.html boots');
   await click(`.pui .start [data-fid=${PLAYER}]`);

@@ -8,6 +8,7 @@
 <div id="loading">Đang dựng thiên hạ năm 219…</div>
 <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/utils/BufferGeometryUtils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/geometries/RoundedBoxGeometry.js"></script>
 <script src="src/engine/engine.js"></script>
 <script src="src/engine/attach-219.js"></script>
 <script src="src/engine/perception.js"></script>
@@ -25,6 +26,11 @@
 <script src="src/world/game-controller.js"></script>
 <script src="src/world/player-ui.js"></script>
 <script src="src/world/demo.js"></script>
+<script src="src/world/nature.js"></script>
+<script src="src/world/han-models.js"></script>
+<script src="src/world/crowd.js"></script>
+<script src="src/world/battle.js"></script>
+<script src="src/world/battle-cut.js"></script>
 <script>
 // Tam Quốc Loạn Nhập, autumn 219 (docs/architecture.md).
 //   default   play: choose one of the four emperors, one order a season, the real engine resolves every turn; the player
@@ -35,6 +41,8 @@
 //             it, &hud=1 shows tier, fps, triangles and draw calls (the owner's reports from real machines), &qa=1
 //             defaults to high so QA shots stay the same on the software GPU. A tier dropped at run time (slow frames)
 //             turns SSAO and DOF off now and is remembered for the next load, where the pixel ratio and shadows follow.
+//   battle    an attack's arrival → result becomes the siege at 1 m (src/world/battle-cut.js, decisions/0004); &cut=0 turns it
+//             off; &qa=1 leaves it off unless &cut=1 (the map QA shots stay the same)
 (async () => {
   const params = new URLSearchParams(location.search);
   const DEMO = params.has('demo');
@@ -85,21 +93,25 @@
     const LU = rt.lens.uniforms; if (!quality.ssao) LU.aoStrength.value = 0; if (!quality.dof) LU.maxBlur.value = 0;
     try { localStorage.setItem('tq.tier', tier); } catch (e) { /* no storage: the drop lasts this page only */ }
   });
+  const cutMeasure = () => { const r = rt.renderer; r.info.autoReset = false; r.info.reset(); const f0 = performance.now(); cut.render(); r.getContext().finish(); const st = K.stats(r, cut.scene, { frameMs: performance.now() - f0 }); r.info.autoReset = true; return st; };
   const qhud = Quality.hud(null, () => ({ tier: quality.tier, reason: quality.reason, fps: monitor.fps, triangles: rt.renderer.info.render.triangles, calls: rt.renderer.info.render.calls, gpu: quality.info.gpu }));
   if (qhud.el) { // bottom left: the top right holds the news card
     Object.assign(qhud.el.style, { top: 'auto', right: 'auto', bottom: '8px', left: '8px' });
     rt.renderer.info.autoReset = false; // counted over the whole frame (shadow pass, scene, lens), reset by the wrapper below
   }
-  { const render0 = rt.render; let lastT = 0; rt.render = () => { const now = performance.now(); if (lastT && now - lastT < 500) monitor.frame(now - lastT); lastT = now; if (qhud.el) { rt.renderer.info.autoReset = false; rt.renderer.info.reset(); } render0(); qhud.tick(now); }; }
+  { const render0 = rt.render; let lastT = 0; rt.render = () => { const now = performance.now(); if (lastT && now - lastT < 500) monitor.frame(now - lastT); lastT = now; if (qhud.el) { rt.renderer.info.autoReset = false; rt.renderer.info.reset(); } if (cut && cut.active) cut.render(); else render0(); qhud.tick(now); }; }
   const hud = WorldHud.create({ colors, glyphs, names: WorldNames });
   const presenter = EventPresenter.create(rt, { world, characters, names: WorldNames, hud });
+  const cutOn = params.get('cut') === '1' || (params.get('cut') !== '0' && !params.has('qa'));
+  const cut = cutOn && window.BattleCut ? BattleCut.create(rt, { world, cities, glyphs, names: WorldNames, quality }) : null;
+  presenter.cut = cut;
   const seats = new Set(world.factions.map((f) => f.start.seat));
   hud.setPlaces(world.provinces.map((p) => { const s = rt.palaceOf(p.id); return { pid: p.id, text: p.city, seat: seats.has(p.id), at: [s[0], s[1] + 1.5, s[2]] }; }));
   const idle = () => { rt.render(); hud.drawPlaces(rt, rt.view().mode === 'far'); };
   const titleOf = (ev) => (ev.kind === 'gate' ? EventPresenter.GATE_TITLE[ev.id] : EventPresenter.KIND_TITLE[ev.kind]) || ev.kind;
   presenter.speed = Number(params.get('speed')) || (DEMO ? 1 : 2);
   hud.controls((s) => { presenter.speed = s; }, () => { if (!loop || !loop.playing) { presenter.end(); idle(); } }, presenter.speed);
-  Object.assign(window.__game, { rt, presenter, hud, measure: () => rt.measure() });
+  Object.assign(window.__game, { rt, presenter, hud, cut, measure: () => (cut && cut.active ? cutMeasure() : rt.measure()) });
   idle();
   if (DEMO) return WorldDemo.run({ rt, presenter, hud, world, gates, fixtures, params, idle, titleOf });
 

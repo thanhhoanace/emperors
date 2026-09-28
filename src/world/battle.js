@@ -21,10 +21,12 @@
 //   deps.Crowd is absent: the same add(kind, list) / group / tick / focus / count / stats / dispose; per kind the fine
 //   figure near the camera given to focus() (shadowed nearest), a box figure beyond. One crowd is made per faction
 //   (colors = { [fid]: hex }), so the rows need no faction. focus(cam) re-sorts them: call it when the view changes.
-//   Budget (0005, tiers high / mid / low): figures 4,000 / 2,500 / 1,200 in all; wards 48 / 24 / 12; fire and smoke
+//   Budget (0005, tiers high / mid / low): figures 3,200 / 2,200 / 1,000 in all; wards 48 / 24 / 12; fire and smoke
 //   are instanced camera-facing quads (four draw calls); PointLights 3 / 1 / 0; low skips the camp's stores and yards.
 //   Battle.plan(cityDef) → { S, D, poly, half } (the scale and outline in metres; the harness sizes the land with it).
-//   Battle.landSpec(desc) → { river, hills, cityR, campSide } for Nature.land when the integrator builds the land.
+//   Battle.land(def, side, Nature) → L: the prototype's land rebuilt round the city's real outline (walls, moat on the
+//   sides cities.json gives, rivers on its river sides, hills north-east, the siege ground and the camp on `side`).
+//   Battle.landSpec(desc) → { river, hills, cityR, campSide } for Nature.land (a square city) when that is enough.
 (function () {
   const B = (window.Battle = {});
   const T = THREE, BGU = THREE.BufferGeometryUtils, KS = 30; // kit units → metres
@@ -32,7 +34,7 @@
   const hex = (c) => (typeof c === 'string' ? parseInt(c.replace('#', ''), 16) : c);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const yawTo = (dx, dz) => Math.atan2(-dz, dx); // the yaw that turns a model's +x toward (dx, dz)
-  const TIER = { high: { figures: 3200, wards: 48, fx: 1, lights: 3 }, mid: { figures: 2500, wards: 24, fx: 0.6, lights: 1 }, low: { figures: 1200, wards: 12, fx: 0.35, lights: 0 } };
+  const TIER = { high: { figures: 3200, wards: 48, fx: 1, lights: 3 }, mid: { figures: 2200, wards: 24, fx: 0.6, lights: 1 }, low: { figures: 1000, wards: 12, fx: 0.35, lights: 0 } };
   const SIDE_VI = { n: 'Bắc', s: 'Nam', e: 'Đông', w: 'Tây' }, DIR = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] };
   const tierOf = (q) => { const t = typeof q === 'string' ? q : q && q.tier; return TIER[t] ? t : 'high'; };
 
@@ -228,6 +230,76 @@
   // figure (no shadow) beyond; focus() re-sorts the rows between them (a view change, not every frame). Rows [x, y, z, yaw, anim?, phase?, fid?].
   const NEAR = { high: 180, mid: 140, low: 100 };
   const COATS = [[0.62, 0.38, 0.22], [0.8, 0.44, 0.24], [0.2, 0.18, 0.17], [1.05, 1.02, 0.98], [0.9, 0.74, 0.5], [0.42, 0.27, 0.17], [0.62, 0.38, 0.22], [0.42, 0.27, 0.17]];
+  // ---------------------------------------------------------------- the land round a real city (Nature's L interface)
+  // The prototype's land round Thọ Xuân, with the square city (cheb < HC) replaced by the real outline: cheb(x, z) is
+  // HC + the signed distance to the wall line, so every "c < MOAT1 + 20" test of sg-nature.js still means "near the
+  // walls". The moat follows the outline on the sides cities.json gives; the big river runs along the first river side
+  // ~450 m out, a smaller one along the second; the siege ground and the camp lie on the attacker's side.
+  B.land = function (def, side, N) {
+    const T = THREE, plan = B.plan(def);
+    const { h2, fbm2, ridged2 } = N.noise, { clamp, lerp, sstep } = N.util;
+    const poly = plan.poly, n = poly.length, HC = 210, WATER = -1.0;
+    const inPoly = (x, z) => { let c = false; for (let i = 0, j = n - 1; i < n; j = i++) { const [xi, zi] = poly[i], [xj, zj] = poly[j]; if ((zi > z) !== (zj > z) && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) c = !c; } return c; };
+    const SIDE = (dx, dz) => (Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 'e' : 'w') : dz > 0 ? 's' : 'n');
+    const cx0 = poly.reduce((a, p) => a + p[0], 0) / n, cz0 = poly.reduce((a, p) => a + p[1], 0) / n;
+    // signed distance to the outline (positive outside) and the side the nearest edge faces
+    const NRM = poly.map((a, i) => { const b = poly[(i + 1) % n]; let nx = -(b[1] - a[1]), nz = b[0] - a[0]; if (((a[0] + b[0]) / 2 - cx0) * nx + ((a[1] + b[1]) / 2 - cz0) * nz < 0) { nx = -nx; nz = -nz; } return SIDE(nx, nz); });
+    const sdS = (x, z) => { let d = 1e9, s = 'n'; for (let i = 0; i < n; i++) { const [ax, az] = poly[i], [bx, bz] = poly[(i + 1) % n], dx = bx - ax, dz = bz - az, t = clamp(((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz || 1), 0, 1), e = Math.hypot(x - ax - dx * t, z - az - dz * t); if (e < d) { d = e; s = NRM[i]; } } return [inPoly(x, z) ? -d : d, s]; };
+    const sd = (x, z) => sdS(x, z)[0], cheb = (x, z) => HC + sd(x, z);
+    const DIRS = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] }, ext = (s) => Math.max(...poly.map((p) => p[0] * DIRS[s][0] + p[1] * DIRS[s][1]));
+    const moatW = def.moat ? clamp((def.moat.width || 0.03) * plan.S, 20, 60) : 0, moatSides = def.moat ? def.moat.sides || 'nesw' : '';
+    const MOAT0 = HC + 26, MOAT1 = HC + 26 + (moatW || 28);
+    const dMoat = (x, z) => { if (!moatW) return 1e9; const [d, s] = sdS(x, z); if (!moatSides.includes(s)) return 1e9; return Math.max(26 - d, d - 26 - moatW); };
+    // rivers in a side's frame: v out from the city, u along
+    const rs = ((def.river && def.river.sides) || '').split('');
+    const frame = (s) => { const d = DIRS[s]; return (x, z) => [x * d[1] * -1 + z * d[0], x * d[0] + z * d[1]]; }; // [u, v]
+    const R0 = rs[0] ? { f: frame(rs[0]), v0: ext(rs[0]) + 450 } : null, R1 = rs[1] ? { f: frame(rs[1]), v0: ext(rs[1]) + 270 } : null;
+    const bigV = (u) => R0.v0 + 95 * Math.sin(u / 540) + 42 * Math.sin(u / 215 + 1.3), bigD = (u) => (95 / 540) * Math.cos(u / 540) + (42 / 215) * Math.cos(u / 215 + 1.3);
+    const smlV = (u) => R1.v0 + 85 * Math.sin(u / 340 + 0.4) + 28 * Math.sin(u / 150), smlD = (u) => (85 / 340) * Math.cos(u / 340 + 0.4) + (28 / 150) * Math.cos(u / 150);
+    const riverSD = (x, z) => {
+      let d = 1e9;
+      if (R0) { const [u, v] = R0.f(x, z); d = Math.abs(v - bigV(u)) / Math.sqrt(1 + bigD(u) ** 2) - 90; }
+      if (R1) { const [u, v] = R1.f(x, z), [, v0] = R0.f(x, z); if (v0 < bigV(R0.f(x, z)[0]) + 30) d = Math.min(d, Math.abs(v - smlV(u)) / Math.sqrt(1 + smlD(u) ** 2) - 31); }
+      return d;
+    };
+    const waterSD = (x, z) => Math.min(riverSD(x, z), dMoat(x, z));
+    // hills north-east (Bagong), pushed out with the city
+    const push = Math.max(0, plan.half - 210), HX = 900 + push, HZ = -230 - push * 0.4;
+    const hills = (x, z) => { const a = Math.hypot((x - HX) / 560, (z - HZ) / 360), b = Math.hypot((x - HX - 450) / 330, (z - HZ - 390) / 260); const m = Math.max(0, 1 - a) ** 1.25 * 120 + Math.max(0, 1 - b) ** 1.4 * 60; return m * (0.62 + 0.75 * ridged2(x / 190 + 3, z / 190)); };
+    const farMtn = (x, z) => { const r = Math.hypot(x * 0.85, z), k = sstep(2300, 4300, r); return k * (140 + 520 * ridged2(x / 700 + 9, z / 700, 5) ** 1.6 + 60 * ridged2(x / 160, z / 160)); };
+    const land = (x, z) => 3.4 + 6.5 * (fbm2(x / 480, z / 480) - 0.5) + 1.2 * (fbm2(x / 95, z / 95) - 0.5) + hills(x, z) + farMtn(x, z);
+    const h = (x, z) => { let y = land(x, z); const d = sd(x, z); y = lerp(2.0, y, sstep(16, 24, d)); y = lerp(-5.5, y, sstep(-8, 34, riverSD(x, z))); if (moatW) y = lerp(-4.0, y, sstep(-2, 4, dMoat(x, z))); return y; };
+    // roads from the middle of each side, out to the edge (or the river bank)
+    const wavy = (pts, amp, s0) => { const out = []; for (let i = 0; i < pts.length - 1; i++) { const [ax, az] = pts[i], [bx, bz] = pts[i + 1], Ln = Math.hypot(bx - ax, bz - az), m = Math.max(2, Math.round(Ln / 20)), nx = -(bz - az) / Ln, nz = (bx - ax) / Ln; for (let k = 0; k < m; k++) { const t = k / m, w = amp * (fbm2(s0 + (i + t) * 1.7, s0) - 0.5) * Math.sin(Math.PI * Math.min(1, t * 4)); out.push([ax + (bx - ax) * t + nx * w, az + (bz - az) * t + nz * w]); } } out.push(pts[pts.length - 1]); return out; };
+    const roads = ['s', 'e', 'w', 'n'].map((s, i) => { const d = DIRS[s], e0 = ext(s) + 60, e1 = rs.includes(s) ? (s === rs[0] ? R0.v0 - 90 : R1.v0 - 30) : 2600; const tn = [-d[1], d[0]]; return wavy([[d[0] * e0, d[1] * e0], [d[0] * (e0 + e1) / 2 + tn[0] * 60, d[1] * (e0 + e1) / 2 + tn[1] * 60], [d[0] * e1 + tn[0] * 120, d[1] * e1 + tn[1] * 120]], 40, i + 1); });
+    const segD = (px, pz, ax, az, bx, bz) => { const dx = bx - ax, dz = bz - az, t = clamp(((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz || 1), 0, 1); return Math.hypot(px - ax - dx * t, pz - az - dz * t); };
+    const roadD = (x, z) => { let d = 1e9; for (const r of roads) for (let i = 0; i < r.length - 1; i++) { const a = r[i], b = r[i + 1]; if (Math.abs(a[0] - x) > 80 && Math.abs(b[0] - x) > 80 && Math.sign(a[0] - x) === Math.sign(b[0] - x)) continue; d = Math.min(d, segD(x, z, a[0], a[1], b[0], b[1])); } return d; };
+    // the siege ground on the attacker's side, the camp beyond it and off to one flank (as the prototype's)
+    const ad = DIRS[side], at = [ad[1], -ad[0]], aExt = ext(side), lat = plan.half + 440, out = aExt + 675;
+    const ccx = ad[0] * out + at[0] * lat, ccz = ad[1] * out + at[1] * lat, CAMP_R = { x0: ccx - 180, x1: ccx + 180, z0: ccz - 125, z1: ccz + 125 };
+    const campIn = (x, z) => Math.min(x - CAMP_R.x0, CAMP_R.x1 - x, z - CAMP_R.z0, CAMP_R.z1 - z);
+    const trampled = (x, z) => { const u = x * at[0] + z * at[1], v = x * ad[0] + z * ad[1] - aExt; return Math.max(sstep(plan.half + 260, plan.half + 170, Math.abs(u)) * sstep(54, 80, v) * sstep(560, 380, v) * (0.55 + 0.45 * fbm2(x / 40, z / 40)), sstep(-34, -6, campIn(x, z))); };
+    const EXT = Math.max(1600, Math.ceil(out + 400)), RES = 512, data = new Uint8Array(RES * RES * 4), wood = new Float32Array(RES * RES), field = new Float32Array(RES * RES);
+    const ang = 0.13, ca = Math.cos(ang), sa = Math.sin(ang);
+    for (let j = 0; j < RES; j++) for (let i = 0; i < RES; i++) {
+      const x = -EXT + ((i + 0.5) / RES) * 2 * EXT, z = -EXT + ((j + 0.5) / RES) * 2 * EXT, qq = (j * RES + i) * 4, wsd = waterSD(x, z), c = cheb(x, z), hl = hills(x, z);
+      const rd = c > MOAT1 ? roadD(x, z) : 1e9, road = sstep(7, 2.5, rd), tr = trampled(x, z), city = c < HC - 8 ? 1 : 0;
+      let w = Math.max(sstep(0.56, 0.68, fbm2(x / 310 + 11, z / 310 + 4)) * sstep(1500, 1100, Math.hypot(x, z)), hl > 6 ? sstep(6, 22, hl) * 0.95 : 0, wsd > 6 && wsd < 26 && riverSD(x, z) < 26 ? 0.45 : 0);
+      if (wsd < 4 || c < MOAT1 + 30 || rd < 12 || tr > 0.3) w = 0;
+      let f = 0;
+      if (!w && wsd > 20 && c > MOAT1 + 24 && hl < 2 && rd > 9 && tr < 0.2 && Math.hypot(x, z) < 1500) {
+        const u = x * ca - z * sa, v = x * sa + z * ca, cu = Math.floor(u / 72), cvv = Math.floor(v / 34), hh = h2(cu, cvv), fu = u / 72 - cu, fv = v / 34 - cvv;
+        if (hh < 0.82 && Math.min(fu, 1 - fu) * 72 > 1.5 && Math.min(fv, 1 - fv) * 34 > 1.5) f = 0.2 + 0.8 * h2(cu + 7, cvv + 3);
+      }
+      wood[j * RES + i] = w; field[j * RES + i] = f;
+      data[qq] = w * 255; data[qq + 1] = f * 255; data[qq + 2] = road * 255; data[qq + 3] = Math.max(tr, city) * 255;
+    }
+    const tex = new T.DataTexture(data, RES, RES, T.RGBAFormat); tex.magFilter = T.LinearFilter; tex.minFilter = T.LinearFilter; tex.needsUpdate = true;
+    const atA = (arr, x, z) => { const i = Math.floor(((x + EXT) / (2 * EXT)) * RES), j = Math.floor(((z + EXT) / (2 * EXT)) * RES); return i < 0 || j < 0 || i >= RES || j >= RES ? 0 : arr[j * RES + i]; };
+    return { HC, MOAT0, MOAT1, WATER, h, cheb, riverSD, waterSD, dMoat, hills, feiX: () => -1e5, roads, roadD, trampled, CAMP_R, CAMP: [ccx, ccz, 180], CAMP_GATE: 6.5, campIn, EXT, landTex: tex,
+      woodAt: (x, z) => atA(wood, x, z), fieldAt: (x, z) => atA(field, x, z), slope: (x, z) => { const e = 3; return Math.hypot(h(x + e, z) - h(x - e, z), h(x, z + e) - h(x, z - e)) / (2 * e); } };
+  };
+
   B.Crowd = {
     create(o) {
       const HM = o.HM, P = HM.parts, tier = tierOf(o.q), near = NEAR[tier];
@@ -281,6 +353,9 @@
     const capital = def.rank === 'capital', H = capital ? 12 : 10, WB = capital ? 30 : 26, WT = capital ? 10 : 9, cw = 34; // wall height, base and top width, corner bastion
     const earth = 0x9a7d5a, earthDark = 0x84694c, burnt = 0x5a4a3c, paving = 0x7d776d, KSv = [KS, KS, KS];
     const plan = B.plan(def), { S, rot } = plan, cs = Math.cos(rot), sn = Math.sin(rot);
+    // tile columns on the gate towers and halls: every other one at mid, a plain roof at low (a capital's towers were
+    // 230 k triangles with their shadow at low, a quarter of the frame)
+    const tl = (x) => (tier === 'low' ? 0 : tier === 'mid' ? x * 2.4 : x);
     // everything is built in plan space (metres, unrotated, the city centre at the origin) and the two meshes turned by
     // the plan's rotation at the end (Chengdu: N30°E); the land is sampled at world positions
     const toW = (x, z) => [x * cs - z * sn, x * sn + z * cs], rotV = (dx, dz) => [dx * cs - dz * sn, dx * sn + dz * cs];
@@ -312,7 +387,7 @@
         for (const sz of [-1, 1]) { b.add(P.rbox(pw + 2.2, 0.9, 0.8, 0.2), 0x3a2414, [x, y0 + ph + 0.45, sz * (WB / 2 + 3.2)]); for (const sx of [-1, 1]) b.add(P.rbox(0.8, ph, 0.8, 0.2), 0x3a2414, [x + sx * (pw / 2 + 0.4), y0 + ph / 2, sz * (WB / 2 + 3.2)]); }
         if (doors) for (const sx of [-1, 1]) b.add(P.rbox(0.35, ph * 0.95, pw * 0.5, 0.2), 0x4a2211, [x + sx * pw * 0.42, y0 + ph * 0.47, WB / 2 + 1.5], [0, sx * 0.7, 0]);
       }
-      b.push(P.xf(P.pavilion({ w: 0.9 + (pass - 1) * 0.3, d: 0.5, h: 0.2, storeys: main ? 3 : 2, rh: 0.17, base: 0.02, ov: 0.08, tiles: 0.028 }), [s, y0 + H + 0.5, 0], [0, 0, 0], KSv));
+      b.push(P.xf(P.pavilion({ w: 0.9 + (pass - 1) * 0.3, d: 0.5, h: 0.2, storeys: main ? 3 : 2, rh: 0.17, base: 0.02, ov: 0.08, tiles: tl(0.028) }), [s, y0 + H + 0.5, 0], [0, 0, 0], KSv));
     };
     // a khuyết pair: the mother tower with one child stepping down on its outer side (二出阙, a governor) or two (三出阙, the emperor)
     const queGeo = (kids) => {
@@ -361,7 +436,7 @@
       const sx = e2.nx * e1.dx + e2.nz * e1.dz >= 0 ? 1 : -1;
       for (let j = 0; j < 8; j++) { const u = -15 + j * 4.3; crenel(k, u, y0 + H + 1.55, cw / 2 - 0.6); crenel(k, sx * (cw / 2 - 0.6), y0 + H + 1.55, u, Math.PI / 2); }
       E.push(P.xf(k.geo(), [v[0], 0, v[1]], [0, e1.ry, 0]));
-      put(P.pavilion({ w: 0.55, d: 0.55, h: 0.17, storeys: 2, rh: 0.14, ov: 0.07, tiles: 0.028 }), [v[0], y0 + H + 1, v[1]], [0, e1.ry, 0], KSv);
+      put(P.pavilion({ w: 0.55, d: 0.55, h: 0.17, storeys: 2, rh: 0.14, ov: 0.07, tiles: tl(0.028) }), [v[0], y0 + H + 1, v[1]], [0, e1.ry, 0], KSv);
     });
     // the gates in world coordinates, each with its way out, and the bridge over the moat where the land has one
     const gates = gatesP.map((g) => {
@@ -411,10 +486,10 @@
         Bk.add(P.rbox(lx, 4, lz, 0), 0xa9523a, [px + (x0 + x1) / 2, y0 + 2, pz + (z0 + z1) / 2]); Bk.add(P.rbox(lx + 1, 0.6, lz + 1, 0), 0x3f444c, [px + (x0 + x1) / 2, y0 + 4.2, pz + (z0 + z1) / 2]);
       }
       Bk.add(P.rbox(w - 2, 0.2, d - 2, 0), paving, [px, y0 + 0.1, pz]);
-      put(P.pavilion({ w: 0.62, d: 0.3, h: 0.16, rh: 0.12, ov: 0.06, tiles: 0.028 }), [px, y0, pz + hd], [0, 0, 0], KSs);
+      put(P.pavilion({ w: 0.62, d: 0.3, h: 0.16, rh: 0.12, ov: 0.06, tiles: tl(0.028) }), [px, y0, pz + hd], [0, 0, 0], KSs);
       for (let i = 0; i < steps; i++) E.add(P.rbox((56 - i * 8) * ks, stepH, (34 - i * 7) * ks, 0.08), earth, [px, y0 + stepH * (i + 0.5), pz - d * 0.07]);
-      put(P.pavilion({ w: 1.35, d: 0.62, h: 0.24, rh: 0.26, ov: 0.08, tiles: 0.026 }), [px, y0 + stepH * steps, pz - d * 0.07], [0, 0, 0], KSs);
-      if (d > 70) put(P.pavilion({ w: 0.9, d: 0.4, h: 0.18, rh: 0.17, base: 0.04, ov: 0.06, tiles: 0.028 }), [px, y0, pz - d * 0.38], [0, 0, 0], KSs);
+      put(P.pavilion({ w: 1.35, d: 0.62, h: 0.24, rh: 0.26, ov: 0.08, tiles: tl(0.026) }), [px, y0 + stepH * steps, pz - d * 0.07], [0, 0, 0], KSs);
+      if (d > 70) put(P.pavilion({ w: 0.9, d: 0.4, h: 0.18, rh: 0.17, base: 0.04, ov: 0.06, tiles: tl(0.028) }), [px, y0, pz - d * 0.38], [0, 0, 0], KSs);
       // side halls down both flanks; a big compound (a commandery seat, a palace) gets a row of them and more trees
       if (w > 90) for (const sx of [-1, 1]) for (const f of d > 120 ? [-0.3, 0.115, 0.36] : [0.115]) put(P.house(1.3, 0.3, 0.14, { wall: C.plaster }), [px + sx * w * 0.37, y0, pz + d * f], [0, Math.PI / 2, 0], KSs);
       if (w > 150) for (let i = 0; i < 10; i++) inTrees.push([...toW(px + (rnd() - 0.5) * w * 0.5, pz + d * (0.2 + rnd() * 0.22)), rnd() < 0.4 ? 3 : 0, 8 + rnd() * 5]);
@@ -429,7 +504,7 @@
         for (const [x0, x1, z0, z1] of [[mk[0], mk[1], mk[2], mk[2]], [mk[0], mk[1], mk[3], mk[3]], [mk[0], mk[0], mk[2], mk[3]], [mk[1], mk[1], mk[2], mk[3]]]) {
           const lx = Math.max(1, x1 - x0), lz = Math.max(1, z1 - z0); Bk.add(P.rbox(lx, 3, lz, 0), C.plaster, [(x0 + x1) / 2, y0 + 1.5, (z0 + z1) / 2]); Bk.add(P.rbox(lx + 0.8, 0.5, lz + 0.8, 0), 0x3f444c, [(x0 + x1) / 2, y0 + 3.2, (z0 + z1) / 2]);
         }
-        put(P.pavilion({ w: 0.3, d: 0.3, h: 0.14, rh: 0.1, storeys: 3, ov: 0.05, tiles: 0.03 }), [fx, y0, fz], [0, 0, 0], KSv);
+        put(P.pavilion({ w: 0.3, d: 0.3, h: 0.14, rh: 0.1, storeys: 3, ov: 0.05, tiles: tl(0.03) }), [fx, y0, fz], [0, 0, 0], KSv);
         for (let r = 0; r < 4; r++) for (let c = 0; c < 2; c++) { const x = mk[0] + 10 + c * 36, z = mk[2] + 8 + r * 13; if (Math.abs(x - fx) < 12 && Math.abs(z - fz) < 12) continue; put(P.house(0.55, 0.13, 0.07, { wall: C.plaster2 }), [x, y0, z], [0, 0, 0], KSv); }
         if (f.name) labels.push({ text: f.name, kind: 'thing', p: [fx, y0 + 12, fz] });
       } else if (f.type === 'granary' && inside(fx, fz)) {
@@ -437,12 +512,12 @@
         block(fx - 12, fx + 56, fz - 12, fz + 36);
       } else if (f.type === 'watchtower' && inside(fx, fz)) {
         E.add(P.rbox(14, 2, 14, 0.1), earth, [fx, y0 + 1, fz]);
-        put(P.pavilion({ w: 0.3, d: 0.3, h: 0.14, rh: 0.1, storeys: 4, ov: 0.06, tiles: 0.03 }), [fx, y0 + 2, fz], [0, 0, 0], KSv);
+        put(P.pavilion({ w: 0.3, d: 0.3, h: 0.14, rh: 0.1, storeys: 4, ov: 0.06, tiles: tl(0.03) }), [fx, y0 + 2, fz], [0, 0, 0], KSv);
         block(fx - 12, fx + 12, fz - 12, fz + 12);
       } else if (f.type === 'platform' && !f.onWall && inside(fx, fz)) {
         const hh = 1.6 * (f.height || 1), k2 = clamp(Math.min(fw, fd) / 40, 0.6, 1.4);
         E.add(P.rbox(fw, hh, fd, 0.06), earth, [fx, y0 + hh / 2, fz]);
-        put(P.pavilion({ w: 0.62, d: 0.34, h: 0.16, rh: 0.13, ov: 0.06, tiles: 0.028 }), [fx, y0 + hh, fz], [0, 0, 0], [KS * k2, KS * k2, KS * k2]);
+        put(P.pavilion({ w: 0.62, d: 0.34, h: 0.16, rh: 0.13, ov: 0.06, tiles: tl(0.028) }), [fx, y0 + hh, fz], [0, 0, 0], [KS * k2, KS * k2, KS * k2]);
         block(fx - fw / 2 - 4, fx + fw / 2 + 4, fz - fd / 2 - 4, fz + fd / 2 + 4);
         if (f.name) labels.push({ text: f.name, kind: 'thing', p: [fx, y0 + hh + 12, fz] });
       } else if (f.type === 'garden' && inside(fx, fz)) {

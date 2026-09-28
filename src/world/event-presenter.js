@@ -7,6 +7,8 @@
 //   const plan = P.plan(ev);            // { ev, duration, cams[], marks[], hud[] }
 //   P.show(plan, t);                    // put the frame at time t (seconds) on screen
 //   await P.play(ev, { speed: 2 });     // real time, 1×/2×/4×; resolves back on the campaign view
+//   P.cut = BattleCut.create(rt, …)     // optional: an attack's arrival → result window becomes the metre-scale siege shot
+//                                       // (plan.cut = { t0, t1, info }; P.show calls P.cut.frame / off, the page draws it)
 //
 // Two inputs, two policies. Demo/spectator: the RuntimeEvent itself (full truth: names from characters.json, raw text).
 // Playable: a display item from GameController.presentationOf(TurnObservation), marked `safe: true` — it carries its own
@@ -135,6 +137,9 @@
       card(pl, tOrigin + 1.2, tBack, { type: 'label', text: (provName[ev.from] || {}).city, at: seatFrom });
       card(pl, tMarch, tBack, { type: 'label', text: (provName[ev.to] || {}).city, at: seatTo });
       pl.meta = { path, from: ev.from, to: ev.to, arrive: tArrive, result: tResult, back: tBack, marchEnd: p1 };
+      // the battle cut (decisions/0004): from the arrival at the walls to the result, the siege at 1 unit = 1 m instead of
+      // the map; who fights and who wins come from the event (or the safe item's actors), never from the scene
+      pl.cut = { t0: tBattle, t1: tBack, info: { from: ev.from, to: ev.to, fid: ev.fid || (attacker && attacker.fid) || null, defenderFid: ev.defenderFid || (defender && defender.fid) || 'neutral', win, commit: ev.commit || null } };
       return pl;
     };
 
@@ -249,10 +254,14 @@
         else obj.userData.place ? obj.userData.place(m.p, m.dir, s) : (obj.position.set(m.p[0], rt.ground(m.p[0], m.p[2]), m.p[2]), obj.scale.setScalar(s), (obj.visible = true));
       }
       for (const k of Object.keys(live)) if (!ids.has(k)) live[k].visible = false;
+      const c = pl.cut, inCut = !!(P.cut && c && t >= c.t0 && t < c.t1);
+      f.cut = inCut && P.cut.frame(c.info, (t - c.t0) / (c.t1 - c.t0)) !== false;
+      if (!f.cut && P.cut) P.cut.off();
+      if (f.cut) f.hud = f.hud.filter((h) => h.type !== 'label'); // map labels would float over the battle
       if (hud) hud.frame(f, rt);
       return f;
     };
-    P.end = () => { clear(); livePlan = null; if (hud) hud.clear(); rt.setView(rt.viewCampaign()); };
+    P.end = () => { clear(); livePlan = null; if (P.cut) P.cut.off(); if (hud) hud.clear(); rt.setView(rt.viewCampaign()); };
 
     // ---------------------------------------------------------------- real-time playback
     P.speed = 1;
@@ -269,9 +278,11 @@
         last = now;
         try { P.show(pl, t); rt.render(); if (op.onFrame) op.onFrame(t, pl); }
         catch (e) { console.error('shot failed', ev.kind, e); t = pl.duration; } // one broken shot must not stall the turn
-        if (t >= pl.duration) { clear(); livePlan = null; resolve(pl); } else requestAnimationFrame(step);
+        if (t >= pl.duration) { clear(); livePlan = null; if (P.cut) P.cut.off(); resolve(pl); } else requestAnimationFrame(step);
       };
-      requestAnimationFrame(step);
+      // the battle is built before the shot starts (a card says so), not in the middle of the march
+      if (pl.cut && P.cut && P.cut.prepare && !skipping) Promise.resolve().then(() => P.cut.prepare(pl.cut.info)).catch((e) => console.warn('battle cut', e)).then(() => requestAnimationFrame(step));
+      else requestAnimationFrame(step);
     });
     // the queue of one turn (RuntimeEvents in the demo, safe items in play), strictly in order, each once; onSkip gets the
     // items left when the viewer skips
