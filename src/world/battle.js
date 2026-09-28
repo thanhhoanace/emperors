@@ -244,7 +244,10 @@
     const cx0 = poly.reduce((a, p) => a + p[0], 0) / n, cz0 = poly.reduce((a, p) => a + p[1], 0) / n;
     // signed distance to the outline (positive outside) and the side the nearest edge faces
     const NRM = poly.map((a, i) => { const b = poly[(i + 1) % n]; let nx = -(b[1] - a[1]), nz = b[0] - a[0]; if (((a[0] + b[0]) / 2 - cx0) * nx + ((a[1] + b[1]) / 2 - cz0) * nz < 0) { nx = -nx; nz = -nz; } return SIDE(nx, nz); });
-    const sdS = (x, z) => { let d = 1e9, s = 'n'; for (let i = 0; i < n; i++) { const [ax, az] = poly[i], [bx, bz] = poly[(i + 1) % n], dx = bx - ax, dz = bz - az, t = clamp(((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz || 1), 0, 1), e = Math.hypot(x - ax - dx * t, z - az - dz * t); if (e < d) { d = e; s = NRM[i]; } } return [inPoly(x, z) ? -d : d, s]; };
+    // far from the walls (over 200 m from their bounding box) the box distance stands in: every threshold on it is under
+    // 200 m, and the exact loop over the edges was a fifth of a battle's build
+    const bx0 = Math.min(...poly.map((p) => p[0])), bx1 = Math.max(...poly.map((p) => p[0])), bz0 = Math.min(...poly.map((p) => p[1])), bz1 = Math.max(...poly.map((p) => p[1]));
+    const sdS = (x, z) => { const far = Math.hypot(Math.max(bx0 - x, 0, x - bx1), Math.max(bz0 - z, 0, z - bz1)); if (far > 200) return [far, SIDE(x - cx0, z - cz0)]; let d = 1e9, s = 'n'; for (let i = 0; i < n; i++) { const [ax, az] = poly[i], [bx, bz] = poly[(i + 1) % n], dx = bx - ax, dz = bz - az, t = clamp(((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz || 1), 0, 1), e = Math.hypot(x - ax - dx * t, z - az - dz * t); if (e < d) { d = e; s = NRM[i]; } } return [inPoly(x, z) ? -d : d, s]; };
     const sd = (x, z) => sdS(x, z)[0], cheb = (x, z) => HC + sd(x, z);
     const DIRS = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] }, ext = (s) => Math.max(...poly.map((p) => p[0] * DIRS[s][0] + p[1] * DIRS[s][1]));
     const moatW = def.moat ? clamp((def.moat.width || 0.03) * plan.S, 20, 60) : 0, moatSides = def.moat ? def.moat.sides || 'nesw' : '';
@@ -273,7 +276,15 @@
     const wavy = (pts, amp, s0) => { const out = []; for (let i = 0; i < pts.length - 1; i++) { const [ax, az] = pts[i], [bx, bz] = pts[i + 1], Ln = Math.hypot(bx - ax, bz - az), m = Math.max(2, Math.round(Ln / 20)), nx = -(bz - az) / Ln, nz = (bx - ax) / Ln; for (let k = 0; k < m; k++) { const t = k / m, w = amp * (fbm2(s0 + (i + t) * 1.7, s0) - 0.5) * Math.sin(Math.PI * Math.min(1, t * 4)); out.push([ax + (bx - ax) * t + nx * w, az + (bz - az) * t + nz * w]); } } out.push(pts[pts.length - 1]); return out; };
     const roads = ['s', 'e', 'w', 'n'].map((s, i) => { const d = DIRS[s], e0 = ext(s) + 60, e1 = rs.includes(s) ? (s === rs[0] ? R0.v0 - 90 : R1.v0 - 30) : 2600; const tn = [-d[1], d[0]]; return wavy([[d[0] * e0, d[1] * e0], [d[0] * (e0 + e1) / 2 + tn[0] * 60, d[1] * (e0 + e1) / 2 + tn[1] * 60], [d[0] * e1 + tn[0] * 120, d[1] * e1 + tn[1] * 120]], 40, i + 1); });
     const segD = (px, pz, ax, az, bx, bz) => { const dx = bx - ax, dz = bz - az, t = clamp(((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz || 1), 0, 1); return Math.hypot(px - ax - dx * t, pz - az - dz * t); };
-    const roadD = (x, z) => { let d = 1e9; for (const r of roads) for (let i = 0; i < r.length - 1; i++) { const a = r[i], b = r[i + 1]; if (Math.abs(a[0] - x) > 80 && Math.abs(b[0] - x) > 80 && Math.sign(a[0] - x) === Math.sign(b[0] - x)) continue; d = Math.min(d, segD(x, z, a[0], a[1], b[0], b[1])); } return d; };
+    // road segments bucketed in 100 m cells (with a 40 m margin): a query reads one cell; past 40 m it may answer 1e9,
+    // and every test on it is under 15 m (the scan of every segment was a fifth of the build)
+    const RB = 100, rgrid = new Map(), rkey = (i, j) => i * 65536 + j;
+    for (const r of roads) for (let i = 0; i < r.length - 1; i++) {
+      const a = r[i], b = r[i + 1], seg = [a[0], a[1], b[0], b[1]];
+      for (let gi = Math.floor((Math.min(a[0], b[0]) - 40) / RB); gi <= Math.floor((Math.max(a[0], b[0]) + 40) / RB); gi++)
+        for (let gj = Math.floor((Math.min(a[1], b[1]) - 40) / RB); gj <= Math.floor((Math.max(a[1], b[1]) + 40) / RB); gj++) { const k = rkey(gi, gj); if (!rgrid.has(k)) rgrid.set(k, []); rgrid.get(k).push(seg); }
+    }
+    const roadD = (x, z) => { const list = rgrid.get(rkey(Math.floor(x / RB), Math.floor(z / RB))); let d = 1e9; if (list) for (const g of list) d = Math.min(d, segD(x, z, g[0], g[1], g[2], g[3])); return d; };
     // the siege ground on the attacker's side, the camp beyond it and off to one flank (as the prototype's)
     const ad = DIRS[side], at = [ad[1], -ad[0]], aExt = ext(side), lat = plan.half + 440, out = aExt + 675;
     const ccx = ad[0] * out + at[0] * lat, ccz = ad[1] * out + at[1] * lat, CAMP_R = { x0: ccx - 180, x1: ccx + 180, z0: ccz - 125, z1: ccz + 125 };
