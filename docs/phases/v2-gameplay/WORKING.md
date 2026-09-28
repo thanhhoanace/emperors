@@ -80,6 +80,16 @@ Máy đo (auto cả hai bên, 40 seed): Chu Nguyên Chương đánh Thọ Xuân 
 - Đánh giá: tới được bố cục, ánh sáng, không khí của TW3K; chưa tới độ chi tiết cận cảnh (cây vẽ tay, đá quét 3D) và lính có cử động. Muốn gần hơn: texture đá, cây CC0 hoặc tạc bằng Blender (Claude viết script), lính có xương + hoạt ảnh chạy trên GPU.
 - Cũng trong vòng này: bộ mô hình demo (`hn-models.js`) đổi sang mái thẳng, cổng xà gỗ, khuyết, tháp canh theo 0006; code màu sửa về chuyển sRGB một lần, giữ nguyên màu. Canvas Demo 1 đã cập nhật.
 
+**Owner sau vòng 4 (28/9 khuya):** "làm tiếp đá và cây nhìn gần trước / trận thọ xuân trên canvas đạt 75% mức độ a mong muốn r / chỉnh sửa thêm chút về doanh trại cho a".
+
+**Vòng 5 (cùng canvas, 6 ảnh mới + ảnh cũ chụp lại):** https://claude.ai/artifact/NuafHe8Qa1qQq1HfJK1af7. Nguồn vẫn ở `docs/design/prototypes/siege/`, thêm `sg-camp.js`.
+- Đá: hình tháp có gờ sườn dọc và lớp trầm tích đứt quãng (không còn chồng "gối"); shader bỏ lưới nứt tế bào (nhìn như xây gạch), thay bằng hai hệ khe dọc, lớp trầm tích mỗi ~9 m, vết mưa đen, rêu; các vạch mờ đi khi một pixel rộng hơn chúng (nhìn xa không thành lưới). Nhiễu GLSL đổi sang các tầng xoay (không còn khối vuông theo trục khi cắt ngưỡng).
+- Cây: thân và cành là ống có vỏ (bóng đổ riêng), lá vẽ thành chùm cành trên atlas; mip của atlas giữ nguyên độ phủ qua phép thử alpha (cỏ không còn thành ô vuông, tán không thưa khi xa); thông dày hơn; cây gần máy dùng mô hình chi tiết trong 260 m. Cỏ khóm đặt theo lưới cố định quanh máy (trong 50 m, chỉ khi máy thấp), lá rụng trên nền rừng, đồng cỏ có chỗ xanh chỗ úa.
+- Doanh trại theo `docs/design/history.md` (luỹ đất, hào, rào gỗ, cự mã; không có sơ đồ chuẩn): hình chữ nhật 360 × 250 m, luỹ đất 3,2 m có rào gỗ vót nhọn, hào có nước (địa hình bị cắt thật ở vành hào), ụ đất đổ bên ngoài, bốn cổng có lầu gỗ và cự mã so le, 12 tháp canh, phố chữ thập, khu trung quân (trướng lớn, cờ 朱, trống kiến cổ, giá binh khí, lều quan), ~600 lều vải gai và da theo khu có bếp lửa và khói, tàu ngựa, kho lương có xe và kho tròn, xưởng công thành, giáo trường có đài điểm tướng và bia tập bắn. Cây trong 150 m quanh trại bị chặt.
+- Lỗi đã gặp: three r146 không đổi chương trình shader giữa các InstancedMesh cùng vật liệu có và không có màu từng bản sao, nên màu lều và ngựa mất; nay mọi InstancedMesh trên vật liệu của bộ mô hình đều mang màu. Màu đỏ thuần bị nâng bão hòa thành đỏ nhựa; dùng đỏ gạch.
+- Đo (máy e, GPU giả lập, 1280×720, DPR 1,5): 9,4–10,7 triệu tam giác mỗi khung tính cả lượt bóng, dựng ~8 giây (vòng 4: ~7 triệu, 3,5–4 giây), 60 MB bộ đệm hình học. Ảnh trong rừng ở tầm mắt phải chụp DPR 1: GPU giả lập bỏ ngữ cảnh ở 1,5. Vẫn chỉ hợp máy tính.
+- Còn thiếu so với TW3K: lính đứng yên; vải lều và mái trướng còn phẳng; đá vẫn là shader thủ tục, chưa có texture quét.
+
 ## Contradictions
 
 - **Cách phát biểu về thị trường.** [Claude](_research/claude.md) C/E và [Grok](_research/grok.md) A.1 dùng achievement và phản hồi campaign để nghiêng ngã rẽ 1; [ChatGPT](_research/chatgpt.md) B9 bác suy luận achievement = bỏ cuộc/hết nhu cầu. Cả ba vẫn khuyên thử ván ngắn trước; chưa có dữ liệu nói tệp đó đông hơn campaign. `DECISION.md` đã chọn hướng, không cần quay về tranh luận quy mô thị trường trước spike.

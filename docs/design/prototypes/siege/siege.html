@@ -1,6 +1,6 @@
 <!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Thọ Xuân bị vây</title>
 <!-- Design prototype: can three.js reach the Total War look (trees, rock hills, a real siege)? Serve the repo root
-     (npm start or python3 -m http.server) and open /docs/design/prototypes/siege/siege.html?shot=siege|overview|bagong|field
+     (npm start or python3 -m http.server) and open /docs/design/prototypes/siege/siege.html?shot=siege|overview|bagong|field|camp|campgate|rocks|woods|forest
      &w=&h=&dpr= · &measure=1 · &play=1 (orbit with the mouse). Build for the canvas: python3 docs/design/prototypes/siege/build.py -->
 <style>html,body{margin:0;background:#1a1712;overflow:hidden;font-family:"Be Vietnam Pro",system-ui,sans-serif}canvas{display:block}
 #labels{position:fixed;inset:0;pointer-events:none}
@@ -8,7 +8,8 @@
 .lb.city{font-size:16px;font-weight:700;padding:3px 10px;border-radius:4px;background:rgba(30,24,16,.72);border:1px solid rgba(214,188,130,.6)}
 .lb.lane{font-size:12.5px;font-weight:600;padding:3px 9px;border-radius:999px;background:rgba(150,34,30,.85);color:#fff3e4}
 .lb.place{font-style:italic;font-size:14px}
-.lb.thing{font-size:12px;color:#e8dcc0}</style></head><body>
+.lb.thing{font-size:12px;color:#e8dcc0}
+.lb.camp{font-size:12.5px;font-weight:600;padding:2px 8px;border-radius:4px;background:rgba(30,24,16,.72);border:1px solid rgba(214,188,130,.45)}</style></head><body>
 <canvas id="c"></canvas><div id="labels"></div>
 <script src="../../../../node_modules/three/build/three.min.js"></script>
 <script src="../../../../node_modules/three/examples/js/utils/BufferGeometryUtils.js"></script>
@@ -18,6 +19,7 @@
 <script src="../../../phases/v2-gameplay/demo1/src/hn-models.js"></script>
 <script src="sg-nature.js"></script>
 <script src="sg-siege.js"></script>
+<script src="sg-camp.js"></script>
 <script src="sg-main.js"></script>
 <script>
 (async () => {
@@ -25,8 +27,13 @@
   const cv = document.getElementById('c'); cv.style.width = W + 'px'; cv.style.height = H + 'px';
   try {
     const sg = (window.__sg = await SG.start({ canvas: cv, width: W, height: H, dpr, shot: q.get('shot') || 'siege', interactive: !!q.get('play') }));
+    if (q.get('cam')) { // &rel=1: the y of cam and tgt are heights above the ground
+      const c = q.get('cam').split(',').map(Number), t = q.get('tgt').split(',').map(Number);
+      if (q.get('rel')) { c[1] += sg.land.h(c[0], c[2]); t[1] += sg.land.h(t[0], t[2]); }
+      sg.look(c, t, +(q.get('fov') || 40));
+    }
     const box = document.getElementById('labels');
-    const drawLabels = () => { if (q.get('labels') === '0') return; box.innerHTML = sg.labels().filter((l) => l.visible && (l.kind !== 'place' || q.get('shot') === 'overview' || q.get('shot') === 'bagong') && (l.kind !== 'lane' || q.get('shot') === 'overview')).map((l) => `<div class="lb ${l.kind}" style="left:${l.x}px;top:${l.y}px">${l.text}</div>`).join(''); };
+    const drawLabels = () => { if (q.get('labels') === '0') return; box.innerHTML = sg.labels().filter((l) => l.visible && (l.kind !== 'place' || q.get('shot') === 'overview' || q.get('shot') === 'bagong') && (l.kind !== 'lane' || q.get('shot') === 'overview') && (l.kind !== 'camp' || q.get('shot') === 'camp')).map((l) => `<div class="lb ${l.kind}" style="left:${l.x}px;top:${l.y}px">${l.text}</div>`).join(''); };
     sg.render(0.5); drawLabels();
     if (q.get('measure')) window.__extra = { measure: sg.measure(), stats: sg.stats() };
     window.__done = true;

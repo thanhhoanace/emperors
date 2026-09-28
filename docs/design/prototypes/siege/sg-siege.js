@@ -200,13 +200,6 @@
   };
   const ladder = (HM, len) => { const P = HM.parts, k = P.kit(), w = 0x6a4a30; for (const z of [-0.45, 0.45]) k.add(P.rbox(0.18, len, 0.18, 0), w, [0, len / 2, z]); for (let y = 0.5; y < len; y += 0.6) k.add(P.rbox(0.12, 0.1, 0.9, 0), w, [0, y, 0]); return k.geo(); };
   const mantlet = (HM) => { const P = HM.parts, k = P.kit(); k.add(P.rbox(0.25, 2.4, 3.2, 0), 0x6d5036, [0, 1.2, 0], [0, 0, 0.18]); k.add(P.rbox(1.6, 0.15, 0.15, 0), 0x4a3222, [-0.7, 0.9, 0], [0, 0, -0.8]); return k.geo(); };
-  const tent = (HM, big) => { // a ridge tent: two slopes of cloth meeting at the ridge
-    const P = HM.parts, k = P.kit(), w = big ? 12 : 5, d = big ? 8 : 3.4, h = big ? 5 : 2.4, c = big ? 0x9c2f28 : 0xcfc2a4, th = Math.atan2(h, d / 2);
-    k.add(P.rbox(w, 0.3, d, 0), 0x5a4a38, [0, 0.15, 0]);
-    for (const s of [-1, 1]) k.add(P.rbox(w, 0.08, Math.hypot(d / 2, h), 0), c, [0, h / 2, (s * d) / 4], [-s * th, 0, 0]);
-    return k.geo();
-  };
-
   // a crowd: an instanced mesh of one figure, placed [x, y, z, yaw, lean]
   const crowd = (geo, mat, list) => {
     const m = new T.InstancedMesh(geo, mat, list.length), m4 = new T.Matrix4(), q = new T.Quaternion(), e = new T.Euler(), v = new T.Vector3(), s = new T.Vector3(1, 1, 1), c = new T.Color();
@@ -221,7 +214,7 @@
     g.fillStyle = css; g.fillRect(0, 0, 64, 128); g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(0, 0, 64, 10); g.fillRect(0, 118, 64, 10);
     g.fillStyle = '#efe3c8'; g.font = 'bold 44px "Noto Serif TC","Noto Serif CJK TC","Noto Serif SC",serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(glyph, 32, 64);
     const t = new T.CanvasTexture(cv); t.encoding = T.sRGBEncoding;
-    return (bannerMat[key] = new T.MeshStandardMaterial({ map: t, side: T.DoubleSide, roughness: 0.85 }));
+    return (bannerMat[key] = new T.MeshStandardMaterial({ map: t, emissiveMap: t, emissive: 0x505050, side: T.DoubleSide, roughness: 0.85 })); // a little light through the cloth: never a black flag against the sun
   };
   const banners = (list, fc, glyph, size = 1) => { // list of [x, y, z, yaw]
     const g = new T.Group(); if (!list.length) return g;
@@ -232,8 +225,10 @@
     pm.castShadow = cm.castShadow = true; g.add(pm, cm); return g;
   };
 
+  S.parts = { soldier, rider, trebuchet, ladder, crowd, banners, RED, GREEN, KS }; // for sg-camp.js
+
   // ---------------------------------------------------------------- the armies and the siege
-  S.armies = function (L, HM, city) {
+  S.armies = function (L, HM, city, env) {
     const group = new T.Group(), mat = HM.mat, HC = L.HC, G0 = city.G0, H = city.H, WB = city.WB, WT = city.WT;
     const R = { spear: [], bow: [], run: [], climb: [], pull: [] }, Gd = { spear: [], bow: [] }, riders = [], Rb = [], Gb = [];
     let sd = 5; const rnd = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
@@ -276,16 +271,8 @@
     // 5. the main force in blocks, cavalry on the flanks, the general's standard
     for (const [cx, cz] of [[-160, HC + 330], [-55, HC + 345], [55, HC + 345], [160, HC + 330], [-100, HC + 420], [100, HC + 420]]) block(R.spear, cx, cz, 22, 10, 1.7, NORTH, 0.25, Rb);
     for (const [cx, cz] of [[-330, HC + 300], [330, HC + 300]]) { const L2 = []; block(L2, cx, cz, 10, 5, 3.2, NORTH, 0.3, Rb); for (const p of L2) riders.push(p); }
-    // 6. the camp to the south-east: a palisade ring, tents, the command tent
-    const [cmx, cmz, cmr] = L.CAMP, tentG = tent(HM, false), bigG = tent(HM, true), tents = [];
-    for (let i = 0; i < 70; i++) { const a = rnd() * 6.28, r = Math.sqrt(rnd()) * (cmr - 20); tents.push([cmx + Math.cos(a) * r, cmz + Math.sin(a) * r, Math.round(rnd() * 3) * Math.PI / 2]); }
-    const tm = new T.InstancedMesh(tentG, mat, tents.length), m4 = new T.Matrix4(), q = new T.Quaternion(), v = new T.Vector3(), s1 = new T.Vector3(1, 1, 1), Y = new T.Vector3(0, 1, 0);
-    tents.forEach(([x, z, r], i) => tm.setMatrixAt(i, m4.compose(v.set(x, y(x, z), z), q.setFromAxisAngle(Y, r), s1))); tm.castShadow = true; tm.receiveShadow = true; group.add(tm);
-    { const m = new T.Mesh(bigG, mat); m.position.set(cmx, y(cmx, cmz), cmz); m.castShadow = true; group.add(m); }
-    const logs = []; for (let i = 0; i < 360; i++) { const a = (i / 360) * 6.28, x = cmx + Math.cos(a) * cmr, z = cmz + Math.sin(a) * cmr; logs.push([x, y(x, z), z]); }
-    const logG = new T.CylinderGeometry(0.25, 0.3, 3.4, 5).translate(0, 1.5, 0), lm = new T.InstancedMesh(logG, new T.MeshStandardMaterial({ color: 0x5a3e28, roughness: 0.9 }), logs.length);
-    logs.forEach(([x, yy, z], i) => lm.setMatrixAt(i, m4.makeTranslation(x, yy, z))); lm.castShadow = true; group.add(lm);
-    for (let i = 0; i < 10; i++) { const a = rnd() * 6.28, r = rnd() * cmr * 0.7; Rb.push([cmx + Math.cos(a) * r, y(cmx, cmz), cmz + Math.sin(a) * r, 0]); }
+    // 6. the camp to the south-east (sg-camp.js): earthworks, gates, towers, the command enclosure, tents, horses, stores
+    const camp = S.camp(L, HM, env, { R, Rb, riders }); group.add(camp.group);
     // 7. boats on the Fei at the canal mouth (the water gate on the west side)
     const ship = HM.figure('thuy', 'zhu_yuanzhang'), ships = [];
     for (let i = 0; i < 5; i++) { const z = -40 + i * 26, x = L.feiX(z) + 8 * (i % 2 ? 1 : -1); ships.push([x, L.WATER + 0.1, z, Math.PI / 2 + (i % 2) * 0.2]); }
@@ -305,7 +292,7 @@
     // the great standards: the general's before the trebuchets, Wei's over the governor's hall
     group.add(banners([[0, y(0, HC + 300), HC + 300, 0]], RED, '朱', 3.2), banners([[city.flagAt[0], G0, city.flagAt[2], 0]], GREEN, '魏', 3.4));
     const count = Object.values(R).reduce((a, l) => a + l.length, 0) + Object.values(Gd).reduce((a, l) => a + l.length, 0) + riders.length;
-    return { group, trebs, ladders, count, archers: [[-110, HC + 120], [0, HC + 145], [110, HC + 120]] };
+    return { group, trebs, ladders, count, hearths: camp.hearths, archers: [[-110, HC + 120], [0, HC + 145], [110, HC + 120]] };
   };
 
   // ---------------------------------------------------------------- fire, smoke, arrows, stones
@@ -326,6 +313,13 @@
     fire(-4, south.towerY + 9, HC + 1, 10, 110, true);  // the south gate tower is burning
     fire(10, south.towerY + 4, HC - 3, 4, 40, false);
     for (const [x, y, z] of city.burn.slice(0, 3)) fire(x, y, z, 5, 60);
+    // cooking fires in the camp: small flames, a glow, a thin wisp of smoke leaning with the wind
+    const hearth = (x, y, z) => {
+      for (let i = 0; i < 5; i++) { const s = new T.Sprite(new T.SpriteMaterial({ map: flameT, blending: T.AdditiveBlending, depthWrite: false, transparent: true })); s.position.set(x + (rnd() - 0.5) * 0.6, y + 0.3 + rnd() * 0.15, z + (rnd() - 0.5) * 0.6); s.scale.set(0.4, 0.8, 1); s.userData = { base: s.position.clone(), sz: 0.8, ph: rnd() * 6 }; group.add(s); live.push(['flame', s]); }
+      const gl = new T.Sprite(new T.SpriteMaterial({ map: glowT, blending: T.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.5 })); gl.position.set(x, y + 0.5, z); gl.scale.set(3, 3, 1); group.add(gl); live.push(['glow', gl]);
+      for (let i = 0; i < 12; i++) { const t = i / 12, g = 0.5 + 0.2 * t, sm = new T.Sprite(new T.SpriteMaterial({ map: smokeT, transparent: true, depthWrite: false, color: new T.Color().setRGB(g, g * 0.97, g * 0.93), opacity: 0.34 * (1 - t) })); const hgt = 1.4 + t * 24; sm.position.set(x + hgt * 0.35 + (rnd() - 0.5), y + hgt, z - hgt * 0.15 + (rnd() - 0.5)); const s2 = 1.3 + hgt * 0.26; sm.scale.set(s2, s2, 1); sm.material.rotation = rnd() * 6; sm.userData = { base: sm.position.clone(), ph: rnd() * 6 }; group.add(sm); live.push(['smoke', sm]); }
+    };
+    for (const [x, y, z] of army.hearths || []) hearth(x, y, z);
     // dust at the gate and the ladders
     for (let i = 0; i < 14; i++) { const sm = new T.Sprite(new T.SpriteMaterial({ map: smokeT, transparent: true, depthWrite: false, color: 0x9a8466, opacity: 0.45 })); const x = (rnd() - 0.5) * 50, z = HC + 30 + rnd() * 40; sm.position.set(x, L.h(x, z) + 3 + rnd() * 3, z); sm.scale.setScalar(12 + rnd() * 10); group.add(sm); }
     // arrows in flight: dark shafts and fire arrows (streaks), from the archers to the south wall and back

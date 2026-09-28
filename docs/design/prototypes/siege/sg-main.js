@@ -50,13 +50,15 @@
     scene.add(SGN.terrain(L, env)); const water = SGN.water(L, env); scene.add(water);
     const rocks = SGN.rocks(L, env); scene.add(rocks);
     const city = SGS.city(L, HM, env); scene.add(city.group);
-    const tops = []; // pines on the pillars' tops and clinging to their ledges
-    for (const [x, y, z, R, H] of rocks.userData.pillars) {
-      for (let i = 0; i < 4; i++) { const a = i * 1.7 + x, r = R * 0.45 * (i ? 1 : 0); tops.push([x + Math.cos(a) * r, z + Math.sin(a) * r, 3, 8 + (i % 2) * 4, y + H * 0.97]); }
-      for (let i = 0; i < 7; i++) { const v = 0.2 + ((i * 0.37 + x * 0.01) % 0.6), a = i * 2.4 + z * 0.01, r = R * (1.12 - 0.34 * v) * 1.02; tops.push([x + Math.cos(a) * r, z + Math.sin(a) * r, i % 3 ? 3 : 1, 5 + (i % 3) * 2, y + H * v]); }
-    }
+    // plants on the towers: pines and shrubs on the tops, shrubs and small pines clinging to the ledges
+    const tops = [];
+    rocks.userData.ledges.forEach(([x, yy, z, kind], i) => {
+      const r = SGN.noise.h2(i, 17);
+      if (kind === 'top') tops.push(r < 0.55 ? [x, z, 3, 7 + r * 9, yy - 0.5] : [x, z, 5, 2 + r * 2, yy - 0.3]);
+      else tops.push(r < 0.3 ? [x, z, 3, 4 + r * 8, yy - 0.8] : [x, z, r < 0.65 ? 5 : 7, 1.6 + r * 1.6, yy - 0.4]);
+    });
     const trees = SGN.trees(L, env, { dir: sunDir, color: sunColor }, city.trees.map(([x, z, sp, h]) => [x, z, sp, h]).concat(tops)); scene.add(trees);
-    const army = SGS.armies(L, HM, city); scene.add(army.group);
+    const army = SGS.armies(L, HM, city, env); scene.add(army.group);
     const fx = SGS.fx(L, city, army); scene.add(fx.group);
     const tBuild = performance.now();
 
@@ -73,13 +75,20 @@
       overview: { target: [260, 0, 40], cam: [-420, 1250, 2150], fov: 36, shadow: [250, 0, 1500], ao: 8 },
       bagong: { target: [940, 60, -210], cam: [480, 210, 330], fov: 38, shadow: [900, -200, 700], ao: 4 },
       field: { target: [10, 10, HC + 110], cam: [-80, 34, HC + 345], fov: 42, shadow: [0, HC + 200, 380], ao: 1.4 },
+      camp: { target: [655, 4, 893], cam: [402, 150, 652], fov: 40, shadow: [650, 885, 260], ao: 3 },
+      campgate: { target: [652, 8, 770], cam: [606, 30, 692], fov: 44, shadow: [650, 776, 110], ao: 1.2 },
+      command: { target: [650, 3, 893], cam: [618, 26, 842], fov: 44, shadow: [650, 885, 90], ao: 1 },
+      tents: { target: [630, L.h(630, 800) + 1, 800], cam: [610, L.h(610, 760) + 16, 760], fov: 45, ao: 1 },
+      rocks: { target: [850, 50, -120], cam: [700, 60, 90], fov: 45, ao: 2 },
+      woods: { target: [620, 18, 40], cam: [560, 30, 120], fov: 45, ao: 1.2 },
+      forest: { target: [720, L.h(720, -80) + 5, -80], cam: [660, L.h(660, -10) + 2.2, -10], fov: 45, ao: 0.8 },
     };
     let current = null;
     const setView = (name) => {
       const v = VIEWS[name] || VIEWS.siege; current = name;
       camera.fov = v.fov; camera.aspect = W / H; camera.position.set(...v.cam); camera.lookAt(...v.target); camera.near = 1.5; camera.far = 16000; camera.updateProjectionMatrix(); camera.updateMatrixWorld();
       if (controls) { controls.target.set(...v.target); controls.update(); }
-      aim(v);
+      aim(v); refocus();
     };
     const aim = (v) => {
       const tgt = controls ? controls.target : new T.Vector3(...v.target), dist = camera.position.distanceTo(tgt);
@@ -92,10 +101,12 @@
       LU.projScale.value = renderer.getDrawingBufferSize(new T.Vector2()).y / (2 * Math.tan(T.MathUtils.degToRad(camera.fov) / 2));
       sky.position.copy(camera.position);
     };
+    const refocus = () => { trees.userData.focus(camera.position); rocks.userData.focus(camera.position); }; // fine plants and towers near the camera
     let controls = null;
     if (o.interactive && T.OrbitControls) {
       controls = new T.OrbitControls(camera, o.eventTarget || o.canvas); controls.enableDamping = true; controls.dampingFactor = 0.08; controls.maxPolarAngle = 1.45; controls.minDistance = 25; controls.maxDistance = 4200;
       controls.addEventListener('change', () => aim(VIEWS[current] ? { ...VIEWS[current], shadow: null } : {}));
+      controls.addEventListener('end', refocus);
     }
     setView(o.shot || 'siege');
 
@@ -107,9 +118,17 @@
       { text: 'Núi Bát Công', kind: 'place', p: [960, 150, -260] },
       { text: 'Doanh trại Chu Nguyên Chương', kind: 'place', p: [L.CAMP[0], 30, L.CAMP[1]] },
       { text: 'Cổng Nam: xe húc, thang mây', kind: 'lane', p: [0, 24, HC + 60] },
-      { text: 'Tường Đông: tháp tên, thang', kind: 'lane', p: [HC + 80, 30, 0] },
+      { text: 'Tường Đông: tháp tên, thang', kind: 'lane', p: [HC + 90, 20, 110] },
       { text: 'Cửa kênh sông Phì: thuyền', kind: 'lane', p: [L.feiX(20) + 30, 16, 20] },
       { text: 'Máy bắn đá', kind: 'thing', p: [0, 18, HC + 250] },
+      // the camp's parts (shown in the camp view)
+      { text: 'Cổng bắc, cự mã trước hào', kind: 'camp', p: [650, 20, 752] },
+      { text: 'Trướng chỉ huy, cờ 朱', kind: 'camp', p: [650, 16, 897] },
+      { text: 'Tàu ngựa', kind: 'camp', p: [770, 8, 946] },
+      { text: 'Kho lương, xe lương', kind: 'camp', p: [522, 10, 944] },
+      { text: 'Xưởng công thành', kind: 'camp', p: [790, 16, 812] },
+      { text: 'Giáo trường, đài điểm tướng', kind: 'camp', p: [537, 14, 800] },
+      { text: 'Luỹ đất, hào, hàng rào gỗ', kind: 'camp', p: [838, 12, 830] },
     ];
     const v3 = new T.Vector3();
     const labels = () => LABELS.map((l) => { v3.set(...l.p).project(camera); return { text: l.text, kind: l.kind, x: (v3.x + 1) * 0.5 * W, y: (1 - v3.y) * 0.5 * H, visible: v3.z < 1 && Math.abs(v3.x) < 1.05 && Math.abs(v3.y) < 1.05 }; });
@@ -122,6 +141,8 @@
     };
     const stats = () => { const s = K.stats(renderer, scene); return Object.assign(s, { buildMs: Math.round(tBuild - t0), landMs: Math.round(tLand - t0), trees: trees.userData.count, soldiers: army.count, pillars: rocks.userData.pillars.length }); };
     const measure = () => { renderer.info.autoReset = false; renderer.info.reset(); const f0 = performance.now(); lens.render(); renderer.getContext().finish(); const s = K.stats(renderer, scene, { frameMs: performance.now() - f0 }); renderer.info.autoReset = true; return Object.assign(s, { trees: trees.userData.count, soldiers: army.count, buildMs: Math.round(tBuild - t0) }); };
-    return { renderer, scene, camera, view: setView, views: Object.keys(VIEWS), labels, render, stats, measure, controls, land: L };
+    // any camera, for close looks while designing (siege.html?cam=x,y,z&tgt=x,y,z&fov=)
+    const look = (cam, target, fov = 40) => { VIEWS._look = { target, cam, fov, shadow: null, ao: Math.max(1, Math.hypot(cam[0] - target[0], cam[1] - target[1], cam[2] - target[2]) * 0.01) }; setView('_look'); };
+    return { renderer, scene, camera, view: setView, views: Object.keys(VIEWS), look, labels, render, stats, measure, controls, land: L };
   };
 })();

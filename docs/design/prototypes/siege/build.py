@@ -13,7 +13,7 @@ os.makedirs(OUT, exist_ok=True)
 parts = ['node_modules/three/build/three.min.js', 'node_modules/three/examples/js/utils/BufferGeometryUtils.js',
          'node_modules/three/examples/js/geometries/RoundedBoxGeometry.js', 'node_modules/three/examples/js/controls/OrbitControls.js',
          'src/world/kit.js', 'docs/phases/v2-gameplay/demo1/src/hn-models.js']
-paths = [os.path.join(ROOT, p) for p in parts] + [os.path.join(HERE, n) for n in ('sg-nature.js', 'sg-siege.js', 'sg-main.js')]
+paths = [os.path.join(ROOT, p) for p in parts] + [os.path.join(HERE, n) for n in ('sg-nature.js', 'sg-siege.js', 'sg-camp.js', 'sg-main.js')]
 with open(os.path.join(OUT, 'sg-bundle.js'), 'w', encoding='utf-8') as f:
     for p in paths:
         f.write('/* ---- %s ---- */\n' % os.path.relpath(p, ROOT)); f.write(open(p, encoding='utf-8').read()); f.write('\n;\n')

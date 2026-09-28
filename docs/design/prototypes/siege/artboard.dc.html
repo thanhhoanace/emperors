@@ -32,7 +32,7 @@ button:focus-visible{outline:2px solid #e2bf6c;outline-offset:2px}
 <sc-if value="{{loading}}" hint-placeholder-val="{{false}}">
 <div style="position: absolute; left: 0; top: 0; width: 1280px; height: 720px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: #1a1712">
 <div style="font-size: 22px; font-weight: 700">Đang dựng Thọ Xuân</div>
-<div style="font-size: 14px; color: #c9bb9c">Địa hình, 9.000 cây, 3.000 lính, thành và lửa đều sinh bằng code: 5–20 giây tùy máy.</div>
+<div style="font-size: 14px; color: #c9bb9c">Địa hình, rừng, núi đá, thành, doanh trại, lính và lửa đều sinh bằng code: 5–20 giây tùy máy.</div>
 </div>
 </sc-if>
 <sc-if value="{{hasErr}}" hint-placeholder-val="{{false}}">
@@ -43,12 +43,13 @@ button:focus-visible{outline:2px solid #e2bf6c;outline-offset:2px}
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
 // Siege prototype (docs/design/prototypes/siege): the live scene. The bundle (build/sg-bundle.js) builds everything in code.
 var W = 1280, H = 720;
-var VIEWS = [['overview', 'Toàn cảnh'], ['siege', 'Vây cổng Nam'], ['field', 'Trận địa máy bắn đá'], ['bagong', 'Núi Bát Công']];
+var VIEWS = [['overview', 'Toàn cảnh'], ['siege', 'Vây cổng Nam'], ['field', 'Trận địa máy bắn đá'], ['camp', 'Doanh trại'], ['campgate', 'Cổng trại'], ['bagong', 'Núi Bát Công'], ['rocks', 'Đá gần'], ['forest', 'Trong rừng']];
 var LOOK = {
   city: { pad: '3px 10px', radius: '4px', bg: 'rgba(30,24,16,.75)', size: 16, weight: 700, italic: 'normal', color: '#f7efdd' },
   lane: { pad: '3px 10px', radius: '999px', bg: 'rgba(150,34,30,.88)', size: 13, weight: 600, italic: 'normal', color: '#fff3e4' },
   place: { pad: '0', radius: '0', bg: 'transparent', size: 15, weight: 400, italic: 'italic', color: '#f3ead6' },
   thing: { pad: '0', radius: '0', bg: 'transparent', size: 12.5, weight: 400, italic: 'normal', color: '#e8dcc0' },
+  camp: { pad: '2px 8px', radius: '4px', bg: 'rgba(30,24,16,.74)', size: 12.5, weight: 600, italic: 'normal', color: '#f3ead6' },
 };
 class Component extends DCLogic {
   constructor(props) {
@@ -78,7 +79,7 @@ class Component extends DCLogic {
   go(name) { if (this.sg) this.sg.view(name); this.setState({ view: name }); }
   labelList() {
     var v = this.state.view;
-    return this.sg.labels().filter(function (l) { return l.visible && (l.kind !== 'place' || v === 'overview' || v === 'bagong') && (l.kind !== 'lane' || v === 'overview'); })
+    return this.sg.labels().filter(function (l) { return l.visible && (l.kind !== 'place' || v === 'overview' || v === 'bagong') && (l.kind !== 'lane' || v === 'overview') && (l.kind !== 'camp' || v === 'camp'); })
       .map(function (l) { var k = LOOK[l.kind] || LOOK.thing; return Object.assign({ left: Math.round(l.x), top: Math.round(l.y), text: l.text }, k); });
   }
   renderVals() {
