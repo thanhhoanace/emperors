@@ -10,8 +10,8 @@
 2. **dat.city crash trên điện thoại vì bộ nhớ đồ họa phình dần.** Trên iPhone giả lập, GPU tăng từ 144 MB lên **868 MB** trong khoảng 2,5 phút khi thành phố dựng xong. **766 MB là texture**: mỗi quận nạp một ảnh "story atlas" (1280–1600 × 960–1280 điểm ảnh) lên GPU và không nhả. Cùng lúc đó là 1.187 lệnh vẽ và 3 triệu tam giác mỗi khung. Code không bắt sự kiện mất ngữ cảnh WebGL.
 3. **Chính Ryan chỉ có một trang có nhánh riêng cho điện thoại:** airace.lol tắt toàn bộ hậu kỳ trên máy nhỏ ("no AO, blur or bloom passes on a battery"). Các trang còn lại chạy đủ chuỗi hậu kỳ trên điện thoại, chỉ giới hạn độ nét và tự hạ khi chậm.
 4. **Demo Hoài Nam của mình đo cùng cách: khoảng 295 MB** trên điện thoại ngang (1688×780), không phình theo thời gian. Hai khoản lớn:
-   - bản đồ bóng 4096² khoảng 100 MB;
-   - khung hậu kỳ "lens" HalfFloat MSAA×4 khoảng 94 MB.
+   - bản đồ bóng 4096² khoảng 100–120 MB;
+   - khung hậu kỳ "lens" HalfFloat MSAA×4 khoảng 63 MB.
    Cả hai đều cắt được.
 5. **spiderbench** chứng minh Claude có thể điều khiển Blender bằng script Python để làm mô hình có xương và động tác (file GLB ghi "Khronos glTF Blender I/O v5.2"). Nhưng đó là game AAA cho máy tính có card rời, và giấy phép cấm dùng thương mại. Chỉ học cách làm, không lấy code.
 6. **frontier-games:** không có game đẹp nào chạy được trên điện thoại. Đáng học nhất:
@@ -63,10 +63,11 @@ Ryan nói về điện thoại ([`ryan-sael.md`](ryan-sael.md) phần 2): tháng
 
 | Khoản | MB | Cắt thế nào |
 | --- | --- | --- |
-| Bản đồ bóng 4096² và độ sâu đi kèm | ~100 | 1024–2048 trên điện thoại, chỉ quanh tiêu điểm, vẽ nửa tốc độ (như dat.city): còn 6–25 MB |
-| Khung "lens" HalfFloat MSAA×4 (+ độ sâu MSAA) | ~94 | Điện thoại: bỏ lens (như airace) hoặc 1 lượt không MSAA ở độ nét 1: còn ~5–10 MB |
-| Texture địa hình nướng sẵn, ảnh khác | ~57 | Giữ; không thêm ảnh lớn theo vùng |
+| Bản đồ bóng 4096² (texture 64 MB, bộ đếm tính cả mipmap nên ghi 89) và độ sâu 32 MB | ~100–120 | 1024–2048 trên điện thoại, chỉ quanh tiêu điểm, vẽ nửa tốc độ (như dat.city): còn 6–25 MB |
+| Khung "lens" MSAA×4: màu HalfFloat 42 MB + độ sâu 21 MB | ~63 | Điện thoại: bỏ lens (như airace) hoặc 1 lượt không MSAA ở độ nét 1: còn ~5–10 MB |
+| Texture khác (địa hình nướng sẵn, khung lens đã giải) | ~57 | Giữ; không thêm ảnh lớn theo vùng |
 | Vùng đệm hình học | ~45 | Giữ; bớt cây và tầng địa hình mịn trên điện thoại |
+| Khung canvas | ~10 | — |
 
 Máy tính (ADR 0005): 150–180 lệnh vẽ, 1,83–1,88 triệu tam giác. Tam giác cần giảm cho điện thoại, chủ yếu ở địa hình và cây.
 
