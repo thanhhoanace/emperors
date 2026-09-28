@@ -1,101 +1,69 @@
 # V2 Gameplay — Working state
 
-> Cập nhật: 2026-09-28 · synthesis bởi Claude · spike ván ngắn thêm cùng ngày · nguồn: `_research/claude.md` (mục A–I). `_research/chatgpt.md` và `_research/grok.md` đã vào repo 28/9 nhưng **chưa được synthesis vào file này**; lượt synthesis tới (tool khác Claude) phải đọc cả hai.
-> Luật dùng file này: `AGENTS.md`, mục phase. Chưa có `DECISION.md`: chưa chốt gì về luật v2.
+> Cập nhật: 2026-09-28 · lượt COMPACT bởi Claude theo yêu cầu chủ dự án (lệch luật 4 trong `AGENTS.md`: Claude vừa research vừa synthesis; ghi lại để lần sau xoay tool) · nguồn: `_research/claude.md` (mục A–I), `_research/chatgpt.md` (mục 1–10), `_research/grok.md` (mục 1–6), spike `spike/`.
+> Bước hiện tại: DECIDE. Đã dùng 2/2 vòng research. Chưa có `DECISION.md`.
 
 ## Problem
 
-Chủ dự án chơi thử `game.html` (27/9): "đang *xem* game chứ không được *chơi*". Ít thao tác; tấn công chỉ xem quân chạy; không tương tác bản đồ như dat.city; không tương tác quân, đất của mình; chưa có chuyện tướng, buff/nerf. v2 đứng trước hai ngã rẽ:
-
-1. **Vào là chơi:** đơn giản, nghĩ ít, kết quả nhanh, chơi đi chơi lại như cờ.
-2. **Chiến dịch sâu:** tính toán, chi tiết, căng thẳng, mất nhiều thời gian.
-
-(Có thể có hướng 3: lai.)
+Chủ dự án chơi `game.html` (27/9): "đang *xem* chứ không *chơi*"; đánh chỉ xem quân chạy; không bấm được đất, quân, tướng. Ngày 28/9 đặt ngã rẽ cho v2: (1) vào là chơi, nghĩ ít, kết quả nhanh, chơi lại như cờ; (2) chiến dịch tính toán, chi tiết, dài. Câu hỏi kèm: thị trường và người chơi thật muốn gì; gốc ý tưởng là Loạn 12 Sứ Quân cũ + trend xuyên không.
 
 ## Owner inputs
 
-Từ interview 27/9 (`_research/claude.md` mục B, phần 9) và câu hỏi 28/9. Đây là mong muốn, **chưa phải luật**, và một phần được nêu *trước* khi đặt câu hỏi ngã rẽ.
+Nguyên ý, chưa phải luật. Interview 27/9 (`claude.md` B.9) được nêu *trước* câu hỏi ngã rẽ; Grok (§4) và ChatGPT (§6) đều lưu ý danh sách này là "muốn sau khi chơi v1", có thể rộng hơn DNA gốc.
 
-- Chơi là chính; clip ở `?demo=1` và cảnh diễn trong lúc chơi. Mốc: người chơi hợp lý thắng 20–30 %, bị loại trước lượt 16 dưới 5 %, sống tới cuối trên 75 %, ván 20–40 phút.
-- Mở ván "đi từ đầu như Civ": châu nhỏ, quân ít, xây dần; không nhận sẵn đại quân.
-- Muốn làm với đất và quân mình: quản dân, tiền, lương; mộ binh, luyện quân; xây; điều quân, đồn trú; bổ nhiệm tướng; buôn bán; có việc 2–3 lượt mới xong. Ngân sách lệnh "theo cách TW3K và Civ làm".
-- Theo lượt, cùng lúc như nay, nhưng phải có tình báo và tin trễ ("tin từ A tới B mất cả tháng").
-- Trận: chọn tướng và số quân, cách đánh, cắt cảnh có diễn biến, kết quả có lý do; cả phòng thủ; quân đông không tự thắng. Yếu tố: tướng, địa hình và sông (thuỷ quân, Xích Bích), đồn trú theo châu, hành quân xa và tiếp tế.
-- Trước trận: ước lượng bằng chữ từ tình báo, do thám; mưu kế làm sai tin được.
-- Liên minh kiểu Civ + TW3K: hỗ trợ thủ, cùng đánh; deal có nghĩa vụ được.
-- Tướng: 3 chỉ số + 1 thẻ, sự kiện cá nhân, người chơi bổ nhiệm, quan hệ, kinh nghiệm, lên cấp.
-- Lật lại khi sắp chết: lưu vong có hạn, xưng thần, phục quốc.
-- Vùng rìa Tây Vực, Giao Chỉ / Đại Việt, Tây Tạng: nơi chiêu binh và buôn bán, không tính vào 20 châu.
-- Cửa kịch bản: phe liên quan thấy, phe khác nghe đồn. Việc hình: cắt cảnh trận trước, rồi chân dung, rồi âm thanh.
-- Quy trình: mở freeze v2 kèm quyết định; đề xuất + prototype duyệt trước khi code; giữ hai lane (Claude hình/UI + đề xuất, Grok engine/luật). Pages trỏ `game.html` (đã làm), LLM sau.
-- Gốc ý tưởng: game cũ Loạn 12 Sứ Quân + trend xuyên không.
+- Chơi là chính; clip giữ ở `?demo=1`. Mốc đặt ra: thắng 20–30 %, chết trước lượt 16 dưới 5 %, ván 20–40 phút.
+- Mở ván từ tay trắng (châu nhỏ, quân ít, xây dần), không nhận sẵn đại quân.
+- Muốn làm với đất và quân mình: dân, tiền, lương, mộ binh, xây, điều quân, đồn trú, bổ nhiệm tướng, buôn bán; việc 2–3 lượt.
+- Theo lượt, cùng lúc; nhưng có tình báo, tin trễ, mưu kế làm sai tin.
+- Trận: chọn tướng và số quân, cách đánh, cắt cảnh, kết quả có lý do; cả phòng thủ; quân đông không tự thắng; tướng, địa hình và sông, đồn trú, hành quân xa.
+- Liên minh có cứu nhau và cùng đánh. Tướng đủ bốn lớp. Lật lại: lưu vong, xưng thần, phục quốc. Vùng rìa chiêu binh và buôn bán, không tính vào 20 châu.
+- Quy trình: mở freeze v2; đề xuất + prototype duyệt trước khi code; giữ hai lane; Pages đã trỏ `game.html`; LLM sau.
 
 ## Evidence we trust
 
-Chỉ giữ những gì có số đo hoặc nguồn; chi tiết và URL ở mục ghi trong ngoặc.
+**Game hiện tại** (`claude.md` B.4): người chơi hợp lý thắng 0–3 %, chết trung bình lượt 12–26; 1,6–2,0 châu đổi chủ mỗi lượt vì thủ = tổng quân chia đều; đánh châu "yếu" vẫn thua 25–40 %; ván 38–41 lượt, 15–25 phút. Về *độ dài* v1 đã ở ngã rẽ 1; thiếu là *chiều sâu của một lệnh*. Grok §5 đồng ý: triệu chứng là "thiếu nước cờ", không phải "thiếu chiến dịch"; thêm thuế, hàng đợi, tin trễ trước khi mỗi lệnh đổi bàn cờ sẽ làm "xem" nặng hơn.
 
-**Game hiện tại (đo 27/9, `tests/playthrough.mjs`, 30 seed mỗi đế) (B.4):**
-- Người chơi hợp lý thắng 0–3 %, chết trung bình lượt 12–26; rùa sống nhưng hạng 4–5; đánh liên tục chết trước lượt 20.
-- Bản đồ đổi chủ 1,6–2,0 châu mỗi lượt vì sức thủ = tổng quân chia đều số châu. Đánh châu band "yếu" vẫn thua 25–40 %.
-- Một ván dài 38–41 lượt, khoảng 15–25 phút ở tốc độ mặc định: về *độ dài*, game đã ở ngã rẽ 1; cái thiếu là *chiều sâu của một lệnh*.
+**Chiến dịch bị bỏ dở là đa số và được chấp nhận** (`claude.md` C.2, E.2; `grok.md` §1): Civ VI 37 % từng thắng một ván, TW3K 31 %, CK3 4 %, Old World 10 % dù khoá 200 lượt; Firaxis: dưới 50 % chơi hết; cộng đồng r/civ, r/CK coi bỏ dở là bình thường, mua *quá trình* không mua *hồi kết*; phần được yêu là mở ván và bất định, phần bỏ là quản lý cuối. Cắt ngắn bằng điểm reset (Civ VII ages) sinh than "cụt" và "mất công đầu tư": không phải cắt nào cũng được.
 
-**Thị trường (C, E):**
-- Ít người chơi hết chiến dịch: Civ VI 37 % từng thắng một ván, TW3K 31 %, Crusader Kings III 4 %, Old World (khoá 200 lượt) 10 %. Firaxis: dưới 50 % hoàn thành một ván Civ VI → Civ VII chia ba kỷ nguyên. Achievement Steam là mức sàn.
-- Có thị trường lớn cho strategy cô đọng: chess.com 8,7 triệu người/ngày, Polytopia 25 triệu tải (30 lượt), OpenFront.io trên 1 triệu người/tháng trên trình duyệt, không tài khoản.
-- Có thị trường lớn cho chiều sâu: Civ trên 70 triệu bản cả dòng, TW3K 1 triệu bản tuần đầu. Nhưng tiền lớn nhất của "Tam Quốc sâu" là SLG mùa giải 50–75 ngày có liên minh (Three Kingdoms Tactics 1,2 tỉ USD, Rise of Kingdoms 3,5 tỉ USD), thứ một người không vận hành được.
-- Quantic Foundry: hứng thú "suy nghĩ chiến lược" giảm mạnh 2015→2024.
-- Game sâu vỡ ở độ rõ, nhịp cuối, AI (Humankind, Millennia). Game sâu thành công với đội nhỏ đều là máy sinh chuyện và mất nhiều năm (RimWorld, Old World, Dominions). Mỗi hệ thống thêm = một màn UI + một nhánh AI + một trục cân bằng.
+**Ván ngắn có thị trường, nhưng "nông" là lời than thật** (`claude.md` C.3, E.3; `grok.md` §2; `chatgpt.md` §2–3): chess.com 8,7 triệu người/ngày; Polytopia 25 triệu tải, 30 lượt; OpenFront hơn 1 triệu người/tháng trên trình duyệt; 9 Kings hơn 1 triệu bản; Thronefall 95 % tích cực. Than trong cộng đồng Polytopia không phải "giá dài thêm" mà là "lặp recipe, hết bài toán"; chiều sâu được chấp nhận = mastery trong cùng khuôn, không = thêm sổ sách. Reigns: Three Kingdoms 52 % tích cực: chủ đề quen và thao tác dễ không tự bảo đảm.
 
-**Gốc ý tưởng (D):**
-- Loạn 12 Sứ Quân là ít nhất sáu game khác nhau; bản được khen gameplay được khen vì "dễ hiểu, dễ học, không phức tạp", bị chê vì chờ tài nguyên. Ký ức: nhiều phe, bản đồ tranh hùng, gặp danh nhân.
-- Độc giả Việt Tam Quốc xuyên không thưởng "logic hợp lý, có tiền, có lương, có quân", phạt "quá bá, harem". Xuyên không giúp *thu hút*; giữ chân phải đến từ gameplay.
-- Tam Quốc ở Việt Nam bão hoà (khoảng 16 game mới năm 2024). Tệp thực tế cho game trình duyệt miễn phí: vài nghìn người thử, vài trăm quay lại → đo bằng clip và seed chia sẻ, không bằng DAU.
+**Khẩu vị dịch về cửa vào thấp, không phải "hết người chơi strategy"** (`claude.md` C.1; `grok.md` §3; `chatgpt.md` §2): Quantic Foundry 2015→2024 điểm "strategy and planning" 50 → 33; mobile strategy vẫn tăng 26 % nửa đầu 2025, tiền ở hybrid 4X "30 giây đầu dễ, dày ở ngày 7"; SLG Tam Quốc lớn nhất là mùa giải có liên minh, thứ một người không vận hành được.
 
-**Cơ chế tham khảo (F–I):** giữ đất bằng đồn trú cục bộ + vây nhiều lượt + trung thành (TW3K, Civ); lật lại bằng lưu vong (Lưu Bị không đất), chư hầu, giải phóng; tình báo = che theo tầm nhìn, bán theo cấp, nhiễu theo nguồn; tin thời Hán tới trong 1–3 tuần (công văn) đến 1–2 tháng (dân gian), đều ngắn hơn một mùa; liên minh = phòng thủ chung tự động không dây chuyền + cùng đánh có mục tiêu, có hạn.
+**Gốc ý tưởng** (`claude.md` D; `grok.md` §4; `chatgpt.md` §4): Loạn 12 Sứ Quân là ít nhất sáu game; bản game thủ Việt nhớ (Java/Android Ola–MGM) là xếp hình + lượt, "vào là đánh, mỗi lượt có kết quả", sử là áo; chưa xác nhận đó là bản chủ dự án chơi. Xuyên không bán fantasy "một người rơi vào thế giới quen, dùng thứ mình biết, đổi một cục diện"; độc giả thưởng "có lương, có quân, logic", phạt "quá bá, harem"; giúp thu hút, không tự giữ chân.
 
-## Spike: ván ngắn (28/9)
+**Chi phí game sâu** (`claude.md` E.4): Humankind, Millennia vỡ ở độ rõ, nhịp cuối, AI; game sâu thành công với đội nhỏ là máy sinh chuyện và mất nhiều năm; mỗi hệ thống thêm = UI + AI + cân bằng.
 
-Prototype chơi được trên canvas: https://claude.ai/artifact/974asePfQJjxNqUYSZ5r2y (riêng tư tới khi chủ dự án chia sẻ). Luật thử và script đo: `spike/rules.js`, `spike/sim.js` (`node sim.js 300`). Không phải engine; AI trong spike đọc sự thật.
+**Cơ chế tham khảo** (`claude.md` F–I): giữ đất bằng đồn trú cục bộ và vây nhiều lượt; lật lại bằng lưu vong, chư hầu, giải phóng; tin thời Hán tới trong một mùa, thứ nên trễ là *chi tiết đáng tin*; liên minh = phòng thủ chung tự động không dây chuyền + cùng đánh có hạn.
 
-Hình dạng đang thử: 32 mùa; mỗi mùa 1 lệnh triều đình (tấn công / ngoại giao / mưu kế / nội chính) + 1 việc trong châu (mộ binh, khai hoang 2 mùa, đắp lũy, điều quân, buôn hoặc chiêu binh vùng rìa); quân đóng theo châu, trần quân theo bậc khai hoang; đế bắt đầu 4 nghìn quân, bậc 1; mỗi đế một tri thức tương lai; tướng có võ, đặc tính, lòng trung (ly gián làm phản); ước lượng trận bằng chữ từ tình báo; minh phòng thủ góp 30 % quân châu kề; tin đồn trễ một mùa, 20 % sai; thủ phủ đế được bảo hộ 8 mùa; mất hết đất thì lưu vong 3 mùa. Thắng: 6 châu, hoặc đứng đầu tứ đế khi hết mùa 32.
+## Spike (28/9)
 
-Đo headless, 300 ván mỗi đế, chính sách người chơi hợp lý (chỉ đánh khi ước lượng "Có lợi" trở lên). Khoảng là hai lần chạy; chính sách thử có ngẫu nhiên nên lệch vài điểm:
-
-| Đế | Thắng | Chết | Chết trước mùa 16 | Châu đổi chủ mỗi mùa |
-| --- | --- | --- | --- | --- |
-| Tần Thủy Hoàng | 30–34 % | 0 % | 0 % | 0,61 |
-| Lý Thế Dân | 18–19 % | 15–18 % | 9–10 % | 0,92 |
-| Chu Nguyên Chương | 0 % | 12 % | 5 % | 0,68 |
-| Hán Vũ Đế | 6–8 % | 0 % | 0 % | 0,55 |
-
-So với game hiện tại (thắng 0–3 %, 1,6–2,0 châu đổi chủ mỗi mùa): đồn trú theo châu làm bản đồ ổn định gấp 2–3 lần; ván có nhịp "xây rồi mới đánh". Còn lệch: Chu quá khó (bị Tào ép bằng đồng bằng và Trương Liêu), Hán Vũ gần như không đánh được ai (chỉ giáp Tần). Đây là số của máy, chưa phải cảm giác người: câu hỏi "có vui không" vẫn chờ chủ dự án chơi (ghi chú trên canvas có 5 điều cần ghi lại).
+Canvas: https://claude.ai/artifact/974asePfQJjxNqUYSZ5r2y · luật thử và đo: `spike/rules.js`, `spike/sim.js`. Hình dạng: 32 mùa; mỗi mùa 1 lệnh triều đình + 1 việc trong châu; quân đóng theo châu, trần theo bậc khai hoang; đế bắt đầu 4 nghìn quân; mỗi đế một tri thức tương lai; tướng có võ, đặc tính, lòng trung; ước lượng trận bằng chữ; minh phòng thủ góp 30 % quân kề; tin đồn trễ một mùa; thủ phủ bảo hộ 8 mùa; lưu vong 3 mùa. Máy chơi 300 ván mỗi đế: Tần thắng 30–34 %, Lý 18–19 % (chết 15–18 %), Chu 0 % (chết 12 %), Hán Vũ 6–8 %; 0,55–0,92 châu đổi chủ mỗi mùa (v1: 1,6–2,0). Chưa có cảm giác người: chủ dự án chưa chơi.
 
 ## Contradictions
 
-- **Mức độ chắc của kết luận "ngắn hơn".** Claude (A.1): bằng chứng nghiêng rõ về ngã rẽ 1, độ chắc trung bình. ChatGPT (theo chủ dự án chuyển lại 28/9; bản đầy đủ ở `_research/chatgpt.md`, chưa synthesis): bằng chứng *không* chứng minh nhóm thích ngắn đông hơn nhóm thích chiến dịch; chỉ nên nói "ưu tiên test ngắn trước", không kết luận thị trường thích ngắn hơn. Hai bên thống nhất về *việc làm tiếp*, khác nhau về *cách diễn giải*. Chưa có bằng chứng phân xử.
-- **Ngắn giúp test vòng chơi nhanh** ↔ **quá ngắn phá fantasy "xây đế chế"** mà chủ dự án muốn (mở ván từ tay trắng, xây 2–3 lượt).
-- **Owner inputs rất rộng** (quản dân, tiền, lương, thuế, hậu cần, bốn lớp tướng, ba đường lật lại) ↔ **evidence nói mỗi hệ thống thêm là sổ sách nếu không sinh chuyện**. Claude đề xuất nén (A.4–A.5); chủ dự án chưa trả lời.
-- **Campaign hỗ trợ tướng, ngoại giao, phục quốc tốt hơn** ↔ **chi phí content, AI, cân bằng** vượt sức một người + agent.
+- **Cách phát biểu về thị trường.** Claude: bằng chứng nghiêng ngã rẽ 1, độ chắc trung bình. ChatGPT: không có cơ sở nói nhóm thích ngắn đông hơn; khuyên ngã rẽ 1 vì lời hứa dễ thử, đo được, đủ sức làm. Grok: không phân xử bằng doanh thu; bằng lời than thì bỏ dở chiến dịch là đa số, "cụt" ván ngắn là lời của người đo nhầm thước hoặc game hết bài toán. Cả ba thống nhất *làm ván ngắn trước*; khác nhau ở *tuyên bố*. Chưa có bằng chứng phân xử; DECISION nên ghi theo cách yếu nhất.
+- **Owner inputs 27/9 và DNA gốc.** Grok §4: sản phẩm gốc trong đầu là "ván có mặt nạ lịch sử + ego xuyên không", không phải Civ mặc áo Tam Quốc; danh sách thuế, hậu cần, hàng đợi, tướng bốn lớp có thể lệch gốc. ChatGPT §6: các lựa chọn interview vẫn là quyết định đã ghi, research không tự huỷ. Cần chủ dự án nhìn lại.
+- **Nén hệ thống và nguy cơ tái tạo v1.** ChatGPT §9: giảm hệ thống có thể tái tạo "ít việc để làm"; phải giữ agency. Grok §5: chỉ những gì là *nước cờ* (đổi bàn cờ ngay) mới đáng ở trong ván. Claude A.4–A.5 đề xuất bảng giữ/nén/lùi. Chưa thống nhất tiêu chí "nước cờ" cho từng hệ thống.
+- **Số lượt và thời lượng.** ChatGPT §6: 48 lượt trong 30 phút = 37,5 giây/lượt, không giữ được khi mỗi lượt có nhiều việc; đừng khoá số lượt chỉ để đạt thời lượng; điều kiện thắng phải hợp cốt. Claude spike: 32 mùa. Grok §6: lai yếu hai nửa nếu nhét hệ thống chiến dịch vào ván 20 phút; lai được nếu lớp sâu nằm *giữa các ván*.
+- **Thước đo.** Chủ dự án: thắng 20–30 %. ChatGPT §6, §8: diễn giải lại theo nhóm và độ khó; đo người mới có hiểu vì sao thua và tự muốn chơi lại trước khi tối ưu một tỉ lệ. Grok §6: nếu chọn ngã rẽ 1 thì đo chơi lại và độ rõ của nước đi, đừng đo bằng fantasy đế chế.
+- **Quy mô chơi thử.** ChatGPT §8: 18 người, ba nhóm, A/B hai prototype. Claude A.6: 10 người, 2 ván. Grok: chỉ cần spike.
+- **Bản Loạn 12 Sứ Quân nào.** Grok: bản Ola–MGM. ChatGPT: cần ảnh hoặc link từ chủ dự án. Chưa xác nhận.
 
 ## Current hypothesis
 
-Prototype **ván ngắn trước**, không kết luận thị trường thích ngắn hơn. Hình dạng Claude đề xuất (A.4), để phản biện, chưa chốt: "cờ Tam Quốc có máy sinh chuyện" — ván 32 mùa, 20–30 phút; 1 lệnh triều đình + 1 việc phụ mỗi lượt; mở ván 8–12 lượt từ tay trắng với một tài nguyên; mỗi đế một "tri thức tương lai" đọc được trên bàn cờ; giữ tướng (chỉ số, tính cách, một quan hệ), liên minh có nghĩa vụ, một dạng do thám, lưu vong; cắt thuế, hậu cần, loại lính, hàng đợi. Có thể thêm một lớp meta bền giữa các ván (hướng lai) nếu chơi thử cho thấy ván ngắn bị "cụt".
+Ván tranh bá ngắn "có răng" là lời hứa chính của v2: một ván làm hoàng đế, dùng sở trường và điều mình biết để đổi thế cuộc, rồi thử lại theo cách khác. Chiều sâu = nước cờ đổi bàn ngay + bốn đế khác nhau ở nước hợp lệ + tướng và liên minh sinh chuyện; không = sổ sách. Hệ thống cần nhiều buổi lùi sang phase chiến dịch sau; lai chỉ ở lớp giữa các ván. Spike cho thấy đồn trú theo châu làm bản đồ ổn định gấp 2–3 lần; cân bằng bốn đế còn lệch (Chu, Hán Vũ).
 
-## Open questions
+## Open questions (để DECISION)
 
-1. Chủ dự án chọn ngã rẽ nào (1, 2, hay lai)? Chưa trả lời.
-2. Chơi lại đến từ đâu: đổi đế, seed, xếp hạng, hay lớp meta?
-3. Một ván 20–30 phút có đủ cảm giác tranh bá và "xây từ tay trắng" không?
-4. Người chơi sử Việt / Tam Quốc muốn nhập vai hay làm chủ chiến thuật?
-5. Lai có làm cả hai nửa cùng yếu không?
-6. Những owner input nào giữ nguyên, nào nén, nào lùi sau chơi thử (bảng A.5 là đề xuất)?
+1. Ngã rẽ: 1, 2, hay 1 + lớp meta giữa các ván?
+2. Tệp đầu tiên: "tối nay thử làm hoàng đế một ván" hay "gây dựng triều đại nhiều buổi"?
+3. Owner input nào là nước cờ giữ trong ván, cái nào lùi sang chiến dịch?
+4. Độ dài: khoá 32 mùa như spike, hay không khoá và để điều kiện thắng theo cốt?
+5. Thước đo thay cho hoặc bên cạnh 20–30 %?
+6. Quy mô và cách chơi thử trước khi khoá luật?
+7. Bản Loạn 12 Sứ Quân gốc là bản nào?
+8. Ai viết freeze v2 từ DECISION (lane Grok) và spike có sửa tiếp trước khi code không?
 
 ## Next research
 
-Chỉ những GAP còn lại; tối đa một vòng nữa (vòng 2 trên 2).
-
-- **ChatGPT, Grok:** research vòng 2 đã có (`_research/chatgpt.md`, `_research/grok.md`). Không research thêm trước khi synthesis (đã dùng 2/2 vòng).
-- **Synthesis:** ChatGPT hoặc Grok (luật 4) gộp ba file research + mục Spike vào file này, bằng lệnh synthesis trong `AGENTS.md`.
-- **Claude:** spike đã có (mục Spike). Tiếp theo chỉ sửa spike theo phản hồi chơi thử của chủ dự án; không research thêm.
-- **Chủ dự án:** chơi 2 ván trên canvas, ghi 5 điều trong ghi chú cam trên canvas (phút tới lệnh đầu, phút một ván, có chơi hết và muốn chơi tiếp không, một khoảnh khắc nhớ được, chỗ thấy thiếu).
-- Synthesis lượt sau: tool khác Claude (luật 4 trong `AGENTS.md`).
+Không. Đã dùng 2/2 vòng. Tiếp theo: chủ dự án trả lời 8 câu trên → `DECISION.md` → luật chép vào `GAMEPLAY-FREEZE.md` v2 → chơi thử theo quy mô đã chọn → BUILD.
