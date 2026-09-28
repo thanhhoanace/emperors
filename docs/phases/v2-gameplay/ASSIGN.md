@@ -5,7 +5,7 @@
 
 | Mục | Giao cho | Vì sao | Trạng thái |
 | --- | --- | --- | --- |
-| 1. Hợp đồng dữ liệu trận, `attack` v2 | Claude | Việc nhỏ, thuần kỹ thuật, và Claude là bên đang cần nó để nối cắt cảnh. Giao người khác chỉ thêm một vòng chờ. | chưa bắt đầu |
+| 1. Hợp đồng dữ liệu trận, `attack` v2 | Claude | Việc nhỏ, thuần kỹ thuật, và Claude là bên đang cần nó để nối cắt cảnh. Giao người khác chỉ thêm một vòng chờ. | xong 29/9 (`0aef1b0`): `battle` v2 trên mọi `attack`, làm mờ ±20 % cho bên kia, cắt cảnh dùng; sim và play không đổi một dòng |
 | 2. Freeze v2 | Claude viết, GPT đọc phản biện | Freeze là tổng hợp từ DECISION + spike, cần nhất quán với engine và test. GPT đọc chéo để bắt chỗ "chặt chẽ nhưng không vui", như đã từng phản đối đúng một kết luận của Claude. | chưa bắt đầu |
 | 3. Trận theo lượt, API thuần | Claude | Có sẵn spike `demo1/src/hn-rules.js` làm mẫu, có `npm run play` và `npm run sim` để cân bằng. | chưa bắt đầu |
 | 4. Dự đoán của tướng | Claude | Cùng lý do mục 3; công thức sai số theo Mưu đã có trong spike. | chưa bắt đầu |
