@@ -1,0 +1,36 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Thọ Xuân bị vây</title>
+<!-- Design prototype: can three.js reach the Total War look (trees, rock hills, a real siege)? Serve the repo root
+     (npm start or python3 -m http.server) and open /docs/design/prototypes/siege/siege.html?shot=siege|overview|bagong|field
+     &w=&h=&dpr= · &measure=1 · &play=1 (orbit with the mouse). Build for the canvas: python3 docs/design/prototypes/siege/build.py -->
+<style>html,body{margin:0;background:#1a1712;overflow:hidden;font-family:"Be Vietnam Pro",system-ui,sans-serif}canvas{display:block}
+#labels{position:fixed;inset:0;pointer-events:none}
+.lb{position:absolute;transform:translate(-50%,-100%);white-space:nowrap;font-size:13px;color:#f3ead6;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+.lb.city{font-size:16px;font-weight:700;padding:3px 10px;border-radius:4px;background:rgba(30,24,16,.72);border:1px solid rgba(214,188,130,.6)}
+.lb.lane{font-size:12.5px;font-weight:600;padding:3px 9px;border-radius:999px;background:rgba(150,34,30,.85);color:#fff3e4}
+.lb.place{font-style:italic;font-size:14px}
+.lb.thing{font-size:12px;color:#e8dcc0}</style></head><body>
+<canvas id="c"></canvas><div id="labels"></div>
+<script src="../../../../node_modules/three/build/three.min.js"></script>
+<script src="../../../../node_modules/three/examples/js/utils/BufferGeometryUtils.js"></script>
+<script src="../../../../node_modules/three/examples/js/geometries/RoundedBoxGeometry.js"></script>
+<script src="../../../../node_modules/three/examples/js/controls/OrbitControls.js"></script>
+<script src="../../../../src/world/kit.js"></script>
+<script src="../../../phases/v2-gameplay/demo1/src/hn-models.js"></script>
+<script src="sg-nature.js"></script>
+<script src="sg-siege.js"></script>
+<script src="sg-main.js"></script>
+<script>
+(async () => {
+  const q = new URLSearchParams(location.search), W = +q.get('w') || innerWidth, H = +q.get('h') || innerHeight, dpr = +q.get('dpr') || Math.min(1.5, devicePixelRatio || 1);
+  const cv = document.getElementById('c'); cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  try {
+    const sg = (window.__sg = await SG.start({ canvas: cv, width: W, height: H, dpr, shot: q.get('shot') || 'siege', interactive: !!q.get('play') }));
+    const box = document.getElementById('labels');
+    const drawLabels = () => { if (q.get('labels') === '0') return; box.innerHTML = sg.labels().filter((l) => l.visible && (l.kind !== 'place' || q.get('shot') === 'overview' || q.get('shot') === 'bagong') && (l.kind !== 'lane' || q.get('shot') === 'overview')).map((l) => `<div class="lb ${l.kind}" style="left:${l.x}px;top:${l.y}px">${l.text}</div>`).join(''); };
+    sg.render(0.5); drawLabels();
+    if (q.get('measure')) window.__extra = { measure: sg.measure(), stats: sg.stats() };
+    window.__done = true;
+    if (q.get('play')) { let last = performance.now(); const loop = (now) => { sg.render((now - last) / 1000); last = now; drawLabels(); requestAnimationFrame(loop); }; requestAnimationFrame(loop); }
+  } catch (e) { console.error(e); window.__error = String(e.stack || e); }
+})();
+</script></body></html>

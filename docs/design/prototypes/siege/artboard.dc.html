@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Thọ Xuân bị vây</title>
+<script src="./support.js"></script>
+<script src="__BUNDLE__"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700&text=%E6%98%8E%E9%AD%8F%E6%9C%B1&display=block" rel="stylesheet">
+<style>
+body{margin:0;background:#1a1712;font-family:"Be Vietnam Pro",system-ui,sans-serif;color:#f3ead6}
+button{font-family:inherit}
+button:focus-visible{outline:2px solid #e2bf6c;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 1280px; height: 720px; position: relative; overflow: hidden; background: #1a1712; font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: #f3ead6">
+<canvas ref="{{setCanvas}}" width="1280" height="720" style="position: absolute; left: 0; top: 0; width: 1280px; height: 720px; display: block; touch-action: none"></canvas>
+<sc-for list="{{labels}}" as="l" hint-placeholder-count="0">
+<div style="position: absolute; left: {{l.left}}px; top: {{l.top}}px; transform: translate(-50%, -100%); pointer-events: none; white-space: nowrap; padding: {{l.pad}}; border-radius: {{l.radius}}; background: {{l.bg}}; font-size: {{l.size}}px; font-weight: {{l.weight}}; font-style: {{l.italic}}; color: {{l.color}}; text-shadow: 0 1px 3px rgba(0,0,0,.75)">{{l.text}}</div>
+</sc-for>
+<div style="position: absolute; left: 16px; top: 16px; display: flex; gap: 8px; flex-wrap: wrap">
+<sc-for list="{{views}}" as="v" hint-placeholder-count="4">
+<button type="button" onClick="{{v.go}}" style="padding: 9px 14px; border-radius: 8px; border: 1px solid rgba(226,191,108,.5); background: {{v.bg}}; color: #f7efdd; font-size: 14px; font-weight: 600; cursor: pointer">{{v.name}}</button>
+</sc-for>
+</div>
+<div style="position: absolute; left: 16px; bottom: 14px; padding: 6px 10px; border-radius: 6px; background: rgba(26,23,18,.66); font-size: 12.5px; color: #d8cbb0">Kéo để xoay · cuộn để phóng · chuột phải để lia · thu 219, giờ chiều</div>
+<sc-if value="{{loading}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 0; top: 0; width: 1280px; height: 720px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: #1a1712">
+<div style="font-size: 22px; font-weight: 700">Đang dựng Thọ Xuân</div>
+<div style="font-size: 14px; color: #c9bb9c">Địa hình, 9.000 cây, 3.000 lính, thành và lửa đều sinh bằng code: 5–20 giây tùy máy.</div>
+</div>
+</sc-if>
+<sc-if value="{{hasErr}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 0; top: 0; width: 1280px; height: 720px; display: flex; align-items: center; justify-content: center; background: #1a1712; font-size: 15px; color: #f0a08a">Không dựng được cảnh: {{err}}</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+// Siege prototype (docs/design/prototypes/siege): the live scene. The bundle (build/sg-bundle.js) builds everything in code.
+var W = 1280, H = 720;
+var VIEWS = [['overview', 'Toàn cảnh'], ['siege', 'Vây cổng Nam'], ['field', 'Trận địa máy bắn đá'], ['bagong', 'Núi Bát Công']];
+var LOOK = {
+  city: { pad: '3px 10px', radius: '4px', bg: 'rgba(30,24,16,.75)', size: 16, weight: 700, italic: 'normal', color: '#f7efdd' },
+  lane: { pad: '3px 10px', radius: '999px', bg: 'rgba(150,34,30,.88)', size: 13, weight: 600, italic: 'normal', color: '#fff3e4' },
+  place: { pad: '0', radius: '0', bg: 'transparent', size: 15, weight: 400, italic: 'italic', color: '#f3ead6' },
+  thing: { pad: '0', radius: '0', bg: 'transparent', size: 12.5, weight: 400, italic: 'normal', color: '#e8dcc0' },
+};
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { phase: 'load', err: '', view: 'overview', labels: [] };
+    this.setCanvas = (el) => { this.canvas = el; };
+  }
+  componentDidMount() { var self = this; this.boot().catch(function (e) { self.setState({ phase: 'err', err: String(e && e.message || e) }); }); }
+  componentWillUnmount() { this.dead = true; }
+  async boot() {
+    for (var i = 0; i < 160 && !(window.SG && window.SGN && window.SGS && window.HNModels && window.K); i++) await new Promise(function (r) { setTimeout(r, 250); });
+    if (!window.SG) throw new Error('không tải được script cảnh.');
+    try { await document.fonts.load('700 40px "Noto Serif TC"', '明魏朱'); } catch (e) { /* banners fall back to any CJK font */ }
+    var dpr = Math.min(1.5, window.devicePixelRatio || 1);
+    this.sg = await SG.start({ canvas: this.canvas, width: W, height: H, dpr: dpr, shot: 'overview', interactive: true });
+    this.setState({ phase: 'play', view: 'overview', labels: this.labelList() });
+    var self = this, last = performance.now(), lastL = 0;
+    var loop = function (now) {
+      if (self.dead) return;
+      var dt = Math.min(0.1, (now - last) / 1000); last = now;
+      self.sg.render(dt);
+      if (now - lastL > 160) { lastL = now; self.setState({ labels: self.labelList() }); }
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+  }
+  go(name) { if (this.sg) this.sg.view(name); this.setState({ view: name }); }
+  labelList() {
+    var v = this.state.view;
+    return this.sg.labels().filter(function (l) { return l.visible && (l.kind !== 'place' || v === 'overview' || v === 'bagong') && (l.kind !== 'lane' || v === 'overview'); })
+      .map(function (l) { var k = LOOK[l.kind] || LOOK.thing; return Object.assign({ left: Math.round(l.x), top: Math.round(l.y), text: l.text }, k); });
+  }
+  renderVals() {
+    var self = this, s = this.state;
+    return {
+      setCanvas: this.setCanvas,
+      labels: s.phase === 'play' ? s.labels : [],
+      views: VIEWS.map(function (v) { return { name: v[1], bg: v[0] === s.view ? 'rgba(150,34,30,.92)' : 'rgba(26,23,18,.72)', go: function () { self.go(v[0]); } }; }),
+      loading: s.phase === 'load', hasErr: s.phase === 'err', err: s.err,
+    };
+  }
+}
+</script>
+</body>
+</html>

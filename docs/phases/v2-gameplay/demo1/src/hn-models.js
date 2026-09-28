@@ -12,8 +12,8 @@
 
     // ---------------------------------------------------------------- geometry kit
     const prep = (g) => { if (g.index) g = g.toNonIndexed(); for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal') g.deleteAttribute(k); return g; };
-    // colours are written in sRGB (as picked); three r146 lights in linear space, so convert (else everything turns pastel)
-    const lin = (hex) => new T.Color(hex).convertSRGBToLinear();
+    // colours are sRGB hex; kit.js turns ColorManagement.legacyMode off, so THREE.Color converts them to linear itself
+    const lin = (hex) => new T.Color(hex);
     const paint = (g, hex) => { g = prep(g); const c = lin(hex), n = g.attributes.position.count, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; } g.setAttribute('color', new T.BufferAttribute(a, 3)); return g; };
     const shade = (hex, k) => new T.Color(hex).lerp(new T.Color(k < 0 ? 0x000000 : 0xffffff), Math.abs(k)).getHex();
     const mix = (a, b, k) => new T.Color(a).lerp(new T.Color(b), k).getHex();
@@ -55,11 +55,11 @@
 
     // ---------------------------------------------------------------- palette (warm key light, Ryan's saturation)
     const C = {
-      skin: 0xe2b48c, cloth: 0x3b322a, boot: 0x2b231d, iron: 0x5b6067, brass: 0xd0a64c, leather: 0x6d4b30, wood: 0x6e5033, straw: 0xd9bb72, red: 0xc0352b, cream: 0xefe4cc,
-      earth: 0xbca78a, brick: 0xa39684, stone: 0xa3a098, plinth: 0x8a8378, dark: 0x2a211b,
-      roof: 0x858c96, thatch: 0xb49a66, under: 0x8a5c3c, pillar: 0xa8382a, plaster: 0xeee6d4, plaster2: 0xe0cfaa, bracket: 0x3c6f66, lattice: 0x9a3d2c, base: 0xb9b2a3,
-      ground: 0x9a8f6a, yard: 0xb3a586, road: 0xcabc98, paving: 0xb8b1a2, grass: 0x8aa35a, trunk: 0x5c4330, water: 0x4d8590,
-      leaf: [0x5b7d38, 0x6d8f42, 0x4b6b31, 0x7c9444, 0x587a3f], pine: 0x3f5f36,
+      skin: 0xc27443, cloth: 0x0b0806, boot: 0x060403, iron: 0x1b1e23, brass: 0xa16112, leather: 0x271208, wood: 0x281408, straw: 0xb17f2b, red: 0x860906, cream: 0xdcc69a,
+      earth: 0x806341, brick: 0x5d4e3b, stone: 0x5d5a50, plinth: 0x413a30, dark: 0x060403,
+      roof: 0x3c434e, thatch: 0x745222, under: 0x411b0c, pillar: 0x640a06, plaster: 0xdacaa8, plaster2: 0xbe9f67, bracket: 0x0c2922, lattice: 0x520c06, base: 0x7c725d,
+      ground: 0x524625, yard: 0x73603d, road: 0x978050, paving: 0x7a705c, grass: 0x415d1a, trunk: 0x1b0e08, water: 0x133c47,
+      leaf: [0x1b340a, 0x27460e, 0x122508, 0x334c0f, 0x19320d], pine: 0x0d1d09,
     };
 
     // ---------------------------------------------------------------- material: environment from a gradient sky, saturation, sky rim
@@ -85,14 +85,15 @@
     const mat = o.recv(look(new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.74, metalness: 0, envMap: env, envMapIntensity: 0.85 })));
     const waterMat = new T.MeshStandardMaterial({ color: lin(C.water), roughness: 0.12, metalness: 0.1, envMap: env, envMapIntensity: 1.1 });
 
-    // ---------------------------------------------------------------- the Chinese roof
-    // Over a w × d plan (x × z), eaves at y = 0, ridge at y = h. The slope is flat at the eaves and steep near the ridge;
-    // the eave line rises toward the corners (lift) and the hip ridges end in upturned tips. kind 'hip' (four slopes) or
-    // 'gable' (two). tMax < 1 stops the slopes part way up: the lower skirt of a double eave. Tiles: ridged columns.
-    const prof = (t, h) => h * (0.26 * t + 0.74 * t * t);
+    // ---------------------------------------------------------------- the Han roof (docs/design/history.md, decisions/0006)
+    // Over a w × d plan (x × z), eaves at y = 0, ridge at y = h. Eastern Han: straight slopes and straight eaves (no
+    // curved roof, no upturned corners: those are later), the two ends of the ridge turned up a little, grey tube tiles.
+    // kind 'hip' (庑殿, four slopes) or 'gable' (悬山, two). tMax < 1 stops the slopes part way up: the eave of a lower
+    // storey. Tiles: ridged columns. o.lift (default 0) is kept for thatch that sags at the corners.
+    const prof = (t, h) => h * t;
     const roof = (w, d, h, o = {}) => {
       if (d > w) return xf(roof(d, w, h, o), [0, 0, 0], [0, Math.PI / 2, 0]);
-      const a = w / 2, b = d / 2, hip = o.kind !== 'gable', tMax = o.tMax ?? 1, lift = o.lift ?? h * 0.42, th = o.th ?? Math.max(0.01, h * 0.08);
+      const a = w / 2, b = d / 2, hip = o.kind !== 'gable', tMax = o.tMax ?? 1, lift = o.lift ?? 0, th = o.th ?? Math.max(0.01, h * 0.08);
       const top = o.color ?? C.roof, under = o.under ?? C.under, ridge = o.ridge ?? shade(top, -0.3), tile = o.tiles ?? 0.05;
       const nt = o.nt ?? 5, parts = [];
       const Y = (u, t) => prof(t, h) + lift * Math.pow(1 - t, 2.2) * Math.pow(Math.abs(u), 3);
@@ -136,7 +137,7 @@
       const hipPts = (sx, sz) => {
         const pts = [];
         for (let j = Math.round(nt * tMax); j >= 0; j--) { const t = (j / nt), p = hip ? [sx * (a - t * b), Y(1, t) + rt * 0.6, sz * b * (1 - t)] : [sx * a, Y(1, t) + rt * 0.6, sz * b * (1 - t)]; pts.push(new T.Vector3(...p)); }
-        const c = pts[pts.length - 1]; pts.push(new T.Vector3(c.x + sx * lift * 0.2, c.y + lift * 0.34, c.z + sz * lift * 0.2 * (hip ? 1 : 0)));
+        const c = pts[pts.length - 1]; pts.push(new T.Vector3(c.x + sx * th * 0.8, c.y - th * 0.3, c.z + sz * th * 0.8 * (hip ? 1 : 0)));
         return pts;
       };
       for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const pts = hipPts(sx, sz); if (pts.length > 2) rk.push(paint(new T.TubeGeometry(new T.CatmullRomCurve3(pts), 6, rt * 0.75, 4), ridge)); }
@@ -180,7 +181,7 @@
       // the fan's base row from the wall top: close the gaps at both ends
       for (const sx of [-1, 1]) { const x = (sx * w) / 2 * 0.999, y0 = 0.025 + h, tri = [[x, y0, 0], [x, y0, -d / 2], [x, y0 + pts[0][1], pts[0][0]], [x, y0, 0], [x, y0 + pts[8][1], pts[8][0]], [x, y0, d / 2]]; if (sx < 0) { tri.reverse(); } for (const t of tri) v.push(...t); }
       k.push(paint(tris(v), wall));
-      k.push(xf(roof(w + 0.08, d + 2 * ov, rh, { kind: 'gable', color: o.roof ?? C.roof, tiles: o.tiles ?? 0.06, nt: 4, lift: rh * 0.12, under: 0x9a7a5a, noUnder: true }), [0, 0.025 + h, 0]));
+      k.push(xf(roof(w + 0.08, d + 2 * ov, rh, { kind: 'gable', color: o.roof ?? C.roof, tiles: o.tiles ?? 0.06, nt: 4, under: 0x52321a, noUnder: true }), [0, 0.025 + h, 0]));
       return k.geo();
     };
     // a round Han granary on stilts, conical roof
@@ -244,16 +245,28 @@
         return;
       }
       k.add(rbox(gw, H + 0.33, gd, 0.08), shade(col, -0.03), [0, (H + 0.03 - 0.3) / 2, zc]);
-      // the passage: a dark arch through the gatehouse, doors ajar inside
-      const aw = 0.17, ah = H * 0.66, sh = new T.Shape(); sh.moveTo(-aw / 2, 0); sh.lineTo(aw / 2, 0); sh.lineTo(aw / 2, ah - aw / 2); sh.absarc(0, ah - aw / 2, aw / 2, 0, Math.PI, false); sh.lineTo(-aw / 2, 0);
-      k.add(new T.ExtrudeGeometry(sh, { depth: gd + 0.02, bevelEnabled: false, curveSegments: 6 }).translate(0, 0, -(gd + 0.02) / 2), C.dark, [0, 0, zc]);
-      for (const sx of [-1, 1]) k.add(rbox(0.012, ah * 0.8, aw * 0.5, 0.3), C.lattice, [sx * aw * 0.42, ah * 0.4, zc + gd / 2 - 0.01], [0, sx * 0.5, 0]);
+      // the passage: flat-topped under timber beams (Han gates have no brick arch), doors ajar inside
+      const aw = 0.16, ah = H * 0.6;
+      k.add(rbox(aw, ah, gd + 0.02, 0), C.dark, [0, ah / 2, zc]);
+      for (const sz of [-1, 1]) { k.add(rbox(aw + 0.06, 0.035, 0.03, 0.3), C.wood, [0, ah + 0.017, zc + sz * (gd / 2 + 0.005)]); for (const sx of [-1, 1]) k.add(rbox(0.025, ah, 0.03, 0.3), C.wood, [sx * (aw / 2 + 0.005), ah / 2, zc + sz * (gd / 2 + 0.005)]); }
+      for (const sx of [-1, 1]) k.add(rbox(0.012, ah * 0.9, aw * 0.5, 0.3), C.lattice, [sx * aw * 0.42, ah * 0.45, zc + gd / 2 - 0.03], [0, sx * 0.5, 0]);
       const hp = 0.045, n = Math.max(2, Math.floor(gw / 0.13));
       for (let i = 0; i < n; i++) k.add(rbox(0.065, 0.05, 0.045, 0), shade(col, -0.05), [-gw / 2 + ((i + 0.5) * gw) / n, H + 0.03 + hp / 2, zc + gd / 2 - 0.02]);
       const tw = gw * 0.78, td = gd * 0.72;
       const tower = lv === 1 ? pavilion({ w: tw * 0.8, d: td * 0.8, h: 0.13, rh: 0.1, roof: C.thatch, tiles: 0, wall: C.wood, cols: false, lift: 0.02 })
         : pavilion({ w: tw, d: td, h: 0.15, storeys: lv >= 3 ? 2 : 1, rh: 0.16 + lv * 0.01, base: 0.03, tiles: 0.045 });
       k.push(xf(tower, [0, H + 0.03, zc]));
+    };
+    // a khuyết (阙): the pair of towers before a gate; a governor has the mother-and-child kind (二出阙): a tall tower with a
+    // lower one on its outer side, each with a small hip roof over a bracket band (after the Gao Yi que, AD 209)
+    const que = () => {
+      const k = kit();
+      k.add(rbox(0.1, 0.03, 0.08, 0.3), C.base, [0, 0.015, 0]);
+      k.add(rbox(0.07, 0.24, 0.055, 0.12), C.plaster, [0, 0.15, 0]); k.add(rbox(0.085, 0.025, 0.07, 0.3), C.bracket, [0, 0.28, 0]);
+      k.push(xf(roof(0.12, 0.1, 0.05, { tiles: 0 }), [0, 0.292, 0]));
+      k.add(rbox(0.05, 0.14, 0.04, 0.12), C.plaster, [0.06, 0.1, 0]); k.add(rbox(0.06, 0.02, 0.05, 0.3), C.bracket, [0.06, 0.18, 0]);
+      k.push(xf(roof(0.08, 0.07, 0.035, { tiles: 0 }), [0.06, 0.19, 0]));
+      return k.geo();
     };
     const cornerTower = (k, x, z, lv) => {
       const { H, wb, col } = LV(lv), cw = wb * 1.9;
@@ -299,24 +312,24 @@
         k.push(xf(w.geo(), [0, 0, 0], [0, (side * Math.PI) / 2, 0]));
       }
       for (const [sx, sz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) cornerTower(k, sx * R, sz * R, lv);
+      if (lv >= 2) for (const sx of [-1, 1]) k.push(xf(que(), [sx * (gw / 2 + 0.2), 0.03, R + wb / 2 + 0.1], [0, sx < 0 ? Math.PI : 0, 0])); // child tower on the outer side
       // the governor's compound, north of the centre, facing south down the main street
       const yz0 = -R + wb / 2 + 0.16, yz1 = -0.3, yx = 0.62, yc = (yz0 + yz1) / 2;
       k.add(rbox(2 * yx, 0.02, yz1 - yz0, 0.3), C.paving, [0, 0.055, yc]);
       for (const [x0, x1, z0, z1] of [[-yx, yx, yz0, yz0], [-yx, -yx, yz0, yz1], [yx, yx, yz0, yz1], [-yx, -0.16, yz1, yz1], [0.16, yx, yz1, yz1]]) {
         const lx = Math.max(0.035, x1 - x0), lz = Math.max(0.035, z1 - z0);
-        k.add(rbox(lx, 0.1, lz, 0.2), 0xb4553d, [(x0 + x1) / 2, 0.1, (z0 + z1) / 2]); k.add(rbox(lx + 0.02, 0.018, lz + 0.02, 0.3), C.roof, [(x0 + x1) / 2, 0.157, (z0 + z1) / 2]);
+        k.add(rbox(lx, 0.1, lz, 0.2), 0x74170c, [(x0 + x1) / 2, 0.1, (z0 + z1) / 2]); k.add(rbox(lx + 0.02, 0.018, lz + 0.02, 0.3), C.roof, [(x0 + x1) / 2, 0.157, (z0 + z1) / 2]);
       }
       k.push(xf(pavilion({ w: 0.32, d: 0.14, h: 0.1, rh: 0.09, tiles: 0.04 }), [0, 0.05, yz1]));
       const hallZ = yc - 0.12, flagAt = [0, 0.06, yz1 - 0.2];
       k.push(xf(pavilion({ w: 0.78, d: 0.4, h: 0.17, rh: 0.2, base: 0.06, storeys: 1, tiles: 0.045 }), [0, 0.05, hallZ]));
       if (lv >= 2) k.push(xf(pavilion({ w: 0.5, d: 0.22, h: 0.13, rh: 0.12, tiles: 0.045 }), [0, 0.05, yz0 + 0.18]));
       for (const sx of [-1, 1]) k.push(xf(house(0.36, 0.16, 0.09, { wall: C.plaster2 }), [sx * (yx - 0.14), 0.05, yc + 0.02], [0, Math.PI / 2, 0]));
-      // the drum tower at the crossroads
+      // the watchtower at the crossroads (square, storeys shrinking, deep eaves), on a low rammed-earth base
       if (lv >= 1) {
-        const tb = 0.4, th2 = 0.2;
-        k.add(rbox(tb, th2, tb, 0.08), lv >= 3 ? C.brick : C.earth, [0, 0.05 + th2 / 2, 0]);
-        for (const ry of [0, Math.PI / 2]) k.add(rbox(0.1, th2 * 0.6, tb + 0.012, 0.2), C.dark, [0, 0.05 + th2 * 0.3, 0], [0, ry, 0]);
-        k.push(xf(pavilion({ w: tb * 0.72, d: tb * 0.72, h: 0.12, rh: 0.14, storeys: lv >= 3 ? 2 : 1, tiles: 0.04 }), [0, 0.05 + th2, 0]));
+        const tb = 0.36, th2 = 0.08;
+        k.add(rbox(tb, th2, tb, 0.15), C.earth, [0, 0.05 + th2 / 2, 0]);
+        k.push(xf(pavilion({ w: tb * 0.7, d: tb * 0.7, h: 0.12, rh: 0.1, storeys: lv >= 3 ? 4 : 3, ov: 0.08, tiles: 0.04 }), [0, 0.05 + th2, 0]));
       }
       // blocks: courtyard houses, the market, the granaries, trees
       const taken = [[-yx - 0.06, yx + 0.06, yz0 - 0.1, yz1 + 0.06], [-0.18, 0.18, -inner, inner], [-inner, inner, -0.18, 0.18]];
@@ -330,8 +343,8 @@
         if (!market && cx > 0 && cz > 0) { // the market: a paved square with awnings
           market = true;
           k.add(rbox(cwid, 0.015, cwid, 0.3), C.paving, [cx, 0.052, cz]);
-          const aw = [0xb8433a, 0x3f6f9a, 0xd29a3a, 0x6f8f4a, 0xb8433a, 0x3f6f9a];
-          for (let i = 0; i < 6; i++) { const x = cx + ((i % 3) - 1) * 0.16, z = cz + (Math.floor(i / 3) - 0.5) * 0.24; for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) k.add(cyl(0.006, 0.006, 0.08, 4), C.wood, [x + a * 0.055, 0.1, z + b * 0.04]); k.add(rbox(0.13, 0.012, 0.1, 0.3), aw[i], [x, 0.145, z], [0.18, 0, 0]); k.add(rbox(0.08, 0.03, 0.05, 0.3), [C.straw, 0x8a5a3a, C.cream][i % 3], [x, 0.07, z]); }
+          const aw = [0x7a0e0b, 0x0d2952, 0xa4520b, 0x294611, 0x7a0e0b, 0x0d2952];
+          for (let i = 0; i < 6; i++) { const x = cx + ((i % 3) - 1) * 0.16, z = cz + (Math.floor(i / 3) - 0.5) * 0.24; for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) k.add(cyl(0.006, 0.006, 0.08, 4), C.wood, [x + a * 0.055, 0.1, z + b * 0.04]); k.add(rbox(0.13, 0.012, 0.1, 0.3), aw[i], [x, 0.145, z], [0.18, 0, 0]); k.add(rbox(0.08, 0.03, 0.05, 0.3), [C.straw, 0x411a0b, C.cream][i % 3], [x, 0.07, z]); }
           continue;
         }
         if (!granaries && cx > 0 && cz < 0) { granaries = true; for (let i = 0; i < 3; i++) k.push(xf(granary(0.085), [cx + (i - 1) * 0.17, 0.05, cz])); trees.push([cx, cz + 0.2]); continue; }
@@ -340,10 +353,10 @@
         k.add(rbox(cwid, 0.012, cwid, 0.3), C.yard, [cx, 0.052, cz]);
         for (const [a0, a1, b0, b1] of [[x0, x1, z0, z0], [x0, x0, z0, z1], [x1, x1, z0, z1], [x0, cx - 0.05, z1, z1], [cx + 0.05, x1, z1, z1]]) {
           const lx = Math.max(0.025, a1 - a0), lz = Math.max(0.025, b1 - b0);
-          k.add(rbox(lx, 0.06, lz, 0.25), wallC, [(a0 + a1) / 2, 0.08, (b0 + b1) / 2]); k.add(rbox(lx + 0.012, 0.012, lz + 0.012, 0.3), 0x9a9ea5, [(a0 + a1) / 2, 0.114, (b0 + b1) / 2]);
+          k.add(rbox(lx, 0.06, lz, 0.25), wallC, [(a0 + a1) / 2, 0.08, (b0 + b1) / 2]); k.add(rbox(lx + 0.012, 0.012, lz + 0.012, 0.3), 0x525760, [(a0 + a1) / 2, 0.114, (b0 + b1) / 2]);
         }
-        if (rich) k.push(xf(pavilion({ w: cwid * 0.72, d: 0.18, h: 0.1, rh: 0.1, storeys: 2, wall: wallC, cols: false, tiles: 0.045 }), [cx, 0.05, z0 + 0.13]));
-        else k.push(xf(house(cwid * 0.74, 0.17, 0.1 + rnd() * 0.03, { wall: wallC }), [cx, 0.05, z0 + 0.13]));
+        k.push(xf(house(cwid * 0.74, 0.17, 0.1 + rnd() * 0.03, { wall: wallC }), [cx, 0.05, z0 + 0.13]));
+        if (rich) k.push(xf(pavilion({ w: 0.1, d: 0.1, h: 0.07, rh: 0.05, storeys: 3, ov: 0.04, wall: C.wood, cols: false, tiles: 0 }), [cx + cwid * 0.28, 0.05, cz + cwid * 0.2]));
         for (const sx of [-1, 1]) if (rnd() < 0.85) k.push(xf(house(cwid * 0.42, 0.13, 0.085, { wall: wallC }), [cx + sx * (cwid / 2 - 0.1), 0.05, cz + 0.06], [0, Math.PI / 2, 0]));
         if (rnd() < 0.55) trees.push([cx + (rnd() - 0.5) * 0.12, cz + 0.12]);
       }
@@ -357,7 +370,7 @@
         const r0 = R + wb / 2 + 0.2, r1 = r0 + 0.32, parts = [];
         for (let side = 0; side < 4; side++) {
           const w = kit(); w.add(rbox(2 * r1, 0.02, r1 - r0, 0.3), 0xffffff, [0, 0.03, (r0 + r1) / 2]); parts.push(xf(w.geo(), [0, 0, 0], [0, (side * Math.PI) / 2, 0]));
-          const b = kit(); b.add(rbox(2 * r1 + 0.06, 0.03, r1 - r0 + 0.06, 0.3), 0x6d6048, [0, 0.019, (r0 + r1) / 2]); k.push(xf(b.geo(), [0, 0, 0], [0, (side * Math.PI) / 2, 0]));
+          const b = kit(); b.add(rbox(2 * r1 + 0.06, 0.03, r1 - r0 + 0.06, 0.3), 0x271e11, [0, 0.019, (r0 + r1) / 2]); k.push(xf(b.geo(), [0, 0, 0], [0, (side * Math.PI) / 2, 0]));
         }
         water = BGU.mergeBufferGeometries(parts); water.deleteAttribute('color');
       }
@@ -388,9 +401,9 @@
         helmet(k, 0, C.iron, C.red);
         arm(k, fc, 0, 1, [0.06, 0.3, 0.09]);
         k.seg([0.055, 0.02, 0.09], [0.085, 1.0, 0.09], 0.008, C.wood, 0.008);
-        k.add(cone(0.02, 0.08, 4), 0xc9ccd0, [0.086, 1.04, 0.09], [0, 0, 0], [1, 1, 0.45]); k.add(sph(0.018, 6, 4), C.red, [0.084, 0.965, 0.09]);
+        k.add(cone(0.02, 0.08, 4), 0x959aa1, [0.086, 1.04, 0.09], [0, 0, 0], [1, 1, 0.45]); k.add(sph(0.018, 6, 4), C.red, [0.084, 0.965, 0.09]);
         arm(k, fc, 0, -1, [0.1, 0.32, -0.05]);
-        k.add(cyl(0.1, 0.1, 0.022, 16), 0x3a2a22, [0.125, 0.3, -0.045], [0, 0, Math.PI / 2], [1.3, 1, 1]);
+        k.add(cyl(0.1, 0.1, 0.022, 16), 0x0b0604, [0.125, 0.3, -0.045], [0, 0, Math.PI / 2], [1.3, 1, 1]);
         k.add(cyl(0.066, 0.066, 0.01, 16), fc, [0.139, 0.3, -0.045], [0, 0, Math.PI / 2], [1.3, 1, 1]); k.add(sph(0.022, 8, 6), C.brass, [0.145, 0.3, -0.045]);
       } else if (arm_ === 'cung') { // straw hat, bow, quiver
         k.add(lathe([[0, 0.55], [0.135, 0.525], [0.135, 0.535], [0.03, 0.61], [0, 0.625]], 12), C.straw, [0, 0, 0]);
@@ -400,11 +413,11 @@
         arm(k, fc, 0, 1, [0.05, 0.36, 0.02]);
         k.seg([-0.09, 0.28, 0.03], [-0.05, 0.5, 0.03], 0.032, C.leather, 0.028); k.add(cone(0.03, 0.05, 6), C.cream, [-0.05, 0.53, 0.03], [0, 0, 0.18]);
       } else { // marines: scarf, halberd, round shield
-        k.add(lathe([[0, 0.51], [0.066, 0.51], [0.063, 0.55], [0.04, 0.58], [0, 0.59]], 10), 0x2f4a5e, [0, 0, 0]); k.seg([-0.06, 0.55, 0], [-0.1, 0.49, 0], 0.012, 0x2f4a5e);
+        k.add(lathe([[0, 0.51], [0.066, 0.51], [0.063, 0.55], [0.04, 0.58], [0, 0.59]], 10), 0x07111d, [0, 0, 0]); k.seg([-0.06, 0.55, 0], [-0.1, 0.49, 0], 0.012, 0x07111d);
         arm(k, fc, 0, 1, [0.06, 0.3, 0.09]);
-        k.seg([0.055, 0.02, 0.09], [0.08, 0.84, 0.09], 0.008, C.wood, 0.008); k.add(cone(0.018, 0.07, 4), 0xc9ccd0, [0.081, 0.87, 0.09], [0, 0, 0], [1, 1, 0.45]); k.add(rbox(0.07, 0.02, 0.008, 0.2), 0xc9ccd0, [0.11, 0.79, 0.09]);
+        k.seg([0.055, 0.02, 0.09], [0.08, 0.84, 0.09], 0.008, C.wood, 0.008); k.add(cone(0.018, 0.07, 4), 0x959aa1, [0.081, 0.87, 0.09], [0, 0, 0], [1, 1, 0.45]); k.add(rbox(0.07, 0.02, 0.008, 0.2), 0x959aa1, [0.11, 0.79, 0.09]);
         arm(k, fc, 0, -1, [0.1, 0.32, -0.05]);
-        k.add(cyl(0.095, 0.095, 0.022, 16), 0x5a4030, [0.13, 0.31, -0.05], [0, 0, Math.PI / 2]); k.add(cyl(0.06, 0.06, 0.01, 16), fc, [0.144, 0.31, -0.05], [0, 0, Math.PI / 2]); k.add(sph(0.024, 8, 6), C.brass, [0.15, 0.31, -0.05]);
+        k.add(cyl(0.095, 0.095, 0.022, 16), 0x1a0d08, [0.13, 0.31, -0.05], [0, 0, Math.PI / 2]); k.add(cyl(0.06, 0.06, 0.01, 16), fc, [0.144, 0.31, -0.05], [0, 0, Math.PI / 2]); k.add(sph(0.024, 8, 6), C.brass, [0.15, 0.31, -0.05]);
       }
       return k.geo();
     };
@@ -416,7 +429,7 @@
       for (const z of [-0.018, 0.018]) k.add(cone(0.011, 0.04, 5), coat, [0.215, 0.6, z]);
       k.seg([0.1, 0.43, 0], [0.205, 0.585, 0], 0.017, hair);
       for (const [x0, x1, z] of [[0.12, 0.19, 0.045], [0.12, 0.08, -0.045], [-0.12, -0.06, 0.045], [-0.12, -0.18, -0.045]]) {
-        k.seg([x0, 0.3, z], [x1, 0.045, z], 0.021, coat, 0.017); k.add(cyl(0.022, 0.026, 0.035, 7), 0x2b241f, [x1, 0.018, z]);
+        k.seg([x0, 0.3, z], [x1, 0.045, z], 0.021, coat, 0.017); k.add(cyl(0.022, 0.026, 0.035, 7), 0x060403, [x1, 0.018, z]);
       }
       k.seg([-0.19, 0.38, 0], [-0.25, 0.2, 0], 0.022, hair);
       k.add(rbox(0.15, 0.035, 0.17, 0.4), C.leather, [0, 0.43, 0]);
@@ -434,26 +447,26 @@
     };
     const geoRider = (fid) => {
       const k = kit(), fc = COLOR[fid];
-      horse(k, 0x8a5a36, fc);
+      horse(k, 0x411a09, fc);
       const y0 = rider(k, fc);
       arm(k, fc, y0, 1, [0.08, y0 + 0.31, 0.1]); arm(k, fc, y0, -1, [0.12, y0 + 0.33, -0.03]);
-      k.seg([-0.2, y0 + 0.22, 0.1], [0.62, y0 + 0.52, 0.1], 0.008, C.wood, 0.008); k.add(cone(0.02, 0.08, 4), 0xc9ccd0, [0.66, y0 + 0.54, 0.1], [0, 0, -1.2], [1, 1, 0.45]);
+      k.seg([-0.2, y0 + 0.22, 0.1], [0.62, y0 + 0.52, 0.1], 0.008, C.wood, 0.008); k.add(cone(0.02, 0.08, 4), 0x959aa1, [0.66, y0 + 0.54, 0.1], [0, 0, -1.2], [1, 1, 0.45]);
       k.add(rbox(0.1, 0.05, 0.004, 0.2), fc, [0.55, y0 + 0.44, 0.1], [0, 0, 0.35]);
       return k.geo();
     };
     const geoGeneral = (fid) => {
       const k = kit(), fc = COLOR[fid];
-      horse(k, 0xeae4d8, fc, { hair: 0xbab3a6, barding: true });
+      horse(k, 0xd2c6af, fc, { hair: 0x7d7361, barding: true });
       const y0 = rider(k, fc, { helm: C.brass, plume: C.red, cape: shade(fc, -0.1) });
       arm(k, fc, y0, 1, [0.08, y0 + 0.32, 0.1]); arm(k, fc, y0, -1, [0.12, y0 + 0.33, -0.03]);
       k.seg([0.08, y0 + 0.02, 0.1], [0.08, y0 + 0.95, 0.1], 0.009, C.dark, 0.009);
-      k.add(rbox(0.09, 0.05, 0.01, 0.2), 0xc9ccd0, [0.12, y0 + 0.9, 0.1], [0, 0, 0.1]); k.add(cone(0.02, 0.09, 4), 0xc9ccd0, [0.08, y0 + 1.0, 0.1], [0, 0, 0], [1, 1, 0.45]); k.add(sph(0.02, 6, 4), C.red, [0.08, y0 + 0.92, 0.1]);
+      k.add(rbox(0.09, 0.05, 0.01, 0.2), 0x959aa1, [0.12, y0 + 0.9, 0.1], [0, 0, 0.1]); k.add(cone(0.02, 0.09, 4), 0x959aa1, [0.08, y0 + 1.0, 0.1], [0, 0, 0], [1, 1, 0.45]); k.add(sph(0.02, 6, 4), C.red, [0.08, y0 + 0.92, 0.1]);
       return xf(k.geo(), [0, 0, 0], [0, 0, 0], [1.3, 1.3, 1.3]);
     };
     // a war junk (lóu chuán): curved hull, shields along the rails, a two-storey castle, a batten sail
     const geoShip = (fid) => {
       const k = kit(), fc = COLOR[fid], N = 18, Mn = 8, pos = [], col = [], idx = [];
-      const hullC = lin(0x5e3f27), railC = lin(0x86613e);
+      const hullC = lin(0x1d0d05), railC = lin(0x3d1e0c);
       const at = (i, j) => {
         const s = i / N, x = -0.78 + 1.66 * s, e = Math.abs(2 * s - 1), w = 0.23 * Math.pow(Math.max(0, 1 - Math.pow(e, s > 0.5 ? 2.2 : 3.2)), 0.55) + 0.02;
         const yt = 0.2 + 0.14 * Math.pow(e, 4) * (s > 0.5 ? 1.25 : 0.9), yb = 0.03 + 0.1 * Math.pow(e, 3), f = j / Mn * Math.PI;
@@ -467,10 +480,10 @@
       // deck, following the hull's width
       const dv = [];
       for (let i = 0; i < N; i++) { const a = at(i, 0), b = at(i + 1, 0), a2 = at(i, Mn), b2 = at(i + 1, Mn), y = 0.19; dv.push(a[0], y, a[2], a2[0], y, a2[2], b[0], y, b[2], b[0], y, b[2], a2[0], y, a2[2], b2[0], y, b2[2]); }
-      const deck = paint(tris(dv), 0xa27d52); if (deck.attributes.normal.getY(0) < 0) { const a2 = deck.attributes.position.array; for (let i = 0; i < a2.length; i += 9) for (let c = 0; c < 3; c++) { const t0 = a2[i + 3 + c]; a2[i + 3 + c] = a2[i + 6 + c]; a2[i + 6 + c] = t0; } deck.computeVertexNormals(); } k.push(deck);
+      const deck = paint(tris(dv), 0x5c3416); if (deck.attributes.normal.getY(0) < 0) { const a2 = deck.attributes.position.array; for (let i = 0; i < a2.length; i += 9) for (let c = 0; c < 3; c++) { const t0 = a2[i + 3 + c]; a2[i + 3 + c] = a2[i + 6 + c]; a2[i + 6 + c] = t0; } deck.computeVertexNormals(); } k.push(deck);
       for (let i = 3; i <= 14; i += 2) { const p = at(i, 0), q = at(i, Mn); k.add(rbox(0.012, 0.07, 0.08, 0.3), i % 4 === 1 ? shade(fc, -0.25) : fc, [p[0], p[1] + 0.02, p[2] - 0.01]); k.add(rbox(0.012, 0.07, 0.08, 0.3), i % 4 === 1 ? shade(fc, -0.25) : fc, [q[0], q[1] + 0.02, q[2] + 0.01]); }
-      k.add(rbox(0.46, 0.15, 0.3, 0.12), 0x8a5a3a, [-0.2, 0.265, 0]); k.add(rbox(0.5, 0.02, 0.34, 0.3), C.bracket, [-0.2, 0.35, 0]);
-      k.add(rbox(0.3, 0.11, 0.22, 0.12), 0x9a6a44, [-0.24, 0.415, 0]);
+      k.add(rbox(0.46, 0.15, 0.3, 0.12), 0x411a0b, [-0.2, 0.265, 0]); k.add(rbox(0.5, 0.02, 0.34, 0.3), C.bracket, [-0.2, 0.35, 0]);
+      k.add(rbox(0.3, 0.11, 0.22, 0.12), 0x52250f, [-0.24, 0.415, 0]);
       k.push(xf(roof(0.42, 0.32, 0.11, { tiles: 0.04, color: C.roof }), [-0.24, 0.47, 0]));
       for (let i = 0; i < 5; i++) for (const z of [-1, 1]) { const p = at(5 + i * 2, z < 0 ? 0 : Mn); k.seg([p[0], p[1] - 0.02, p[2]], [p[0] - 0.06, 0.0, p[2] + z * 0.2], 0.007, C.wood, 0.007); }
       k.seg([0.3, 0.19, 0], [0.3, 1.25, 0], 0.016, C.wood, 0.012);
@@ -562,6 +575,8 @@
     });
     HM.mat = mat;
     HM.look = look;
+    // the kit itself, for the design prototypes (docs/design/prototypes/siege) that build at other scales
+    HM.parts = { kit, xf, paint, shade, mix, rbox, cyl, sph, lathe, cone, blob, tris, roof, pavilion, house, granary, que, treeGeo, wallPrism, C, env };
     HM.banner = banner;
     HM.tree = (kind, seed, lo) => cached('tree:' + kind + ':' + (seed || 1) + (lo ? ':lo' : ''), () => treeGeo(kind, seed || 1, lo));
     // a siege: a run of wall across one lane (along x, outside +z) and a tower between lanes

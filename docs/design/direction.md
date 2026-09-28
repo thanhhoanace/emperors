@@ -177,6 +177,7 @@ Ba hướng đồ chơi/voxel bám sát Ryan: sa bàn khối (`prototypes/a.html
   - `terrain-real.js` đọc `assets/map/`;
   - `hancity.js` đọc `data/cities.json`;
   - dùng chung shader và dụng cụ của `terrain.js`, `flora.js`, `city.js`, `kit.js`.
+- Thử mức TW3K bằng code (28/9, phase v2-gameplay): `siege/siege.html` — Thọ Xuân bị vây ở tỉ lệ 1 m, núi Bát Công, rừng lá thu; dùng bộ mô hình của demo 1 (`docs/phases/v2-gameplay/demo1/src/hn-models.js`).
 - Để so sánh:
   - `map.html` (vòng 4);
   - `real.html` (vòng 2–3);
