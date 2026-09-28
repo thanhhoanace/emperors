@@ -5,11 +5,25 @@
     {
       "v": 1, "kind": "attack", "fid": "sun_quan", "from": "jiang", "to": "jing_nan", "win": true,
       "actorChar": "lu_meng", "defenderFid": "liu_bei", "defenderChar": "guan_yu", "other": "liu_bei",
+      "commit": 30000, "attLoss": 4200, "defLoss": 6600,
+      "battle": {
+        "v": 2, "turn": 1, "site": "jing_nan", "from": "jiang", "terrain": "river", "river": true, "siege": true, "walls": 2,
+        "attacker": { "fid": "sun_quan", "gen": "lu_meng", "men": 30000, "units": { "bo": 13500, "cung": 7500, "ky": 1500, "thuy": 7500 } },
+        "defender": { "fid": "liu_bei", "gen": "guan_yu", "men": 12000, "units": { "bo": 6600, "cung": 2400, "ky": 1200, "thuy": 1800 }, "holding": true },
+        "result": { "win": true, "losses": { "A": 4200, "D": 6600 }, "routed": "D", "turns": 3 }
+      },
       "tone": "good", "text": "Tôn Quyền xuất quân đánh Giang Lăng. Quan Vũ thất thủ — Giang Lăng về tay Tôn."
     },
     {
       "v": 1, "kind": "attack", "fid": "qin_shihuang", "from": "longxi", "to": "guan", "win": false,
       "actorChar": "qin_shihuang", "defenderFid": "cao_cao", "defenderChar": "zhang_he", "other": "cao_cao",
+      "commit": 20000, "attLoss": 7000, "defLoss": 2600,
+      "battle": {
+        "v": 2, "turn": 1, "site": "guan", "from": "longxi", "terrain": "hills", "river": true, "siege": true, "walls": 3,
+        "attacker": { "fid": "qin_shihuang", "gen": "qin_shihuang", "men": 20000, "units": { "bo": 9000, "cung": 7000, "ky": 3000, "thuy": 1000 } },
+        "defender": { "fid": "cao_cao", "gen": "zhang_he", "men": 26000, "units": { "bo": 13000, "cung": 5200, "ky": 6500, "thuy": 1300 }, "holding": true },
+        "result": { "win": false, "losses": { "A": 7000, "D": 2600 }, "routed": "A", "turns": 4 }
+      },
       "tone": "bad", "text": "Tần Thủy Hoàng đánh Trường An nhưng bị Trương Hợp đẩy lui."
     },
     {

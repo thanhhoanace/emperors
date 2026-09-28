@@ -163,6 +163,12 @@ function normalizeEvent(g, raw) {
     ev.defenderChar = raw.defenderChar || governorOf(g, raw.to);
     ev.actorChar = raw.actorChar || governorOf(g, raw.from);
     ev.other = ev.defenderFid;
+    if (raw.commit != null) ev.commit = raw.commit;
+    // attack v2 (docs/product/runtime-event.md): the engine's descriptor, the generals named here
+    if (raw.battle) {
+      const b = raw.battle;
+      ev.battle = { ...b, attacker: { ...b.attacker, gen: ev.actorChar || null }, defender: { ...b.defender, gen: ev.defenderChar || null } };
+    }
   } else if (raw.kind === 'pact' || String(raw.kind).indexOf('deal_') === 0) {
     ev.other = raw.other;
     ev.clauses = raw.clauses || (raw.kind === 'pact' ? ['truce'] : raw.clauses);

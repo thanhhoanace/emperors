@@ -213,6 +213,56 @@
     return { commit, power: commit * mul };
   }
 
+  // BattleDescriptor v2 (docs/product/runtime-event.md): the battle as the scene, the observation and the forecast read
+  // it. Built from the numbers resolveAttack has already rolled; it draws no random number, so v1 results and balance
+  // are unchanged. Engine v1 keeps one troop count per faction: the arms are that count split by the faction's arm mix
+  // (world.json factions[].arms, neutral.arms), boats only where the site is on a river (else they fight on foot).
+  const ARMS = ['bo', 'cung', 'ky', 'thuy'];
+  const DEFAULT_ARMS = { bo: 0.6, cung: 0.3, ky: 0.1, thuy: 0 };
+  function armMix(g, fid) {
+    if (fid === NEUTRAL) return (g.def.world.neutral && g.def.world.neutral.arms) || DEFAULT_ARMS;
+    return (g.def.F[fid] && g.def.F[fid].arms) || DEFAULT_ARMS;
+  }
+  // men split by the mix, whole men, the remainders to the largest fractions (ties in ARMS order)
+  function splitArms(men, mix, water) {
+    const w = ARMS.map((k) => Math.max(0, Number(mix[k]) || 0));
+    if (!water) { w[0] += w[3]; w[3] = 0; }
+    const tot = w.reduce((a, b) => a + b, 0) || 1;
+    const n = Math.max(0, round(men));
+    const exact = w.map((x) => (n * x) / tot);
+    const whole = exact.map(Math.floor);
+    let rest = n - whole.reduce((a, b) => a + b, 0);
+    const order = exact.map((x, i) => [x - whole[i], i]).sort((a, b) => b[0] - a[0] || a[1] - b[1]);
+    for (let j = 0; rest > 0; j++, rest--) whole[order[j % 4][1]] += 1;
+    const out = {};
+    ARMS.forEach((k, i) => { out[k] = whole[i]; });
+    return out;
+  }
+  // turns the battle lasted: a rout ends it in 3, an even fight runs to 5 (by the rolled power ratio)
+  function battleTurns(atkRoll, defRoll) {
+    const m = Math.abs(Math.log(atkRoll / Math.max(1, defRoll)));
+    return m > 0.5 ? 3 : m > 0.2 ? 4 : 5;
+  }
+  function battleOf(g, fid, from, site, defender, atk, dfn, rolls, win, losses) {
+    const P = g.def.P[site];
+    const water = !!P.river;
+    const aWater = water && !!(g.def.P[from] && g.def.P[from].river);
+    const men = { A: round(atk.commit), D: round(dfn.troops) };
+    return {
+      v: 2,
+      turn: g.state.turn,
+      site,
+      from,
+      terrain: P.terrain,
+      river: water,
+      siege: true,
+      walls: clamp(1 + (g.state.provinces[site].fort || 0), 0, 4),
+      attacker: { fid, men: men.A, units: splitArms(men.A, armMix(g, fid), aWater) },
+      defender: { fid: defender, men: men.D, units: splitArms(men.D, armMix(g, defender), water), holding: true },
+      result: { win, losses: { A: round(losses.A), D: round(losses.D) }, routed: win ? 'D' : 'A', turns: battleTurns(rolls.A, rolls.D) },
+    };
+  }
+
   // Strongest faction pressing on fid's borders, as a troops ratio.
   function threatOf(g, fid) {
     const me = g.state.factions[fid];
@@ -613,10 +663,12 @@
     const defName = nameOf(g, 'faction', defender);
     const t = defender === NEUTRAL ? null : st.factions[defender];
     const ev = { kind: 'attack', fid: d.fid, from, to: d.target, defender, win, commit: round(atk.commit), tone: win ? 'good' : 'bad' };
+    const rolls = { A: atkRoll, D: defRoll };
 
     if (win) {
       const attLoss = atk.commit * clamp(0.08 + (0.25 * defRoll) / atkRoll, 0.08, 0.35);
       const defLoss = dfn.troops * 0.55;
+      ev.battle = battleOf(g, d.fid, from, d.target, defender, atk, dfn, rolls, true, { A: attLoss, D: defLoss });
       f.troops -= attLoss;
       f.troops += defLoss * (C.surrender || 0); // hàng binh
       if (t) t.troops = Math.max(0, t.troops - defLoss);
@@ -647,6 +699,7 @@
     } else {
       const attLoss = atk.commit * clamp(0.2 + (0.2 * defRoll) / atkRoll, 0.2, 0.45);
       const defLoss = dfn.troops * clamp((0.1 * atkRoll) / defRoll, 0.03, 0.2);
+      ev.battle = battleOf(g, d.fid, from, d.target, defender, atk, dfn, rolls, false, { A: attLoss, D: defLoss });
       f.troops -= attLoss;
       if (t) {
         t.troops = Math.max(0, t.troops - defLoss);
@@ -827,6 +880,8 @@
     attackOrigin,
     attackOf,
     defenseOf,
+    ARMS,
+    splitArms,
     income,
     upkeep,
     fmt,

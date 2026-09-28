@@ -9,10 +9,12 @@
 //   await cut.prepare(info)        build it now (shows "Đang dựng trận…" for the one to four seconds it takes)
 //   cut.frame(info, u)             put the shot at u ∈ 0..1 on screen (approach → gate → result); builds if not ready
 //   cut.off() · cut.active · cut.render() · cut.stats() · cut.dispose()
-//   info = { from, to, fid, defenderFid, win, commit? }  (an attack RuntimeEvent carries all of these)
+//   info = { from, to, fid, defenderFid, win, commit?, battle?, sides? }  (an attack RuntimeEvent carries all of these)
 //
-// Troops: until the engine hands over a battle descriptor (docs/phases/v2-gameplay/ASSIGN.md, mục 1), the split into
-// foot, horse and boats is a display guess from the committed troops, the faction's traits and the city's river.
+// Troops: from info.battle (attack v2, docs/product/runtime-event.md): foot and archers on foot, horse, boats; the
+// spectator gets the event's truth, the player the battle as the observation gives it (perception.md, "Trận"). Without
+// one (an older event) the split is a display guess from the committed troops, the faction's traits and the river.
+// info.sides (a safe item, in play): each side's public label, and glyph '' where the HUD hides it (a guest emperor).
 // One battle is kept (the last built); a new key disposes it. Nature.warm(quality) is called once the page is idle,
 // so the leaf atlas and the plant geometries are ready before the first battle.
 (function () {
@@ -38,6 +40,14 @@
     const ky = Math.round(n * (traits.cavalry && traits.cavalry > 1 ? 0.28 : attacker ? 0.15 : 0.07));
     const thuy = attacker && river ? Math.round(n * (traits.riverDefense || traits.navy ? 0.12 : 0.05)) : 0;
     return { bo: n - ky - thuy, ky, thuy };
+  };
+
+  // the scene's armies from a BattleDescriptor: archers march with the foot, null when the descriptor is not usable
+  BC.armies = function (b) {
+    const ok = (s) => s && s.units && ['bo', 'cung', 'ky', 'thuy'].every((k) => Number.isFinite(s.units[k]));
+    if (!b || !ok(b.attacker) || !ok(b.defender)) return null;
+    const army = (u) => ({ bo: u.bo + u.cung, ky: u.ky, thuy: u.thuy });
+    return { A: army(b.attacker.units), D: army(b.defender.units) };
   };
 
   BC.create = function (rt, o) {
@@ -104,13 +114,14 @@
       const t0 = performance.now(), to = info.to, def = Object.assign({}, cities[to], { id: to });
       if (!def.outline) return null; // no layout for this city: the event stays on the map
       const aFid = info.fid, dFid = info.defenderFid && info.defenderFid !== 'neutral' ? info.defenderFid : 'neutral';
-      const nameOf = (fid) => (fid === 'neutral' ? 'Quân trấn thủ' : o.names ? o.names.name(fid) : fid);
-      const sideOf = (fid, troops) => ({ fid, color: colors[fid] || 0x8a7a55, name: nameOf(fid), glyph: (o.glyphs && o.glyphs[fid]) || '守', troops });
+      const nameOf = (fid, pub) => (pub && pub.name) || (fid === 'neutral' ? 'Quân trấn thủ' : o.names ? o.names.name(fid) : fid);
+      const glyphOf = (fid, pub) => (pub && pub.glyph === '' && fid !== 'neutral' ? '軍' : (o.glyphs && o.glyphs[fid]) || '守');
+      const sideOf = (fid, troops, pub) => ({ fid, color: colors[fid] || 0x8a7a55, name: nameOf(fid, pub), glyph: glyphOf(fid, pub), troops });
       const side = BC.sideOf(world, def, info.from, to);
-      const commit = info.commit || null;
+      const commit = info.commit || null, B = BC.armies(info.battle), P = info.sides || {};
       const desc = {
-        attacker: sideOf(aFid, BC.troopsOf(world, def, aFid, commit, true)),
-        defender: sideOf(dFid, BC.troopsOf(world, def, dFid, commit ? commit * 0.45 : null, false)),
+        attacker: sideOf(aFid, B ? B.A : BC.troopsOf(world, def, aFid, commit, true), P.A),
+        defender: sideOf(dFid, B ? B.D : BC.troopsOf(world, def, dFid, commit ? commit * 0.45 : null, false), P.D),
         city: def, season: 'autumn', hour: 17.5, mode: 'assault', result: info.win ? 'win' : 'loss', side,
       };
       const L = Battle.land(def, side, N);

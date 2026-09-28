@@ -89,6 +89,17 @@ Chi tiết tỉnh, cửa nhìn sự kiện, khách, minh ước: `GAMEPLAY-CONTR
 `Engine.ownersSnapshot(game)` chụp chủ châu trước resolve.
 Không copy `ev.text`. Spectator vẫn dùng `result.events`.
 
+## Trận (BattleDescriptor trong TurnObservation)
+
+`visibleEvents[]` của bên đánh và bên thủ mang `battle` (bản của người nhìn, từ `RuntimeEvent.battle`, `runtime-event.md`):
+
+- Phe mình: đúng số (`men`, `units`, tổn thất), `approx: false`, có `gen`.
+- Phe kia (đã giáp trận, tức là "gần"): `men`, `units`, tổn thất lệch tối đa **±20 %**, làm tròn trăm (binh chủng có mặt ít nhất 100), `approx: true`. `gen: null`: id tướng của đế khách lộ danh tính.
+- Hệ số lệch cố định theo (người nhìn, lượt, nơi, phe): xem lại không ra số khác, không đoán được bằng cách xem nhiều lần. Không rút số ngẫu nhiên, không đổi `game`.
+- Bên thủ không biết bên đánh đến từ đâu (không `from`), như v1.
+- Phe thứ ba ở xa: không thấy trận (như v1); chỉ tin đổi chủ.
+- Chưa có: phe thứ ba gần thấy trận ±20 %; đạo quân trên bản đồ theo luật "gần ±20 %, xa chỉ cờ và loại quân, dò thám mới ra số đúng" (DECISION v2) khi engine có đạo quân (freeze v2). Hàm làm mờ dùng lại được cho khi đó.
+
 ## API
 
 `Engine.projectPerception(g, fid)`

@@ -653,6 +653,55 @@ function defenderOfEvent(ev) {
   return ev.defenderFid || ev.defender || null;
 }
 
+// The battle as a party to it sees it (docs/product/perception.md, "Trận"): its own side exact; the other side's men,
+// arms and losses off by up to ±20 %, to the hundred. One factor per (observer, turn, site, side), so looking again
+// never re-rolls it. The other side's general is left out (a guest emperor's id would give him away) and the defender
+// never learns where the attack came from. Pure: no random draw, the game is not touched.
+const BLUR = 0.2;
+function hash01(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0) / 4294967296;
+}
+const toHundred = (x) => Math.round(x / 100) * 100;
+function blurFactor(observer, b, fid) {
+  return 1 - BLUR + 2 * BLUR * hash01([observer, b.turn, b.site, fid].join('|'));
+}
+function observeBattleDescriptor(observer, b) {
+  if (!b || !b.attacker || !b.defender) return null;
+  const side = (x, f) => {
+    if (x.fid === observer) return { fid: x.fid, gen: x.gen || null, men: x.men, units: { ...x.units }, approx: false };
+    const units = {};
+    for (const k of Object.keys(x.units || {})) units[k] = x.units[k] ? Math.max(100, toHundred(x.units[k] * f)) : 0;
+    return { fid: x.fid, gen: null, men: Object.values(units).reduce((a, n) => a + n, 0), units, approx: true };
+  };
+  const fA = b.attacker.fid === observer ? 1 : blurFactor(observer, b, b.attacker.fid);
+  const fD = b.defender.fid === observer ? 1 : blurFactor(observer, b, b.defender.fid);
+  const loss = (n, f, own) => (own ? n : toHundred(n * f));
+  const out = {
+    v: b.v,
+    turn: b.turn,
+    site: b.site,
+    terrain: b.terrain,
+    river: b.river,
+    siege: b.siege,
+    walls: b.walls,
+    attacker: side(b.attacker, fA),
+    defender: { ...side(b.defender, fD), holding: b.defender.holding },
+    result: {
+      win: b.result.win,
+      routed: b.result.routed,
+      turns: b.result.turns,
+      losses: { A: loss(b.result.losses.A, fA, b.attacker.fid === observer), D: loss(b.result.losses.D, fD, b.defender.fid === observer) },
+    },
+  };
+  if (b.attacker.fid === observer && b.from) out.from = b.from;
+  return out;
+}
+
 function observeBattle(g, observer, ev, rules) {
   const defender = defenderOfEvent(ev);
   const attacker = ev.fid;
@@ -678,6 +727,7 @@ function observeBattle(g, observer, ev, rules) {
     else {
       visible.outcome = ev.win ? 'win' : 'loss';
       if (ev.attLoss != null) visible.ownLoss = ev.attLoss;
+      if (ev.battle) visible.battle = observeBattleDescriptor(observer, ev.battle);
     }
     return { visible };
   }
@@ -697,6 +747,7 @@ function observeBattle(g, observer, ev, rules) {
     else {
       visible.outcome = ev.win ? 'loss' : 'win';
       if (ev.defLoss != null) visible.ownLoss = ev.defLoss;
+      if (ev.battle) visible.battle = observeBattleDescriptor(observer, ev.battle);
     }
     return { visible };
   }

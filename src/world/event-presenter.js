@@ -138,8 +138,11 @@
       card(pl, tMarch, tBack, { type: 'label', text: (provName[ev.to] || {}).city, at: seatTo });
       pl.meta = { path, from: ev.from, to: ev.to, arrive: tArrive, result: tResult, back: tBack, marchEnd: p1 };
       // the battle cut (decisions/0004): from the arrival at the walls to the result, the siege at 1 unit = 1 m instead of
-      // the map; who fights and who wins come from the event (or the safe item's actors), never from the scene
-      pl.cut = { t0: tBattle, t1: tBack, info: { from: ev.from, to: ev.to, fid: ev.fid || (attacker && attacker.fid) || null, defenderFid: ev.defenderFid || (defender && defender.fid) || 'neutral', win, commit: ev.commit || null } };
+      // the map; who fights and who wins come from the event (or the safe item's actors), never from the scene. The armies
+      // come from its battle (attack v2); a safe item names the sides by the labels on its cards, and a glyph '' hides one
+      const pub = (a) => (a ? { name: a.name || '', glyph: a.glyph } : null);
+      pl.cut = { t0: tBattle, t1: tBack, info: { from: ev.from, to: ev.to, fid: ev.fid || (attacker && attacker.fid) || null, defenderFid: ev.defenderFid || (defender && defender.fid) || 'neutral', win, commit: ev.commit || null,
+        battle: ev.battle || null, sides: ev.safe ? { A: pub(attacker), D: pub(defender) } : null } };
       return pl;
     };
 

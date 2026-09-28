@@ -344,6 +344,29 @@ test('13–14. hidden true names, enemy troops and enemy losses never reach play
   assert.ok(rawNames > 0 && rawNumbers > 0, 'the raw events did carry names and numbers (the test is not vacuous)');
 });
 
+test('attack items carry the battle as the player saw it: own side exact, the other side approximate and unnamed', () => {
+  let seen = 0;
+  for (const [i, fid] of EMPERORS.entries()) {
+    const ctrl = make(700 + i);
+    ctrl.start(fid);
+    for (let k = 0; k < 12 && !ctrl.status().over; k++) {
+      const e = play(ctrl, k);
+      for (const it of e.presentation.items.filter((x) => x.kind === 'attack' && x.battle)) {
+        const v = e.visibleEvents.find((x) => x.kind === 'attack' && x.role === it.role && x.to === it.to);
+        assert.deepEqual(it.battle, v.battle, 'the item carries the observation, not the event');
+        const own = it.role === 'attacker' ? it.battle.attacker : it.battle.defender, other = it.role === 'attacker' ? it.battle.defender : it.battle.attacker;
+        assert.equal(own.fid, fid);
+        assert.equal(own.approx, false);
+        assert.equal(other.approx, true);
+        assert.equal(other.gen, null);
+        if (it.role === 'defender') assert.equal(it.battle.from, undefined);
+        seen++;
+      }
+    }
+  }
+  assert.ok(seen > 0, 'some attack involved the player');
+});
+
 test('15. a distant battle the player did not observe creates no playable item', () => {
   const ctrl = make(45);
   ctrl.start('liu_che');

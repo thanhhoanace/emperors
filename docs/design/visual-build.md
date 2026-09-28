@@ -100,7 +100,7 @@ Ngày 28/9 góc kết quả Trường An còn 3,56 / 2,36 triệu (cao / vừa) 
 ## Nợ còn lại
 
 - Dựng trận còn chặn luồng chính 1–7 giây (thẻ "Đang dựng trận…"; Giang Lăng chậm nhất vì sông và tường dài): phải dựng dần theo khung (dat.city: ≤ 5 ms mỗi khung) hoặc dựng trong lúc quân hành quân.
-- Chia quân bộ / kỵ / thủy trong cắt cảnh là đoán theo đặc tính phe và sông (`BattleCut.troopsOf`), chờ bộ mô tả trận của engine (ASSIGN.md mục 1).
+- Cắt cảnh lấy quân bộ / cung / kỵ / thủy từ `battle` của sự kiện (attack v2, ASSIGN mục 1); ở chế độ chơi là bản đã làm mờ của người chơi, cờ và nhãn theo publicLabel (đế khách không lộ chữ trên cờ). Cảnh chưa dùng `walls`, `turns`: tường vẫn theo `cities.json`, trận diễn một nhịp.
 - `season`, `hour`, `deps.sun` của `Battle.siege` chưa dùng; doanh trại luôn quay bắc; ngoài tường (Linh Đài…) chưa dựng.
 - Vân bump trên vách đá nhấp nháy khối 2×2 ở GPU giả lập (kế thừa bản mẫu); mức thấp đã tắt bump đá.
 - Cảnh dựng bằng `nature.js` + `battle.js` + `crowd.js` tải thêm ~260 KB script (chưa nén) ở `game.html`; chưa tải lười.

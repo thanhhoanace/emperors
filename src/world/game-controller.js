@@ -100,12 +100,12 @@
       const it = { safe: true, kind: v.kind, role: v.role, title: TITLE[v.titleKey] || 'Tin', text: visibleText(v), tone: tone(v), fid: v.actorId || null, kicker: v.actorLabel || 'Thiên hạ', mine, hostile, shot: null };
       const actor = (id, label, role) => ({ id: 'actor:' + role, name: label || 'Trung lập', fid: id || null, role, faction: '', glyph: id === look.player ? undefined : '' });
       if (v.kind === 'attack' && v.role === 'attacker') {
-        Object.assign(it, { from: v.from || null, to: v.to, win: v.outcome === 'win', badge: { win: v.outcome === 'win', text: v.outcome === 'win' ? 'Thắng' : 'Bại' },
+        Object.assign(it, { from: v.from || null, to: v.to, win: v.outcome === 'win', battle: v.battle || null, badge: { win: v.outcome === 'win', text: v.outcome === 'win' ? 'Thắng' : 'Bại' },
           actors: [actor(v.actorId, v.actorLabel, 'Bên đánh'), actor(v.otherId, v.otherLabel, 'Bên thủ')], other: v.otherId || null });
         it.shot = v.from && v.to ? 'march' : 'focus'; it.prov = v.to; it.view = 'city';
       } else if (v.kind === 'attack' && v.role === 'defender') {
         // no origin on purpose: the shot looks at the player's own city, never at where the enemy came from
-        Object.assign(it, { to: v.to, prov: v.to, view: 'city', shot: 'focus', dust: true, badge: { win: v.outcome === 'win', text: v.outcome === 'win' ? 'Giữ vững' : 'Thất thủ' },
+        Object.assign(it, { to: v.to, prov: v.to, view: 'city', shot: 'focus', dust: true, battle: v.battle || null, badge: { win: v.outcome === 'win', text: v.outcome === 'win' ? 'Giữ vững' : 'Thất thủ' },
           actors: [actor(v.actorId, v.actorLabel, 'Bên đánh'), actor(v.otherId, v.otherLabel, 'Bên thủ')] });
       } else {
         const prov = v.prov || v.to || (mine && (v.kind === 'internal' || v.kind === 'fortify') ? look.seat : null);
