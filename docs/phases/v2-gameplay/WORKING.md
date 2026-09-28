@@ -1,7 +1,7 @@
 # V2 Gameplay — Working state
 
 > Cập nhật: 2026-09-28 · lượt COMPACT bởi Claude theo yêu cầu chủ dự án (lệch luật 4 trong `AGENTS.md`: Claude vừa research vừa synthesis; ghi lại để lần sau xoay tool) · nguồn: `_research/claude.md` (mục A–I), `_research/chatgpt.md` (mục 1–10), `_research/grok.md` (mục 1–6), spike `spike/`.
-> Bước hiện tại: DECIDE. Đã dùng 2/2 vòng research. Chưa có `DECISION.md`.
+> Bước hiện tại: FREEZE chờ spike 2. Đã dùng 2/2 vòng research. `DECISION.md` chốt 28/9 (ván ngắn, quẹt thẻ có / không, scale từ thành lên châu, số thay chữ); phần chưa chốt ghi trong đó.
 
 ## Problem
 
@@ -66,4 +66,6 @@ Ván tranh bá ngắn "có răng" là lời hứa chính của v2: một ván l�
 
 ## Next research
 
-Không. Đã dùng 2/2 vòng. Tiếp theo: chủ dự án trả lời 8 câu trên → `DECISION.md` → luật chép vào `GAMEPLAY-FREEZE.md` v2 → chơi thử theo quy mô đã chọn → BUILD.
+Không. Đã dùng 2/2 vòng. `DECISION.md` đã có. Tiếp theo: Claude làm spike 2 (trang HTML trong repo: quẹt thẻ có / không trên bản đồ, mở ván từ thành trong một châu, số thay chữ) → chủ dự án chơi, ghi kết quả vào mục Spike ở đây → Grok viết `GAMEPLAY-FREEZE.md` v2 từ DECISION + spike 2 → BUILD.
+
+Phản hồi spike 1 (chủ dự án, 28/9): không bấm được trên canvas; nhiều nút, nhiều lựa chọn, sai tinh thần ngã rẽ 1. Spike 1 vì vậy bị bỏ về hình thức; nguyên tắc đồn trú theo châu giữ.

@@ -6,8 +6,8 @@
 
 ## Đang chờ
 
-- **Phase `v2-gameplay`** (`docs/phases/v2-gameplay/WORKING.md`): đang ở bước CHALLENGE. Đã có research của [Claude](phases/v2-gameplay/_research/claude.md), [Grok](phases/v2-gameplay/_research/grok.md) và [ChatGPT](phases/v2-gameplay/_research/chatgpt.md) (ChatGPT đưa vào 28/9, nguyên văn kèm ngày và câu hỏi). Spike ván ngắn đã có trên canvas (https://claude.ai/artifact/974asePfQJjxNqUYSZ5r2y). Còn (1) chủ dự án chơi 2 ván và ghi phản hồi theo ghi chú trên canvas; (2) một lượt synthesis bởi tool khác Claude gộp ba research + spike vào `WORKING.md`; (3) chủ dự án chọn ngã rẽ rồi mới có `DECISION.md`. Không code luật mới trước `DECISION.md`.
-- **Grok:** việc nhỏ làm được ngay không chờ phase: chặn 1–3 dưới, `governors` đổi theo chủ châu.
+- **Phase `v2-gameplay`:** `docs/phases/v2-gameplay/DECISION.md` chốt 28/9: v2 là ván tranh bá ngắn vào là chơi, nét riêng là quẹt thẻ có / không, mở ván từ thành trong một châu rồi scale lên 20 châu, số thay chữ, không khoá số lượt, thước đo là ngưỡng hành vi. **Tiếp:** Claude làm spike 2 (trang HTML trong repo, quẹt được trên điện thoại) → chủ dự án chơi → Grok viết `GAMEPLAY-FREEZE.md` v2 từ DECISION + spike 2 → code. Phần chưa chốt (việc trong châu, liên minh, vùng rìa, cách scale) ghi ở DECISION mục Preserve / Defer; không tự quyết trong lúc code.
+- **Grok:** chờ spike 2 rồi viết freeze v2. Việc nhỏ làm được ngay: chặn 1–3 dưới, `governors` đổi theo chủ châu.
 - LLM adapter remap id: sau khi luật v2 ổn.
 
 ## Vòng 9 (Claude, 27–28/9)
