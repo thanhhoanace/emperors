@@ -1,7 +1,7 @@
 # V2 Gameplay — Working state
 
-> Cập nhật: 2026-09-28 · lượt COMPACT bởi Claude theo yêu cầu chủ dự án (lệch luật 4 trong `AGENTS.md`: Claude vừa research vừa synthesis; ghi lại để lần sau xoay tool) · nguồn: `_research/claude.md` (mục A–I), `_research/chatgpt.md` (mục 1–10), `_research/grok.md` (mục 1–6), spike `spike/`.
-> Bước hiện tại: FREEZE chờ spike 2. Đã dùng 2/2 vòng research. `DECISION.md` chốt 28/9 (ván ngắn, quẹt thẻ có / không, scale từ thành lên châu, số thay chữ); phần chưa chốt ghi trong đó.
+> Cập nhật: 2026-09-28 · lượt COMPACT bởi Claude theo yêu cầu chủ dự án (lệch luật 4 trong `AGENTS.md`: Claude vừa research vừa synthesis; ghi lại để lần sau xoay tool) · nguồn: `_research/claude.md` (mục A–I), `_research/chatgpt.md` (mục 1–10), `_research/grok.md` (mục 1–6), spike 1 `spike/`, spike 2 `spike2/`.
+> Bước hiện tại: FREEZE chờ chủ dự án chơi spike 2 (đã lên canvas 28/9). Đã dùng 2/2 vòng research. `DECISION.md` chốt 28/9 (ván ngắn, quẹt thẻ có / không, scale từ thành lên châu, số thay chữ); phần chưa chốt ghi trong đó.
 
 ## Problem
 
@@ -35,9 +35,19 @@ Nguyên ý, chưa phải luật. Interview 27/9 (`claude.md` B.9) được nêu 
 
 **Cơ chế tham khảo** (`claude.md` F–I): giữ đất bằng đồn trú cục bộ và vây nhiều lượt; lật lại bằng lưu vong, chư hầu, giải phóng; tin thời Hán tới trong một mùa, thứ nên trễ là *chi tiết đáng tin*; liên minh = phòng thủ chung tự động không dây chuyền + cùng đánh có hạn.
 
-## Spike (28/9)
+## Spike 1 (28/9, lệnh + việc)
 
-Canvas: https://claude.ai/artifact/974asePfQJjxNqUYSZ5r2y · luật thử và đo: `spike/rules.js`, `spike/sim.js`. Hình dạng: 32 mùa; mỗi mùa 1 lệnh triều đình + 1 việc trong châu; quân đóng theo châu, trần theo bậc khai hoang; đế bắt đầu 4 nghìn quân; mỗi đế một tri thức tương lai; tướng có võ, đặc tính, lòng trung; ước lượng trận bằng chữ; minh phòng thủ góp 30 % quân kề; tin đồn trễ một mùa; thủ phủ bảo hộ 8 mùa; lưu vong 3 mùa. Máy chơi 300 ván mỗi đế: Tần thắng 30–34 %, Lý 18–19 % (chết 15–18 %), Chu 0 % (chết 12 %), Hán Vũ 6–8 %; 0,55–0,92 châu đổi chủ mỗi mùa (v1: 1,6–2,0). Chưa có cảm giác người: chủ dự án chưa chơi.
+Canvas: https://claude.ai/artifact/974asePfQJjxNqUYSZ5r2y · luật thử và đo: `spike/rules.js`, `spike/sim.js`. Hình dạng: 32 mùa; mỗi mùa 1 lệnh triều đình + 1 việc trong châu; quân đóng theo châu, trần theo bậc khai hoang; đế bắt đầu 4 nghìn quân; mỗi đế một tri thức tương lai; tướng có võ, đặc tính, lòng trung; ước lượng trận bằng chữ; minh phòng thủ góp 30 % quân kề; tin đồn trễ một mùa; thủ phủ bảo hộ 8 mùa; lưu vong 3 mùa. Máy chơi 300 ván mỗi đế: Tần thắng 30–34 %, Lý 18–19 % (chết 15–18 %), Chu 0 % (chết 12 %), Hán Vũ 6–8 %; 0,55–0,92 châu đổi chủ mỗi mùa (v1: 1,6–2,0). Chủ dự án chơi: không bấm được trên canvas, nhiều nút, sai tinh thần ngã rẽ 1 (xem cuối file).
+
+## Spike 2 (28/9, quẹt thẻ)
+
+Canvas Design: https://claude.ai/artifact/KV5Zuif1rgcZAdnZ31hU7m. Chủ dự án yêu cầu làm trên canvas Design ("tạo demo bằng /design") thay cho trang HTML ghi ở DECISION mục 8; bấm Play ở góc artboard rồi mới quẹt. Nguồn duy nhất: `spike2/Main.dc.html` (artboard, luật nằm trong script của nó); đo: `node docs/phases/v2-gameplay/spike2/sim.js 60`.
+
+Hình dạng: màn điện thoại 390×844. Mỗi mùa 2–3 thẻ có / không (quẹt hoặc hai nút), thẻ kết quả sau mỗi trận, thẻ tin tức cuối mùa. Thẻ sinh từ bàn cờ, ba khe: *thời cơ* (đánh hoặc chiêu hàng nơi dễ nhất, hợp binh mọi nơi kề, % thắng tính trước, phép tính in trên thẻ), *giữ nhà* (điều quân, đắp lũy, mộ binh, thuế, khai hoang), *người* (hiền tài, tù binh hàng hay chết, ly gián tướng lòng trung thấp, xin kết minh, dò thám, tri thức của đế). Bản đồ khoanh nơi thẻ nói tới. Chương 1: 5 thành trong châu nhà (hào tộc, Khương hoặc Hồ, đồn Tào); đủ 5 thành hoặc hết mùa 9 thì ra 20 châu, mang quân theo. Chương 2: xưng bá khi nắm 6 châu; thua khi một nhà nắm 11 châu hoặc mất hết đất lần hai (lưu vong một lần, 3 mùa). Không khoá số mùa; AI càng về sau càng dám đánh. Tin: kề đất ta hoặc đồng minh thì ước ±20 %, xa thì "?", dò thám cho số đúng 3 mùa.
+
+Máy chơi 60 ván mỗi đế (cẩn thận / gật hết / nửa ngẫu nhiên): thắng Tần 72 / 80 / 30 %, Đường 22 / 30 / 20 %, Minh 32 / 8 / 2 %, Hán Vũ 45 / 55 / 35 %. Ván 28–52 mùa, trung bình 98–209 lần chạm (p90 tới 570 ở Đường); ra 20 châu ở mùa 7–10 với 3,1–4,8 / 5 thành. Cân bằng đế còn lệch (Tần dễ; Đường, Minh khó; Minh bị kẹp giữa Tào và Ngô nên lưu vong nhiều).
+
+Máy cho thấy (chưa phải cảm giác người): chương 2 cần đồng hồ thua và AI leo thang, thiếu một trong hai là ván bế tắc không hết; Hán Vũ chỉ giáp Tần nên đường ra là tri thức tơ lụa (kỵ binh vượt trần nuôi). Chờ chủ dự án chơi: giây tới thẻ đầu, phút một ván, có kể lại được một lựa chọn, có muốn ván nữa và đổi đế (ghi chú trên canvas).
 
 ## Contradictions
 
@@ -66,6 +76,6 @@ Ván tranh bá ngắn "có răng" là lời hứa chính của v2: một ván l�
 
 ## Next research
 
-Không. Đã dùng 2/2 vòng. `DECISION.md` đã có. Tiếp theo: Claude làm spike 2 (trang HTML trong repo: quẹt thẻ có / không trên bản đồ, mở ván từ thành trong một châu, số thay chữ) → chủ dự án chơi, ghi kết quả vào mục Spike ở đây → Grok viết `GAMEPLAY-FREEZE.md` v2 từ DECISION + spike 2 → BUILD.
+Không. Đã dùng 2/2 vòng. `DECISION.md` đã có; spike 2 đã lên canvas. Tiếp theo: chủ dự án chơi spike 2, ghi kết quả vào mục Spike 2 ở đây → Grok viết `GAMEPLAY-FREEZE.md` v2 từ DECISION + spike 2 → BUILD.
 
 Phản hồi spike 1 (chủ dự án, 28/9): không bấm được trên canvas; nhiều nút, nhiều lựa chọn, sai tinh thần ngã rẽ 1. Spike 1 vì vậy bị bỏ về hình thức; nguyên tắc đồn trú theo châu giữ.

@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Ván ngắn quẹt thẻ</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Noto+Serif:wght@600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#e9dfc6;font-family:"Be Vietnam Pro",system-ui,sans-serif;color:#2b2419}
+a{color:#9e2a1e}a:hover{color:#7d2016}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #e9dfc6; font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: #2b2419">
+
+<sc-if value="{{isStart}}" hint-placeholder-val="{{true}}">
+<div style="position: absolute; left: 0; top: 0; width: 390px; height: 844px; box-sizing: border-box; padding: 30px 20px 20px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #6b5f4b">Tam Quốc Loạn Nhập · spike 2</div>
+<h1 style="margin: 0; font-family: 'Noto Serif', Georgia, serif; font-size: 27px; line-height: 1.2; color: #1f1a12">Thu 219. Chọn một hoàng đế xuyên không.</h1>
+<p style="margin: 0; font-size: 14px; line-height: 1.5; color: #3d352a">Chiếm năm thành trong châu nhà, rồi ra 20 châu. Nắm 6 châu là xưng bá. Quẹt phải là Có, quẹt trái là Không, hoặc bấm nút.</p>
+</div>
+<sc-for list="{{emps}}" as="e" hint-placeholder-count="4">
+<button type="button" onClick="{{e.pick}}" style="display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 13px 16px; background: #fbf7ec; border: 1px solid #b8a67c; border-radius: 12px; cursor: pointer; color: #2b2419">
+<span style="display: flex; align-items: center; gap: 9px"><span style="width: 14px; height: 14px; border-radius: 50%; background: {{e.color}}; flex: none"></span><span style="font-family: 'Noto Serif', Georgia, serif; font-size: 19px; font-weight: 700; color: #1f1a12">{{e.name}}</span></span>
+<span style="font-size: 13px; line-height: 1.4; color: #3d352a">{{e.home}}</span>
+<span style="font-size: 13px; line-height: 1.4; color: #3d352a">{{e.know}}</span>
+<span style="font-size: 12px; color: #5f5443">{{e.rate}}</span>
+</button>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{isPlay}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 0; top: 0; width: 390px; height: 844px; display: flex; flex-direction: column">
+
+<div style="height: 52px; box-sizing: border-box; padding: 10px 16px 0; display: flex; justify-content: space-between; align-items: flex-end; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 1px; min-width: 0">
+<div style="font-size: 11.5px; color: #5f5443; white-space: nowrap">{{chapterLine}}</div>
+<div style="display: flex; align-items: center; gap: 7px"><span style="width: 11px; height: 11px; border-radius: 50%; background: {{empColor}}; flex: none"></span><span style="font-family: 'Noto Serif', Georgia, serif; font-size: 18px; font-weight: 700; color: #1f1a12; white-space: nowrap">{{empName}}</span></div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 1px; align-items: flex-end">
+<div style="font-size: 11.5px; color: #5f5443; white-space: nowrap">{{calText}}</div>
+<div style="font-size: 16px; font-weight: 700; color: #1f1a12; white-space: nowrap">{{countText}}</div>
+</div>
+</div>
+
+<div style="margin: 8px 12px 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+<sc-for list="{{stats}}" as="s" hint-placeholder-count="4">
+<div style="background: #fbf7ec; border: 1px solid #d6c9aa; border-radius: 8px; padding: 4px 8px; display: flex; flex-direction: column">
+<span style="font-size: 11px; color: #5f5443">{{s.label}}</span>
+<span style="font-size: 16px; font-weight: 700; color: {{s.color}}; font-variant-numeric: tabular-nums; white-space: nowrap">{{s.value}}</span>
+</div>
+</sc-for>
+</div>
+
+<div style="position: relative; margin: 8px 12px 0; height: 262px; flex: none; background: #f3ebd7; border: 1px solid #d6c9aa; border-radius: 12px; overflow: hidden">
+<sc-for list="{{edges}}" as="e" hint-placeholder-count="30">
+<div style="position: absolute; left: {{e.x}}px; top: {{e.y}}px; width: {{e.w}}px; height: 0; border-top: {{e.bw}}px solid #bfae84; transform-origin: 0 0; transform: rotate({{e.a}}deg)"></div>
+</sc-for>
+<sc-for list="{{nodes}}" as="n" hint-placeholder-count="20">
+<div style="position: absolute; left: {{n.l}}px; top: {{n.t}}px; width: {{n.size}}px; height: {{n.size}}px; box-sizing: border-box; border-radius: 50%; background: {{n.bg}}; border: {{n.border}}; box-shadow: {{n.ring}}; display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: {{n.numSize}}px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap">{{n.num}}</div>
+<div style="position: absolute; left: {{n.ll}}px; top: {{n.lt}}px; width: {{n.lw}}px; text-align: center; font-size: {{n.labelSize}}px; line-height: 1.15; font-weight: 600; color: #2b2419; pointer-events: none">{{n.label}}<div style="font-weight: 400; color: #5f5443">{{n.sub}}</div></div>
+</sc-for>
+</div>
+
+<div style="margin: 6px 12px 0; display: flex; flex-wrap: wrap; gap: 3px 10px; align-items: center; min-height: 17px">
+<sc-for list="{{facs}}" as="f" hint-placeholder-count="6">
+<span style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: #2b2419; white-space: nowrap"><span style="width: 10px; height: 10px; border-radius: 50%; background: {{f.color}}"></span>{{f.name}} {{f.n}}</span>
+</sc-for>
+</div>
+<div style="margin: 3px 12px 0; font-size: 11.5px; line-height: 1.3; color: #3d352a; min-height: 30px">{{clock}}<sc-if value="{{hasExile}}" hint-placeholder-val="{{false}}"><span style="color: #b0301f; font-weight: 600"> {{exileText}}</span></sc-if></div>
+
+<div style="position: relative; flex-grow: 1; margin: 4px 20px 0">
+<div style="display: flex; gap: 5px; justify-content: center; height: 8px">
+<sc-for list="{{dots}}" as="d" hint-placeholder-count="4"><span style="width: 6px; height: 6px; border-radius: 50%; background: {{d.bg}}"></span></sc-for>
+</div>
+<sc-if value="{{hasNext}}" hint-placeholder-val="{{true}}">
+<div style="position: absolute; left: 12px; right: 12px; top: 24px; height: 296px; box-sizing: border-box; padding: 12px 16px; background: #efe5cc; border: 1px solid #cdbd95; border-radius: 18px; font-size: 12px; font-weight: 600; color: #6b5f4b; text-transform: uppercase; letter-spacing: .05em">{{nextWho}}</div>
+</sc-if>
+<div onPointerDown="{{down}}" onPointerMove="{{move}}" onPointerUp="{{up}}" onPointerCancel="{{up}}" style="position: absolute; left: 0; right: 0; top: 14px; height: 300px; box-sizing: border-box; padding: 16px 18px 14px; background: #fbf7ec; border: 1px solid #b8a67c; border-radius: 18px; box-shadow: 0 8px 22px rgba(60, 45, 20, .2); touch-action: none; user-select: none; cursor: grab; display: flex; flex-direction: column; gap: 8px; overflow: hidden; {{cardStyle}}">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 22px">
+<span style="font-size: 12px; font-weight: 700; color: {{cTone}}; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{cWho}}</span>
+<sc-if value="{{hasP}}" hint-placeholder-val="{{false}}"><span style="flex: none; font-size: 13px; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: #1f1a12; color: #fbf7ec; font-variant-numeric: tabular-nums">{{pText}}</span></sc-if>
+</div>
+<div style="font-family: 'Noto Serif', Georgia, serif; font-size: 21px; font-weight: 700; line-height: 1.22; color: #1f1a12">{{cTitle}}</div>
+<sc-if value="{{hasText}}" hint-placeholder-val="{{true}}"><div style="font-size: 14.5px; line-height: 1.45; color: #2b2419">{{cText}}</div></sc-if>
+<sc-if value="{{hasMath}}" hint-placeholder-val="{{false}}"><div style="font-size: 12.5px; line-height: 1.4; color: #3d352a; background: #efe6cf; border-radius: 8px; padding: 6px 9px; font-variant-numeric: tabular-nums">{{cMath}}</div></sc-if>
+<sc-if value="{{hasLines}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 3px">
+<sc-for list="{{lines}}" as="l" hint-placeholder-count="3"><div style="font-size: 13px; line-height: 1.35; color: {{l.color}}; font-weight: {{l.weight}}">{{l.t}}</div></sc-for>
+</div>
+</sc-if>
+<div style="margin-top: auto; display: flex; justify-content: space-between; gap: 12px; padding-top: 8px; border-top: 1px solid #e4d8bb">
+<sc-if value="{{cDouble}}" hint-placeholder-val="{{true}}">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 12.5px; font-weight: 700; color: #8a2a1e">← {{cNoLabel}}</span><span style="font-size: 12px; line-height: 1.3; color: #3d352a">{{cNoFx}}</span></div>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; text-align: right"><span style="font-size: 12.5px; font-weight: 700; color: #2f6b3a">{{cYesLabel}} →</span><span style="font-size: 12px; line-height: 1.3; color: #3d352a">{{cYesFx}}</span></div>
+</sc-if>
+<sc-if value="{{cSingle}}" hint-placeholder-val="{{false}}"><div style="flex: 1; text-align: center; font-size: 12px; color: #5f5443">Quẹt bên nào cũng được</div></sc-if>
+</div>
+<div style="position: absolute; top: 44px; left: 14px; padding: 3px 10px; border: 3px solid #2f6b3a; border-radius: 8px; background: #fbf7ec; color: #2f6b3a; font-size: 20px; font-weight: 800; text-transform: uppercase; transform: rotate(-12deg); opacity: {{yesOp}}; pointer-events: none">{{cYesLabel}}</div>
+<div style="position: absolute; top: 44px; right: 14px; padding: 3px 10px; border: 3px solid #b0301f; border-radius: 8px; background: #fbf7ec; color: #b0301f; font-size: 20px; font-weight: 800; text-transform: uppercase; transform: rotate(12deg); opacity: {{noOp}}; pointer-events: none">{{cNoLabel}}</div>
+</div>
+</div>
+
+<div style="display: flex; gap: 10px; padding: 10px 20px 18px">
+<sc-if value="{{cDouble}}" hint-placeholder-val="{{true}}">
+<button type="button" onClick="{{no}}" style="flex: 1; height: 52px; border-radius: 14px; border: 1.5px solid #8a2a1e; background: #fbf7ec; color: #8a2a1e; font-size: 16px; font-weight: 700; cursor: pointer">← {{cNoLabel}}</button>
+<button type="button" onClick="{{yes}}" style="flex: 1; height: 52px; border-radius: 14px; border: 1.5px solid #2f6b3a; background: #2f6b3a; color: #fbf7ec; font-size: 16px; font-weight: 700; cursor: pointer">{{cYesLabel}} →</button>
+</sc-if>
+<sc-if value="{{cSingle}}" hint-placeholder-val="{{false}}">
+<button type="button" onClick="{{yes}}" style="flex: 1; height: 52px; border-radius: 14px; border: 1.5px solid #1f1a12; background: #1f1a12; color: #fbf7ec; font-size: 16px; font-weight: 700; cursor: pointer">{{cYesLabel}} →</button>
+</sc-if>
+</div>
+
+</div>
+</sc-if>
+
+<sc-if value="{{isOver}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 0; top: 0; width: 390px; height: 844px; box-sizing: border-box; padding: 30px 20px 20px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #5f5443"><span style="width: 11px; height: 11px; border-radius: 50%; background: {{empColor}}"></span>{{empName}} · {{seedText}}</div>
+<h1 style="margin: 0; font-family: 'Noto Serif', Georgia, serif; font-size: 34px; line-height: 1.15; color: {{overColor}}">{{overTitle}}</h1>
+<div style="font-size: 15px; line-height: 1.45; color: #1f1a12">{{overWhy}}</div>
+<div style="font-size: 13px; color: #3d352a; font-variant-numeric: tabular-nums">{{overStats}}</div>
+<div style="margin-top: 6px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #5f5443">Biên niên</div>
+<div style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; background: #fbf7ec; border: 1px solid #d6c9aa; border-radius: 12px; padding: 12px 14px">
+<sc-for list="{{chronicle}}" as="c" hint-placeholder-count="8"><div style="font-size: 13px; line-height: 1.4; color: #2b2419">{{c.t}}</div></sc-for>
+</div>
+<div style="display: flex; gap: 10px">
+<button type="button" onClick="{{change}}" style="flex: 1; height: 52px; border-radius: 14px; border: 1.5px solid #1f1a12; background: #fbf7ec; color: #1f1a12; font-size: 16px; font-weight: 700; cursor: pointer">Đổi đế</button>
+<button type="button" onClick="{{again}}" style="flex: 1; height: 52px; border-radius: 14px; border: 1.5px solid #1f1a12; background: #1f1a12; color: #fbf7ec; font-size: 16px; font-weight: 700; cursor: pointer">Chơi ván nữa</button>
+</div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+// Spike 2 (phase v2-gameplay): ván ngắn quẹt thẻ có / không.
+// Chương 1: năm thành trong châu nhà. Chương 2: 20 châu, xưng bá khi đủ 6 châu.
+// Luật thử để trả lời "có vui không"; không phải engine. AI đọc sự thật. Số, không chữ.
+var SW = (function () {
+  // ------------------------------------------------------------------ dữ liệu
+  var EMP = {
+    qin_shihuang: { name: 'Tần Thủy Hoàng', short: 'Tần', color: '#a8841a', prov: 'longxi', vo: 4, trait: null, know: 'Pháp gia', knowText: 'Mộ binh được nhiều hơn một nửa.' },
+    li_shimin: { name: 'Lý Thế Dân', short: 'Đường', color: '#2f63c9', prov: 'bing', vo: 5, trait: 'Kỵ đột', know: 'Trinh Quán', knowText: 'Hiền tài tìm tới nhiều hơn; tướng bị bắt gần như luôn quy hàng.' },
+    zhu_yuanzhang: { name: 'Chu Nguyên Chương', short: 'Minh', color: '#a8262d', prov: 'huai', vo: 4, trait: null, know: 'Quảng tích lương', knowText: 'Lương thu thêm một nửa; lũy đắp nhanh gấp đôi.' },
+    liu_che: { name: 'Hán Vũ Đế', short: 'Hán Vũ', color: '#6f43bf', prov: 'hexi', vo: 3, trait: null, know: 'Con đường tơ lụa', knowText: 'Đổi tơ lấy ngựa Tây Vực: thêm kỵ binh mà không mất dân.' },
+  };
+  // chương 1: năm thành (x, y trong khung 360×280), chủ ban đầu, quân, lũy, dân, người giữ
+  var HOMES = {
+    qin_shihuang: { title: 'Lũng Tây', towns: [
+      ['ky', 'Ký', 180, 150, 'me', 1500, 1, 4000, null],
+      ['thuong_khue', 'Thượng Khuê', 300, 95, 'local', 800, 1, 3500, 'Hào tộc Dương thị'],
+      ['tay', 'Tây huyện', 150, 245, 'raider', 700, 0, 2000, 'Khương Mê Đương'],
+      ['lam_thao', 'Lâm Thao', 55, 130, 'raider', 1000, 0, 2500, 'Khương Nga Hà'],
+      ['dich_dao', 'Địch Đạo', 110, 40, 'tao', 1600, 1, 3000, 'Du Sở, tướng Tào'],
+    ], nb: [['ky', 'thuong_khue'], ['ky', 'tay'], ['ky', 'lam_thao'], ['lam_thao', 'tay'], ['lam_thao', 'dich_dao'], ['thuong_khue', 'dich_dao']] },
+    li_shimin: { title: 'Tịnh châu', towns: [
+      ['tan_duong', 'Tấn Dương', 180, 150, 'me', 1500, 1, 4500, null],
+      ['du_thu', 'Du Thứ', 295, 180, 'local', 900, 0, 3500, 'Hào tộc Vương thị'],
+      ['ly_thach', 'Ly Thạch', 55, 170, 'raider', 1100, 0, 2000, 'Hung Nô Khứ Ti'],
+      ['am_quan', 'Âm Quán', 165, 40, 'raider', 1000, 1, 2000, 'Tiên Ti Kha Bỉ Năng'],
+      ['truong_tu', 'Trường Tử', 285, 255, 'tao', 1700, 1, 3500, 'Lương Tập, tướng Tào'],
+    ], nb: [['tan_duong', 'du_thu'], ['tan_duong', 'ly_thach'], ['tan_duong', 'am_quan'], ['du_thu', 'truong_tu'], ['ly_thach', 'am_quan'], ['tan_duong', 'truong_tu']] },
+    zhu_yuanzhang: { title: 'Hoài Nam', towns: [
+      ['chung_ly', 'Chung Ly', 185, 120, 'me', 1400, 1, 4000, null],
+      ['hu_di', 'Hu Dị', 305, 70, 'local', 800, 0, 3000, 'Hào tộc Trần thị'],
+      ['am_lang', 'Âm Lăng', 255, 215, 'local', 900, 1, 3500, 'Hào tộc Lưu thị'],
+      ['lich_duong', 'Lịch Dương', 115, 250, 'raider', 1000, 0, 2500, 'Sơn Việt Phí Sạn'],
+      ['tho_xuan', 'Thọ Xuân', 55, 105, 'tao', 1700, 1, 4000, 'Mãn Sủng, tướng Tào'],
+    ], nb: [['chung_ly', 'hu_di'], ['chung_ly', 'am_lang'], ['chung_ly', 'tho_xuan'], ['am_lang', 'lich_duong'], ['tho_xuan', 'lich_duong'], ['hu_di', 'am_lang']] },
+    liu_che: { title: 'Hà Tây', towns: [
+      ['co_tang', 'Cô Tang', 250, 185, 'me', 1500, 1, 3500, null],
+      ['truong_dich', 'Trương Dịch', 180, 120, 'local', 800, 0, 2500, 'Hào tộc Doãn thị'],
+      ['tuu_tuyen', 'Tửu Tuyền', 105, 75, 'raider', 900, 0, 2000, 'Khương Hoàng Hoa'],
+      ['don_hoang', 'Đôn Hoàng', 35, 35, 'local', 700, 1, 2500, 'Hào tộc Trương Cung'],
+      ['kim_thanh', 'Kim Thành', 320, 255, 'tao', 1600, 1, 3000, 'Tô Tắc, tướng Tào'],
+    ], nb: [['co_tang', 'truong_dich'], ['truong_dich', 'tuu_tuyen'], ['tuu_tuyen', 'don_hoang'], ['co_tang', 'kim_thanh'], ['truong_dich', 'kim_thanh']] },
+  };
+  var TALENTS = {
+    qin_shihuang: [['Khương Duy', 4, 'Kỵ đột'], ['Mã Đại', 3, null]],
+    li_shimin: [['Điền Dự', 4, 'Kỵ đột'], ['Khiên Chiêu', 3, 'Giữ thành'], ['Quách Hoài', 4, null]],
+    zhu_yuanzhang: [['Đặng Ngải', 4, 'Giữ thành'], ['Chu Hoàn', 3, null]],
+    liu_che: [['Diêm Hành', 3, null], ['Kỵ tướng Nguyệt Chi', 4, 'Kỵ đột']],
+  };
+  var PD = {"si_li":{"city":"Lạc Dương","nb":["ji","yu","jing","guan","bing"],"terrain":"plains","def":1.2,"fert":8,"pop":70},"guan":{"city":"Trường An","nb":["si_li","bing","longxi","han_zhong"],"terrain":"hills","def":1.25,"fert":6,"pop":55},"yu":{"city":"Hứa Xương","nb":["si_li","xu","yan","jing","yang","huai"],"terrain":"plains","def":1.05,"fert":9,"pop":100},"ji":{"city":"Nghiệp","nb":["si_li","qing","you","bing","yan"],"terrain":"plains","def":1.05,"fert":8,"pop":120},"qing":{"city":"Lâm Truy","nb":["ji","xu"],"terrain":"coast","def":1,"fert":7,"pop":90},"yan":{"city":"Xương Ấp","nb":["xu","yu","ji","huai"],"terrain":"plains","def":1,"fert":7,"pop":60},"xu":{"city":"Bành Thành","nb":["qing","yu","yan","huai"],"terrain":"plains","def":1.05,"fert":8,"pop":70},"jing":{"city":"Tương Dương","nb":["jing_nan","han_zhong","si_li","yu"],"terrain":"river","def":1.25,"fert":8,"pop":90},"jing_nan":{"city":"Giang Lăng","nb":["jing","yi","jiang","jiao","yang"],"terrain":"river","def":1.2,"fert":8,"pop":80},"yi":{"city":"Thành Đô","nb":["han_zhong","jing_nan","nanzhong"],"terrain":"mountains","def":1.45,"fert":9,"pop":80},"han_zhong":{"city":"Nam Trịnh","nb":["guan","yi","jing"],"terrain":"mountains","def":1.35,"fert":6,"pop":35},"yang":{"city":"Kiến Nghiệp","nb":["yu","jing_nan","jiang","jiao","huai"],"terrain":"river","def":1.25,"fert":8,"pop":90},"jiang":{"city":"Hạ Khẩu","nb":["jing_nan","yang"],"terrain":"river","def":1.2,"fert":6,"pop":40},"bing":{"city":"Tấn Dương","nb":["ji","guan","si_li","you","longxi"],"terrain":"hills","def":1.2,"fert":5,"pop":40},"longxi":{"city":"Thiên Thủy","nb":["bing","guan","hexi"],"terrain":"hills","def":1.15,"fert":4,"pop":28},"hexi":{"city":"Cô Tang","nb":["longxi"],"terrain":"desert","def":1.1,"fert":3,"pop":18},"huai":{"city":"Chung Ly","nb":["xu","yan","yu","yang"],"terrain":"plains","def":1.05,"fert":7,"pop":32},"you":{"city":"Kế","nb":["ji","bing"],"terrain":"plains","def":1.05,"fert":4,"pop":30},"nanzhong":{"city":"Điền Trì","nb":["yi"],"terrain":"jungle","def":1.2,"fert":5,"pop":22},"jiao":{"city":"Phiên Ngung","nb":["jing_nan","yang"],"terrain":"jungle","def":1.15,"fert":6,"pop":30}};
+  var PNAME = { si_li: 'Tư Lệ', guan: 'Quan Trung', yu: 'Dự', ji: 'Ký', qing: 'Thanh', yan: 'Duyện', xu: 'Từ', jing: 'Kinh Bắc', jing_nan: 'Kinh Nam', yi: 'Ích', han_zhong: 'Hán Trung', yang: 'Dương', jiang: 'Giang Hạ', bing: 'Tịnh', longxi: 'Lũng Tây', hexi: 'Hà Tây', huai: 'Hoài Nam', you: 'U', nanzhong: 'Nam Trung', jiao: 'Giao' };
+  // vị trí 20 châu trong khung 900×880 (giống spike 1)
+  var POS2 = { you: [600, 120], bing: [380, 205], ji: [560, 240], qing: [760, 225], hexi: [115, 255], longxi: [195, 365], guan: [335, 395], si_li: [490, 355], yan: [665, 340], xu: [805, 385], han_zhong: [300, 500], yu: [595, 460], huai: [770, 505], jing: [460, 555], yi: [195, 625], jing_nan: [440, 675], jiang: [615, 600], yang: [790, 650], nanzhong: [185, 775], jiao: [560, 800] };
+  var FAC2 = {
+    qin_shihuang: EMP.qin_shihuang, li_shimin: EMP.li_shimin, zhu_yuanzhang: EMP.zhu_yuanzhang, liu_che: EMP.liu_che,
+    cao_cao: { name: 'Tào Tháo', short: 'Tào', color: '#56702f', prov: null },
+    liu_bei: { name: 'Lưu Bị', short: 'Thục', color: '#23884a', prov: null },
+    sun_quan: { name: 'Tôn Quyền', short: 'Ngô', color: '#cf6a18', prov: null },
+    neutral: { name: 'Trung lập', short: 'Tr.lập', color: '#8a8275', prov: null },
+  };
+  function Gv(name, vo, trait, loyal, leader) { return { name: name, vo: vo, trait: trait || null, loyal: loyal == null ? 80 : loyal, leader: leader || null }; }
+  var START2 = {
+    yu: ['cao_cao', 8000, 1, Gv('Tào Tháo', 4, 'Gian hùng', 100, 'cao_cao')], ji: ['cao_cao', 6500, 1, Gv('Tào Phi', 2, null, 95)],
+    jing: ['cao_cao', 7000, 2, Gv('Tào Nhân', 4, 'Giữ thành', 95)], guan: ['cao_cao', 5500, 1, Gv('Trương Hợp', 4, 'Kỵ đột', 55)],
+    si_li: ['cao_cao', 5500, 1, Gv('Hạ Hầu Đôn', 4, null, 95)], xu: ['cao_cao', 5500, 1, Gv('Trương Liêu', 5, 'Kỵ đột', 70)],
+    qing: ['cao_cao', 4000, 0, Gv('Tang Bá', 3, null, 45)], yan: ['cao_cao', 4500, 0, Gv('Lý Điển', 3, null, 75)],
+    yi: ['liu_bei', 7000, 1, Gv('Lưu Bị', 3, 'Nhân nghĩa', 100, 'liu_bei')], jing_nan: ['liu_bei', 7000, 1, Gv('Quan Vũ', 5, 'Uy chấn', 100)],
+    han_zhong: ['liu_bei', 5000, 1, Gv('Ngụy Diên', 4, null, 50)], yang: ['sun_quan', 7000, 1, Gv('Tôn Quyền', 3, null, 100, 'sun_quan')],
+    jiang: ['sun_quan', 5500, 1, Gv('Lã Mông', 4, 'Bạch y', 85)],
+    you: ['neutral', 3500, 1, Gv('Công Tôn Khang', 3, null, 40)], nanzhong: ['neutral', 3000, 1, Gv('Ung Khải', 3, null, 35)], jiao: ['neutral', 3500, 1, Gv('Sĩ Nhiếp', 2, null, 45)],
+  };
+  var SEATS = { cao_cao: 'yu', liu_bei: 'yi', sun_quan: 'yang', qin_shihuang: 'longxi', li_shimin: 'bing', zhu_yuanzhang: 'huai', liu_che: 'hexi' };
+  var TERRAIN = { plains: 'đồng bằng', hills: 'đồi', mountains: 'núi', river: 'sông', coast: 'biển', desert: 'sa mạc', jungle: 'rừng' };
+  var WIN_PROV = 6, LOSE_PROV = 11, TRUCE = 6, CH1_MAX = 9;
+  var SEASONS = ['Xuân', 'Hạ', 'Thu', 'Đông'];
+
+  // ------------------------------------------------------------------ tiện ích
+  function rnd(g) { g.rs = (g.rs + 0x6d2b79f5) >>> 0; var t = g.rs; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  function cal(s) { var i = 2 + s - 1; return SEASONS[i % 4] + ' ' + (219 + Math.floor(i / 4)); }
+  function fmt(n) { n = Math.round(n); var s = String(Math.abs(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); return (n < 0 ? '−' : '') + s; }
+  function sg(n) { return (n >= 0 ? '+' : '') + fmt(n); }
+  function r100(n) { return Math.round(n / 100) * 100; }
+  function pct(p) { return Math.round(p * 100) + '%'; }
+  // xác suất thắng khi công × U(0.85, 1.15) > thủ × U(0.85, 1.15); tính trên lưới 21×21 cho tất định
+  function winProb(a, d) { var n = 0, N = 21; for (var i = 0; i < N; i++) for (var j = 0; j < N; j++) { if (a * (0.85 + 0.3 * i / (N - 1)) > d * (0.85 + 0.3 * j / (N - 1))) n++; } return n / (N * N); }
+  function roll(g, a, d) { return a * (0.85 + 0.3 * rnd(g)) > d * (0.85 + 0.3 * rnd(g)); }
+  function genMul(gv) { return 1 + 0.08 * ((gv ? gv.vo : 2) - 3); }
+  function chron(g, s) { g.chronicle.push({ s: g.season, t: s }); }
+  function note(g, s) { g.log.push(s); }
+  function fx(g, k, v) { g.seasonFx[k] = (g.seasonFx[k] || 0) + v; }
+  function uy(g, v) { g.uy = Math.max(0, Math.min(100, g.uy + v)); fx(g, 'uy', v); }
+  function luong(g, v) { g.luong += v; fx(g, 'luong', v); }
+
+  // ------------------------------------------------------------------ ván mới
+  function newGame(emp, seed) {
+    var H = HOMES[emp], E = EMP[emp];
+    var g = { v: 2, emp: emp, seed: seed >>> 0, rs: (seed >>> 0) || 1, season: 1, chapter: 1, luong: 400, uy: emp === 'qin_shihuang' ? 35 : 50,
+      gens: [{ name: E.name, vo: E.vo, trait: E.trait, loyal: 100, leader: emp }], talentsLeft: clone(TALENTS[emp]),
+      queue: [], log: [], chronicle: [], over: null, cardNo: 0, seasonFx: {}, exile: null, exileUsed: false, pacts: [], captives: [], scout: {}, lastPact: -9 };
+    g.towns = {}; g.townOrder = [];
+    H.towns.forEach(function (t) { g.towns[t[0]] = { id: t[0], name: t[1], x: t[2], y: t[3], own: t[4], binh: t[5], fort: t[6], dan: t[7], face: t[8] }; g.townOrder.push(t[0]); });
+    g.nb1 = H.nb; g.home = H.title;
+    chron(g, 'Thu 219. ' + E.name + ' tỉnh dậy ở thành ' + H.towns[0][1] + ', ' + H.title + ', trong tay ' + fmt(H.towns[0][5]) + ' quân.');
+    deal(g);
+    g.queue.unshift({ kind: 'intro', single: true, who: E.name, title: 'Thu 219, Kiến An năm 24', text: 'Ta tỉnh dậy ở ' + H.towns[0][1] + ' với ' + fmt(H.towns[0][5]) + ' quân. Bốn thành còn lại của ' + H.title + ' chưa theo ta. Ngoài kia Tào, Lưu, Tôn chia ba thiên hạ.', math: 'Tri thức: ' + E.know + '. ' + E.knowText, yes: { label: 'Bắt đầu' } });
+    return g;
+  }
+
+  // ------------------------------------------------------------------ chương 1: thành
+  function myTowns(g) { return g.townOrder.filter(function (id) { return g.towns[id].own === 'me'; }); }
+  function adj1(g, a, b) { return g.nb1.some(function (e) { return (e[0] === a && e[1] === b) || (e[0] === b && e[1] === a); }); }
+  function army1(g) { var s = 0; myTowns(g).forEach(function (id) { s += g.towns[id].binh; }); return s; }
+  function dan1(g) { var s = 0; myTowns(g).forEach(function (id) { s += g.towns[id].dan; }); return s; }
+  function bestGen(g) { var b = null; g.gens.forEach(function (x) { if (!b || x.vo > b.vo) b = x; }); return b; }
+  function def1(t) { return t.binh * (1 + 0.2 * t.fort); }
+  function plan1(g, to) {
+    var t = g.towns[to], src = myTowns(g).filter(function (a) { return adj1(g, a, to) && g.towns[a].binh >= 400; });
+    var shares = src.map(function (a) { return { id: a, n: r100(g.towns[a].binh * 0.7) }; }), commit = 0;
+    shares.forEach(function (s) { commit += s.n; });
+    var gv = bestGen(g), ap = commit * genMul(gv) * (gv.trait === 'Kỵ đột' ? 1.1 : 1), dp = def1(t);
+    return { to: to, shares: shares, commit: commit, gv: gv, ap: ap, dp: dp, p: commit ? winProb(ap, dp) : 0 };
+  }
+  function targets1(g) {
+    var out = [];
+    g.townOrder.forEach(function (id) { if (g.towns[id].own !== 'me' && myTowns(g).some(function (m) { return adj1(g, m, id); })) out.push(plan1(g, id)); });
+    return out.sort(function (a, b) { return b.p - a.p || a.dp - b.dp; });
+  }
+  function frontTown(g, to) { var best = null; myTowns(g).forEach(function (a) { if (adj1(g, a, to) && (!best || g.towns[a].binh > g.towns[best].binh)) best = a; }); return best || myTowns(g)[0]; }
+
+  function deal1(g) {
+    var tg = targets1(g), best = tg[0], rec = g.emp === 'qin_shihuang' ? 1200 : 800;
+    // thẻ 1: thời cơ
+    if (best && best.p >= 0.2) {
+      var t = g.towns[best.to];
+      if (t.own === 'local' && rnd(g) < 0.5) {
+        var cost = r100(t.dan * 0.06), ch = Math.min(0.85, 0.3 + g.uy / 200);
+        g.queue.push({ kind: 'annex1', who: t.face, title: t.face + ' xin quy thuận', text: 'Muốn giữ ruộng và được tha thuế hai mùa. ' + t.name + ' có ' + fmt(t.binh) + ' quân, ' + fmt(t.dan) + ' dân.', to: best.to, cost: cost, p: ch,
+          yes: { label: 'Nhận', fx: 'Lương −' + fmt(cost) + ' · ' + pct(ch) + ' thành' }, no: { label: 'Đòi đầu hàng', fx: 'Uy +2 · họ đóng cổng' } });
+      } else {
+        g.queue.push({ kind: 'attack1', who: best.gv.name, title: 'Đánh ' + t.name, text: t.face + ' giữ ' + t.name + ' với ' + fmt(t.binh) + ' quân' + (t.fort ? ', lũy ' + t.fort : '') + '. Ta dồn ' + fmt(best.commit) + ' quân từ ' + best.shares.map(function (s) { return g.towns[s.id].name; }).join(', ') + '.', to: best.to, from: best.shares.map(function (s) { return s.id; }), p: best.p,
+          math: 'Ta ' + fmt(best.ap) + ' (' + fmt(best.commit) + ' × võ ' + best.gv.vo + ') · họ ' + fmt(best.dp) + (t.fort ? ' (lũy +' + 20 * t.fort + '%)' : ''),
+          yes: { label: 'Đánh', fx: pct(best.p) + ' thắng' }, no: { label: 'Chờ', fx: 'họ +' + (t.own === 'tao' ? 80 : 60) + ' quân mỗi mùa' } });
+      }
+    } else if (best) {
+      var at = frontTown(g, best.to);
+      g.queue.push({ kind: 'recruit1', who: 'Trai tráng ' + g.towns[at].name, title: 'Chưa đủ sức đánh ' + g.towns[best.to].name, text: 'Họ có ' + fmt(g.towns[best.to].binh) + ' quân. Mộ thêm ở ' + g.towns[at].name + ' để lần sau đánh?', at: at, n: rec, cost: 150, focus: best.to,
+        yes: { label: 'Mộ', fx: 'Binh +' + fmt(rec) + ' · Dân −600 · Lương −150' }, no: { label: 'Để dân cày', fx: 'Dân +200' } });
+    }
+    // thẻ 2: kinh tế
+    if (g.luong < 200) {
+      var tax = r100(dan1(g) * 0.05);
+      g.queue.push({ kind: 'tax', who: 'Quan thu thuế', title: 'Kho lương còn ' + fmt(g.luong), text: 'Thu thuế nặng một mùa? Dân sẽ oán.', gain: tax, yes: { label: 'Thu', fx: 'Lương +' + fmt(tax) + ' · Uy −5' }, no: { label: 'Thôi', fx: 'quân có thể đói' } });
+    } else if (!g.queue.some(function (c) { return c.kind === 'recruit1'; }) && rnd(g) < 0.6) {
+      var at2 = best ? frontTown(g, best.to) : myTowns(g)[0];
+      g.queue.push({ kind: 'recruit1', who: 'Trai tráng ' + g.towns[at2].name, title: 'Mộ binh ở ' + g.towns[at2].name, text: 'Trai tráng xin tòng quân. Có ' + fmt(g.towns[at2].binh) + ' quân ở đó.', at: at2, n: rec, cost: 150,
+        yes: { label: 'Mộ', fx: 'Binh +' + fmt(rec) + ' · Dân −600 · Lương −150' }, no: { label: 'Để dân cày', fx: 'Dân +200' } });
+    } else {
+      var mt = myTowns(g), t2 = mt[Math.floor(rnd(g) * mt.length)];
+      g.queue.push({ kind: 'farm1', who: 'Nông quan', title: 'Khai hoang ' + g.towns[t2].name, text: 'Dẫn nước, chia ruộng cho dân lưu tán. Nhiều dân thì nhiều lương.', at: t2,
+        yes: { label: 'Làm', fx: 'Lương −200 · Dân +1.000' }, no: { label: 'Để sau', fx: 'không đổi' } });
+    }
+    // thẻ 3: biến cố
+    var mine = myTowns(g), victim = null, rd = null;
+    g.townOrder.forEach(function (r) { var o = g.towns[r].own; if (o !== 'raider' && !(o === 'tao' && g.season >= 4)) return; mine.forEach(function (m) { if (adj1(g, r, m) && (!victim || g.towns[m].binh < g.towns[victim].binh)) { victim = m; rd = r; } }); });
+    var talentDue = g.talentsLeft.length && (g.season === 2 || g.season === 5 || (g.emp === 'li_shimin' && g.season === 3));
+    if (talentDue) g.queue.push(talentCard(g));
+    else if (victim && rnd(g) < 0.5) {
+      var rt = g.towns[rd], force = r100(rt.binh * 0.6), dp = def1(g.towns[victim]) * 1.1, ph = winProb(dp, force), pay = r100(force * 0.25);
+      g.queue.push({ kind: 'raid', who: 'Lính trạm ' + g.towns[victim].name, title: rt.face + ' kéo tới ' + g.towns[victim].name, text: fmt(force) + ' quân đang áp sát. Ta có ' + fmt(g.towns[victim].binh) + ' quân ở đó.', at: victim, to: victim, from: [rd], force: force, p: ph, pay: pay,
+        math: 'Ta thủ ' + fmt(dp) + ' · họ ' + fmt(force),
+        yes: { label: 'Đánh chặn', fx: pct(ph) + ' giữ được' }, no: { label: 'Nộp lương', fx: 'Lương −' + fmt(pay) } });
+    } else g.queue.push(knowCard(g));
+  }
+  function talentCard(g) {
+    var tl = g.talentsLeft[0];
+    return { kind: 'talent', who: tl[0], title: tl[0] + ' xin theo', text: 'Võ ' + tl[1] + (tl[2] ? ', ' + tl[2] : '') + '. Xin một chức và lương an gia.' + (g.chapter === 2 ? ' Sẽ trấn một châu mới chiếm.' : ''), yes: { label: 'Nhận', fx: 'Tướng võ ' + tl[1] + ' · Lương −100' }, no: { label: 'Từ chối', fx: 'đi theo phe khác' } };
+  }
+  function knowCard(g) {
+    var e = g.emp;
+    if (g.season - (g.lastKnow || -9) < (e === 'liu_che' && g.chapter === 2 ? 2 : 3)) return null;
+    g.lastKnow = g.season;
+    if (e === 'qin_shihuang') return { kind: 'know', who: 'Ký ức Hàm Dương', title: 'Xe cùng trục, chữ cùng lối', text: 'Thống nhất cân đo ở các nơi đã chiếm. Dân khó chịu một thời, lương thu đều hơn.', yes: { label: 'Ban lệnh', fx: 'Lương +250 · Uy −3' }, no: { label: 'Chưa', fx: 'không đổi' } };
+    if (e === 'li_shimin') return { kind: 'know', who: 'Ký ức Trinh Quán', title: 'Lấy người làm gương', text: 'Mở cửa nghe can gián. Uy tăng, nhưng phải nuôi thêm mưu sĩ.', yes: { label: 'Mở cửa', fx: 'Uy +6 · Lương −100' }, no: { label: 'Chưa', fx: 'không đổi' } };
+    if (e === 'zhu_yuanzhang') return { kind: 'know', who: 'Ký ức Hồng Vũ', title: 'Cao trúc tường, quảng tích lương', text: 'Cho quân vừa cày vừa giữ. Đắp lũy nơi hiểm nhất.', yes: { label: 'Làm', fx: 'Lũy +1 · Lương +150' }, no: { label: 'Chưa', fx: 'không đổi' } };
+    return { kind: 'know', who: 'Ký ức Nguyên Thú', title: 'Đổi tơ lấy thiên mã', text: 'Sai sứ sang Tây Vực đổi tơ lấy ngựa Đại Uyển.', yes: { label: 'Sai sứ', fx: 'Lương −150 · Binh +' + (g.chapter === 1 ? '500' : '1.000') + ' kỵ, vượt trần' }, no: { label: 'Chưa', fx: 'không đổi' } };
+  }
+
+  // ------------------------------------------------------------------ chương 2: châu
+  function own2(g, f) { return Object.keys(PD).filter(function (p) { return g.prov[p].owner === f; }); }
+  function adj2(a, b) { return PD[a].nb.indexOf(b) !== -1; }
+  function allied(g, a, b) { return g.pacts.some(function (x) { return x.until >= g.season && ((x.a === a && x.b === b) || (x.a === b && x.b === a)); }); }
+  function army2(g, f) { var s = 0; own2(g, f).forEach(function (p) { s += g.prov[p].binh; }); return s; }
+  function dan2(g, f) { var s = 0; own2(g, f).forEach(function (p) { s += PD[p].pop * 1000; }); return s; }
+  function cap2(g, p) { return r100(4000 + PD[p].pop * 50 + g.prov[p].tier * 2000); }
+  function isSeat(g, p) { var o = g.prov[p].owner; return o !== 'neutral' && SEATS[o] === p && g.prov[p].gov && g.prov[p].gov.leader === o; }
+  function defMul(g, p) {
+    var pv = g.prov[p], gv = pv.gov, m = PD[p].def * (1 + 0.2 * pv.fort * (gv && gv.trait === 'Giữ thành' ? 2 : 1)) * genMul(gv);
+    if (gv && gv.trait === 'Uy chấn') m *= 1.25; if (gv && gv.trait === 'Gian hùng') m *= 1.1;
+    if (isSeat(g, p)) m *= 1.15;
+    return m;
+  }
+  function reinf(g, p) { var o = g.prov[p].owner, add = 0; if (o === 'neutral') return 0; Object.keys(FAC2).forEach(function (a) { if (a === o || !allied(g, o, a)) return; var best = 0; PD[p].nb.forEach(function (n) { if (g.prov[n].owner === a) best = Math.max(best, g.prov[n].binh); }); add += Math.round(best * 0.3); }); return add; }
+  function atkMul(gv, to, f) { var m = genMul(gv); if (gv && gv.trait === 'Kỵ đột' && PD[to].terrain === 'plains') m *= 1.2; if (gv && gv.trait === 'Bạch y' && PD[to].terrain === 'river') m *= 1.25; else if (PD[to].terrain === 'river' && f !== 'sun_quan') m *= 0.85; return m; }
+  function protectedFrom(g, attacker, q) {
+    if (g.season > g.truceUntil) return false;
+    var o = g.prov[q].owner;
+    if (o === g.emp) return attacker !== g.emp && isSeat(g, q);
+    return EMP[o] && attacker !== g.emp && !EMP[attacker] && isSeat(g, q);
+  }
+  // người chơi thấy gì: đất mình và nơi đã dò = đúng; kề đất ta hoặc đồng minh = ước ±20 % (cố định trong mùa); còn lại = không rõ
+  function seen2(g, p) {
+    var me = g.emp, pv = g.prov[p];
+    if (pv.owner === me || (g.scout[p] || 0) >= g.season) return { n: pv.binh, text: fmt(pv.binh), exact: true };
+    var eyes = own2(g, me).slice(); if (g.exile) eyes.push(g.exile.near);
+    Object.keys(FAC2).forEach(function (a) { if (a !== me && allied(g, me, a)) eyes = eyes.concat(own2(g, a)); });
+    if (!eyes.some(function (q) { return q === p || adj2(q, p); })) return { n: null, text: '?', exact: false };
+    var k = (((g.season * 7919) ^ (p.charCodeAt(0) * 131 + p.charCodeAt(p.length - 1) * 17 + p.length * 1013)) % 41 + 41) % 41 / 100 - 0.2;
+    var est = r100(pv.binh * (1 + k));
+    return { n: est, text: '~' + fmt(est), exact: false };
+  }
+  function govOf(g, p) { return g.prov[p].gov || { name: 'Tướng vô danh', vo: 2, trait: null, loyal: 70 }; }
+  function plan2(g, to) {
+    var me = g.emp, src = own2(g, me).filter(function (a) { return adj2(a, to) && g.prov[a].binh >= 1500; });
+    var shares = src.map(function (a) { return { id: a, n: r100(g.prov[a].binh * 0.7) }; }), commit = 0, gv = null;
+    shares.forEach(function (s) { commit += s.n; var x = govOf(g, s.id); if (!gv || x.vo > gv.vo) gv = x; });
+    var s = seen2(g, to), dn = s.n == null ? g.prov[to].binh * 1.2 : s.n, ap = commit * atkMul(gv, to, me), dp = dn * defMul(g, to) + reinf(g, to);
+    var p = commit ? winProb(ap, dp) : 0; if (s.n == null) p = Math.min(p, 0.5);
+    return { to: to, shares: shares, commit: commit, gv: gv, ap: ap, dp: dp, p: p, seen: s };
+  }
+  function targets2(g) {
+    var me = g.emp, seen = {}, out = [];
+    own2(g, me).forEach(function (a) { PD[a].nb.forEach(function (q) { var o = g.prov[q].owner; if (seen[q] || o === me || allied(g, me, o) || protectedFrom(g, me, q)) return; seen[q] = 1; var pl = plan2(g, q); if (pl.commit >= 1000) out.push(pl); }); });
+    return out.sort(function (a, b) { return b.p - a.p || a.dp - b.dp; });
+  }
+  function threats2(g) {
+    var me = g.emp, out = [];
+    own2(g, me).forEach(function (p) {
+      var worst = 0, by = null;
+      PD[p].nb.forEach(function (q) { var o = g.prov[q].owner; if (o === me || o === 'neutral' || allied(g, me, o) || protectedFrom(g, o, p)) return; var a = g.prov[q].binh * 0.7 * atkMul(govOf(g, q), p, o); if (a > worst) { worst = a; by = q; } });
+      if (by) out.push({ p: p, by: by, r: worst / (g.prov[p].binh * defMul(g, p) + reinf(g, p)) });
+    });
+    return out.sort(function (a, b) { return b.r - a.r; });
+  }
+  function recruitN(g) { return g.emp === 'qin_shihuang' ? 1500 : 1000; }
+
+  function deal2(g) {
+    var me = g.emp, mine = own2(g, me);
+    if (!mine.length && g.exile) { exileCard(g); return; }
+    // thẻ 1: thời cơ
+    var tg = targets2(g), best = tg[0], neutralNear = null;
+    mine.forEach(function (a) { PD[a].nb.forEach(function (x) { if (g.prov[x].owner === 'neutral') neutralNear = x; }); });
+    if (best && best.p >= 0.2) {
+      var q = best.to, pv = g.prov[q], o = pv.owner, gq = govOf(g, q);
+      g.queue.push({ kind: 'attack2', who: best.gv.name, title: 'Đánh ' + PD[q].city, text: FAC2[o].name + ' giữ ' + PD[q].city + ' (' + PNAME[q] + ') với ' + best.seen.text + ' quân' + (best.seen.exact ? ', tướng ' + gq.name : '') + '. Ta dồn ' + fmt(best.commit) + ' từ ' + best.shares.map(function (s) { return PD[s.id].city; }).join(', ') + '.', to: q, from: best.shares.map(function (s) { return s.id; }), p: best.p,
+        math: 'Ta ' + fmt(best.ap) + ' · họ ' + (best.seen.exact ? '' : '~') + fmt(best.dp) + ' (' + TERRAIN[PD[q].terrain] + (pv.fort ? ', lũy ' + pv.fort : '') + (isSeat(g, q) ? ', kinh đô' : '') + (reinf(g, q) ? ', viện binh' : '') + ')' + (best.seen.exact ? '' : ' · tin ±20%'),
+        yes: { label: 'Đánh', fx: pct(best.p) + ' thắng' }, no: { label: 'Chờ', fx: 'giữ quân ở nhà' } });
+    } else if (neutralNear && rnd(g) < 0.7) {
+      var ch = Math.min(0.8, 0.25 + g.uy / 200), gn = govOf(g, neutralNear);
+      g.queue.push({ kind: 'annex2', who: 'Sứ giả', title: 'Chiêu hàng ' + PD[neutralNear].city, text: gn.name + ' giữ ' + PNAME[neutralNear] + ' đứng ngoài ba nhà. Mang lễ vật tới dụ hàng?', to: neutralNear, p: ch, cost: 300,
+        yes: { label: 'Sai sứ', fx: 'Lương −300 · ' + pct(ch) + ' thành' }, no: { label: 'Thôi', fx: 'không đổi' } });
+    } else if (best) {
+      var at = mine.filter(function (a) { return adj2(a, best.to); }).sort(function (x, y) { return (cap2(g, y) - g.prov[y].binh) - (cap2(g, x) - g.prov[x].binh); })[0] || mine[0];
+      recruitCard2(g, at, 'Chưa đủ sức đánh ' + PD[best.to].city, 'Họ có ' + best.seen.text + ' quân, ta ước chỉ ' + pct(best.p) + ' thắng. ');
+    }
+    // thẻ 2: phòng thủ hoặc kinh tế
+    var th = threats2(g)[0];
+    if (th && th.r > 0.8) {
+      var p = th.p, byF = FAC2[g.prov[th.by].owner].name, sBy = seen2(g, th.by);
+      var src = mine.filter(function (x) { return x !== p && adj2(x, p) && g.prov[x].binh > 3000 && !threats2(g).some(function (t) { return t.p === x && t.r > 0.7; }); })[0];
+      var head = byF + ' có ' + sBy.text + ' quân ở ' + PD[th.by].city + ', sát ' + PD[p].city + '. Ta giữ ' + fmt(g.prov[p].binh) + '.';
+      if (src) { var mv = r100(g.prov[src].binh * 0.4); g.queue.push({ kind: 'move', who: govOf(g, p).name, title: 'Giữ ' + PD[p].city, text: head, from: [src], to: p, n: mv, yes: { label: 'Điều quân', fx: fmt(mv) + ' từ ' + PD[src].city }, no: { label: 'Mặc', fx: 'không đổi' } }); }
+      else if (g.prov[p].fort < 3) { var nf = Math.min(3, g.prov[p].fort + (me === 'zhu_yuanzhang' ? 2 : 1)); g.queue.push({ kind: 'fort2', who: govOf(g, p).name, title: 'Đắp lũy ' + PD[p].city, text: head, at: p, to: p, yes: { label: 'Đắp', fx: 'Lũy ' + g.prov[p].fort + '→' + nf + ' (thủ +' + 20 * (nf - g.prov[p].fort) + '%) · Lương −250' }, no: { label: 'Mặc', fx: 'không đổi' } }); }
+      else recruitCard2(g, p, 'Giữ ' + PD[p].city, head + ' ');
+    } else if (g.luong < 250) {
+      var tax = r100(own2(g, me).reduce(function (s, x) { return s + PD[x].fert * 60; }, 0) + 200);
+      g.queue.push({ kind: 'tax', who: 'Quan thu thuế', title: 'Kho lương còn ' + fmt(g.luong), text: 'Thu thuế nặng một mùa? Dân sẽ oán.', gain: tax, yes: { label: 'Thu', fx: 'Lương +' + fmt(tax) + ' · Uy −5' }, no: { label: 'Thôi', fx: 'quân có thể đói' } });
+    } else if (!g.queue.some(function (c) { return c.kind === 'recruit2' || c.kind === 'farm2'; })) {
+      var front = mine.slice().sort(function (a, b) { return (g.prov[a].binh / cap2(g, a)) - (g.prov[b].binh / cap2(g, b)); })[0];
+      recruitCard2(g, front, null, '');
+    } else g.queue.push(knowCard(g));
+    // thẻ 3: người
+    var r = rnd(g);
+    if (g.captives.length) {
+      var c = g.captives[0], pc = me === 'li_shimin' ? 0.9 : c.loyal < 60 ? 0.7 : 0.3;
+      g.queue.push({ kind: 'captive', who: c.name, title: 'Bắt được ' + c.name, text: 'Võ ' + c.vo + (c.trait ? ', ' + c.trait : '') + '. Lòng trung với chủ cũ ' + c.loyal + '. Không hàng thì chết.', p: pc, yes: { label: 'Chiêu hàng', fx: pct(pc) + ' theo ta' }, no: { label: 'Thả về', fx: 'Uy +4' } });
+    } else if (g.talentsLeft.length && g.season % 4 === 0) g.queue.push(talentCard(g));
+    else if (best && !best.seen.exact && best.p >= 0.3 && best.p <= 0.8 && r < 0.45) {
+      g.queue.push({ kind: 'scout', who: 'Thám tử', title: 'Dò ' + PD[best.to].city, text: 'Tin về ' + PD[best.to].city + ' chỉ là ước ' + best.seen.text + ' quân. Cho người trà trộn vào thành?', to: best.to, yes: { label: 'Đi', fx: 'Lương −80 · biết đúng 3 mùa' }, no: { label: 'Thôi', fx: 'đánh theo ước' } });
+    } else if (r < 0.7) {
+      var bribe = null;
+      mine.forEach(function (a) { PD[a].nb.forEach(function (q) { var gv = g.prov[q].gov, o = g.prov[q].owner; if (o !== me && o !== 'neutral' && gv && !gv.leader && gv.loyal < 70 && gv.trait !== 'Uy chấn' && (!bribe || gv.loyal < g.prov[bribe].gov.loyal)) bribe = q; }); });
+      var asker = null;
+      if (g.season - g.lastPact >= 4) Object.keys(g.fac).forEach(function (f) { if (f === me || !g.fac[f].alive || allied(g, me, f)) return; if (own2(g, f).some(function (p) { return mine.some(function (m) { return adj2(m, p); }); }) && army2(g, f) < army2(g, me) * 1.3 && (!asker || army2(g, f) < army2(g, asker))) asker = f; });
+      if (bribe && (r < 0.55 || !asker)) {
+        var gb = g.prov[bribe].gov, pb = Math.min(0.75, (70 - gb.loyal) / 50 + 0.2 + g.uy / 400);
+        g.queue.push({ kind: 'bribe', who: 'Mưu sĩ', title: 'Ly gián ' + gb.name, text: gb.name + ' giữ ' + PD[bribe].city + ' cho ' + FAC2[g.prov[bribe].owner].name + ' với ' + seen2(g, bribe).text + ' quân, lòng trung ' + gb.loyal + '. Gửi vàng dụ phản?', to: bribe, p: pb, yes: { label: 'Gửi vàng', fx: 'Lương −400 · ' + pct(pb) + ' phản' }, no: { label: 'Thôi', fx: 'không đổi' } });
+      } else if (asker) {
+        g.queue.push({ kind: 'pact', who: 'Sứ ' + FAC2[asker].name, title: FAC2[asker].name + ' xin kết minh', text: '6 mùa không đánh nhau. Châu kề góp 30% quân khi bên kia bị đánh. Ta sẽ không được đánh họ.', f: asker, yes: { label: 'Kết minh', fx: 'đến ' + cal(g.season + 6) }, no: { label: 'Từ chối', fx: 'không đổi' } });
+      } else g.queue.push(knowCard(g));
+    } else g.queue.push(knowCard(g));
+  }
+  function recruitCard2(g, p, title, pre) {
+    var n = recruitN(g), cap = cap2(g, p), room = cap - g.prov[p].binh;
+    if (room < 500) { g.queue.push({ kind: 'farm2', who: 'Nông quan ' + PD[p].city, title: title || 'Khai hoang ' + PNAME[p], text: pre + PNAME[p] + ' đã nuôi đủ ' + fmt(cap) + ' quân. Mở ruộng để nuôi thêm?', at: p, to: p, yes: { label: 'Khai hoang', fx: 'Lương −300 · nuôi tối đa +2.000' }, no: { label: 'Để sau', fx: 'không đổi' } }); return; }
+    var add = Math.min(n, room);
+    g.queue.push({ kind: 'recruit2', who: 'Trai tráng ' + PD[p].city, title: title || 'Mộ binh ở ' + PD[p].city, text: pre + PD[p].city + ' đang có ' + fmt(g.prov[p].binh) + ' quân, nuôi được tối đa ' + fmt(cap) + '.', at: p, to: p, n: add, cost: 200, yes: { label: 'Mộ', fx: 'Binh +' + fmt(add) + ' · Lương −200' }, no: { label: 'Để dân cày', fx: 'Lương +100' } });
+  }
+  function exileCard(g) {
+    var me = g.emp, ex = g.exile, best = null;
+    [ex.near].concat(PD[ex.near].nb).forEach(function (q) { if (g.prov[q].owner === me) return; var s = seen2(g, q), dn = s.n == null ? g.prov[q].binh : s.n, ap = ex.binh * genMul(EMP[me]) * 1.2, dp = dn * defMul(g, q), p = winProb(ap, dp); if (!best || p > best.p) best = { to: q, p: p, ap: ap, dp: dp, s: s }; });
+    g.queue.push({ kind: 'exile_attack', who: EMP[me].name, title: 'Đoạt lại ' + PD[best.to].city + '?', text: 'Lưu vong, còn ' + ex.left + ' mùa. ' + fmt(ex.binh) + ' tàn quân liều chết (công +20%). ' + PD[best.to].city + ' có ' + best.s.text + ' quân.', to: best.to, p: best.p, math: 'Ta ' + fmt(best.ap) + ' · họ ~' + fmt(best.dp), yes: { label: 'Liều đánh', fx: pct(best.p) + ' thắng' }, no: { label: 'Ẩn mình', fx: 'chiêu thêm 800 · còn ' + (ex.left - 1) + ' mùa' } });
+  }
+
+  // ------------------------------------------------------------------ mùa
+  function deal(g) {
+    g.seasonFx = {}; g.queue = [];
+    if (g.chapter === 1) deal1(g); else deal2(g);
+    var kinds = {}; g.queue = g.queue.filter(function (c) { if (!c || kinds[c.kind]) return false; kinds[c.kind] = 1; return true; });
+  }
+  function startSeason(g, report) {
+    deal(g);
+    if (report) g.queue.unshift(report);
+  }
+
+  function choose(g0, yes) {
+    var g = clone(g0), c = g.queue.shift(); g.cardNo += 1; g.log = [];
+    if (!c || g.over) return g;
+    var me = g.emp;
+    switch (c.kind) {
+      case 'intro': case 'result': case 'report': break;
+      case 'go2': toChapter2(g); deal(g); g.queue.unshift({ kind: 'report', single: true, who: 'Thiên hạ', title: 'Ra 20 châu', text: 'Kinh đô ta là ' + PD[EMP[me].prov].city + ' (' + PNAME[EMP[me].prov] + ') với ' + fmt(g.prov[EMP[me].prov].binh) + ' quân. Xưng bá khi nắm ' + WIN_PROV + ' châu. Nếu một nhà nắm ' + LOSE_PROV + ' châu trước, ta thua.', lines: ['Đình chiến ' + TRUCE + ' mùa: không ai đánh kinh đô ta tới hết ' + cal(g.truceUntil) + '.', 'Số có dấu ~ là tin ước, sai tới 20%. Dấu ? là chưa có tin.'], yes: { label: 'Vào' } }); return g;
+      case 'attack1': if (yes) attack1(g, c.to); break;
+      case 'annex1': if (yes) annex1(g, c); else uy(g, 2); break;
+      case 'tax': if (yes) { luong(g, c.gain); uy(g, -5); } break;
+      case 'recruit1': { var at = g.towns[c.at]; if (at.own !== 'me') break; if (yes) { at.binh += c.n; at.dan = Math.max(500, at.dan - 600); luong(g, -c.cost); fx(g, 'binh', c.n); fx(g, 'dan', -600); } else { at.dan += 200; fx(g, 'dan', 200); } break; }
+      case 'farm1': if (yes && g.towns[c.at].own === 'me') { g.towns[c.at].dan += 1000; luong(g, -200); fx(g, 'dan', 1000); } break;
+      case 'talent': { var tl = g.talentsLeft.shift(); if (yes) { var ng = { name: tl[0], vo: tl[1], trait: tl[2], loyal: 85 }; g.gens.push(ng); luong(g, -100); chron(g, tl[0] + ' tới đầu quân.'); if (g.chapter === 2) seatGeneral(g, ng); } break; }
+      case 'raid': raid1(g, c, yes); break;
+      case 'know': if (yes) know(g); break;
+      case 'attack2': if (yes) attack2(g, me, c.to, true); break;
+      case 'annex2': if (yes) { luong(g, -c.cost); var pn = g.prov[c.to]; if (pn.owner === 'neutral' && rnd(g) < c.p) { pn.owner = me; pn.binh = r100(pn.binh * 0.8); pn.gov.loyal = 60; chron(g, pn.gov.name + ' dâng ' + PNAME[c.to] + ' quy thuận.'); g.queue.unshift(result(true, PNAME[c.to] + ' quy thuận', pn.gov.name + ' mở cổng ' + PD[c.to].city + '. Thêm ' + fmt(pn.binh) + ' quân.', '', c.to)); } else g.queue.unshift(result(false, PD[c.to].city + ' từ chối', 'Sứ giả bị đuổi về, lễ vật mất.', '', c.to)); } break;
+      case 'scout': if (yes) { luong(g, -80); g.scout[c.to] = g.season + 2; var ps = g.prov[c.to], gs = govOf(g, c.to); g.queue.unshift(result(true, 'Tin từ ' + PD[c.to].city, fmt(ps.binh) + ' quân, lũy ' + ps.fort + ', ' + gs.name + ' (võ ' + gs.vo + (gs.trait ? ', ' + gs.trait : '') + ', trung ' + gs.loyal + ').', 'Sức thủ thật: ' + fmt(ps.binh * defMul(g, c.to) + reinf(g, c.to)), c.to)); } break;
+      case 'move': if (yes) { var s0 = c.from[0], mv = Math.min(c.n, g.prov[s0].binh - 1000); if (mv > 0 && g.prov[s0].owner === me && g.prov[c.to].owner === me) { g.prov[s0].binh -= mv; g.prov[c.to].binh += mv; } } break;
+      case 'fort2': if (yes && g.prov[c.at].owner === me) { luong(g, -250); g.prov[c.at].fort = Math.min(3, g.prov[c.at].fort + (me === 'zhu_yuanzhang' ? 2 : 1)); } break;
+      case 'recruit2': if (g.prov[c.at].owner !== me) break; if (yes) { var add = Math.max(0, Math.min(c.n, cap2(g, c.at) - g.prov[c.at].binh)); g.prov[c.at].binh += add; luong(g, -c.cost); fx(g, 'binh', add); } else luong(g, 100); break;
+      case 'farm2': if (yes && g.prov[c.at].owner === me) { luong(g, -300); g.prov[c.at].tier += 1; } break;
+      case 'captive': captive(g, c, yes); break;
+      case 'pact': g.lastPact = g.season; if (yes) { g.pacts.push({ a: me, b: c.f, until: g.season + 6 }); chron(g, 'Kết minh với ' + FAC2[c.f].name + ' tới ' + cal(g.season + 6) + '.'); } break;
+      case 'bribe': bribe(g, c, yes); break;
+      case 'exile_attack': exileAttack(g, c, yes); break;
+    }
+    checkWin(g);
+    if (g.over) g.queue = g.queue.filter(function (x) { return x.kind === 'result' || x.kind === 'report'; });
+    else if (!g.queue.length) endSeason(g);
+    return g;
+  }
+  function result(ok, title, text, math, to) { return { kind: 'result', single: true, ok: ok, who: ok ? 'Tin thắng' : 'Tin dữ', title: title, text: text, math: math, to: to, yes: { label: 'Tiếp' } }; }
+  function go2Card(g, forced) { return { kind: 'go2', single: true, who: EMP[g.emp].name, title: forced ? 'Tào Tháo đã để ý tới ta' : 'Toàn ' + g.home + ' đã về tay ta', text: forced ? 'Tin ta nổi lên ở ' + g.home + ' đã tới Hứa Xương. Không thể ở yên trong châu. Nhìn ra 20 châu.' : 'Năm thành một lòng. Ngoài kia Tào, Lưu, Tôn chia ba thiên hạ. Nhìn ra 20 châu.', yes: { label: 'Ra thiên hạ' } }; }
+
+  function attack1(g, to) {
+    var pl = plan1(g, to), t = g.towns[to];
+    if (!pl.commit) return;
+    pl.shares.forEach(function (s) { g.towns[s.id].binh -= s.n; });
+    var win = roll(g, pl.ap, pl.dp), loss = win ? r100(pl.commit * Math.min(0.45, 0.12 + 0.3 * pl.dp / pl.ap)) : r100(pl.commit * 0.4);
+    fx(g, 'binh', -loss);
+    if (win) { var old = t.face; t.own = 'me'; t.binh = Math.max(200, pl.commit - loss + r100(t.binh * 0.2)); t.fort = Math.max(0, t.fort - 1); t.face = null; uy(g, 3); chron(g, 'Chiếm ' + t.name + ' từ tay ' + old + '.');
+      g.queue.unshift(result(true, 'Chiếm ' + t.name, t.name + ' về tay ta. Mất ' + fmt(loss) + ' quân; ' + fmt(t.binh) + ' ở lại giữ thành (có hàng binh).', 'Ta ' + fmt(pl.ap) + ' × may rủi (0,85–1,15) · họ ' + fmt(pl.dp) + ' × may rủi', to));
+    } else {
+      var back = pl.commit - loss; pl.shares.forEach(function (s) { g.towns[s.id].binh += r100(back * s.n / pl.commit); }); t.binh = Math.max(200, t.binh - r100(t.binh * 0.15)); uy(g, -2);
+      g.queue.unshift(result(false, 'Bại ở ' + t.name, 'Bị đẩy lui. Mất ' + fmt(loss) + ' quân. ' + t.name + ' còn ' + fmt(t.binh) + '.', 'Ta ' + fmt(pl.ap) + ' × may rủi · họ ' + fmt(pl.dp) + ' × may rủi', to));
+    }
+    if (win && myTowns(g).length === g.townOrder.length) g.queue.splice(1, 0, go2Card(g, false));
+  }
+  function annex1(g, c) {
+    luong(g, -c.cost); var t = g.towns[c.to];
+    if (t.own !== 'me' && rnd(g) < c.p) { var face = t.face; t.own = 'me'; t.face = null; chron(g, face + ' dâng ' + t.name + ' quy thuận.'); g.queue.unshift(result(true, t.name + ' quy thuận', face + ' mở cổng. Thêm ' + fmt(t.binh) + ' quân, ' + fmt(t.dan) + ' dân.', '', c.to)); if (myTowns(g).length === g.townOrder.length) g.queue.splice(1, 0, go2Card(g, false)); }
+    else g.queue.unshift(result(false, t.name + ' đổi ý', t.face + ' nhận lễ rồi đóng cổng.', '', c.to));
+  }
+  function raid1(g, c, yes) {
+    var v = g.towns[c.at], rt = g.towns[c.from[0]];
+    if (v.own !== 'me') return;
+    if (!yes) { luong(g, -c.pay); if (g.luong < 0) { var lost = r100(v.binh * 0.3); v.binh -= lost; fx(g, 'binh', -lost); g.luong = 0; } return; }
+    var dp = def1(v) * 1.1, held = roll(g, dp, c.force), l = r100(c.force * (held ? 0.25 : 0.5));
+    v.binh = Math.max(100, v.binh - l); fx(g, 'binh', -l); rt.binh = Math.max(200, rt.binh - r100(c.force * (held ? 0.5 : 0.2)));
+    if (!held) { v.own = rt.own; v.face = rt.face; v.binh = r100(c.force * 0.6); chron(g, 'Mất ' + v.name + ' vào tay ' + rt.face + '.'); }
+    g.queue.unshift(result(held, held ? 'Giữ được ' + v.name : 'Mất ' + v.name, held ? 'Đẩy lui ' + rt.face + '. Mất ' + fmt(l) + ' quân.' : rt.face + ' phá cổng. Mất ' + fmt(l) + ' quân.', 'Ta thủ ' + fmt(dp) + ' × may rủi · họ ' + fmt(c.force) + ' × may rủi', c.at));
+    if (!myTowns(g).length) g.over = { win: false, why: 'Mất thành cuối cùng ở ' + g.home + '.' };
+  }
+  function know(g) {
+    var e = g.emp;
+    if (e === 'qin_shihuang') { luong(g, 250); uy(g, -3); }
+    else if (e === 'li_shimin') { uy(g, 6); luong(g, -100); }
+    else if (e === 'zhu_yuanzhang') { luong(g, 150); if (g.chapter === 1) { var ct = myTowns(g).sort(function (a, b) { return g.towns[a].fort - g.towns[b].fort; })[0]; g.towns[ct].fort = Math.min(3, g.towns[ct].fort + 1); } else { var th = threats2(g)[0], sp = th ? th.p : own2(g, e)[0]; if (sp) g.prov[sp].fort = Math.min(3, g.prov[sp].fort + 1); } }
+    else { var n = g.chapter === 1 ? 500 : 1000; luong(g, -150); fx(g, 'binh', n); if (g.chapter === 1) g.towns[myTowns(g)[0]].binh += n; else { var sp2 = own2(g, e)[0]; if (sp2) g.prov[sp2].binh += n; } }
+  }
+  function seatGeneral(g, gv) { var slot = own2(g, g.emp).filter(function (p) { return !g.prov[p].gov || g.prov[p].gov.name === 'Tướng vô danh'; })[0]; if (slot) { g.prov[slot].gov = gv; gv.seat = slot; } }
+  function freeGeneral(g) { var used = {}; Object.keys(g.prov).forEach(function (p) { if (g.prov[p].owner === g.emp && g.prov[p].gov) used[g.prov[p].gov.name] = 1; }); return g.gens.filter(function (x) { return !used[x.name] && !x.leader; }).sort(function (a, b) { return b.vo - a.vo; })[0] || null; }
+  function captive(g, c, yes) {
+    var cp = g.captives.shift();
+    if (!yes) { uy(g, 4); chron(g, 'Thả ' + cp.name + ' về.'); return; }
+    if (rnd(g) < c.p) { cp.loyal = 60; cp.leader = null; g.gens.push(cp); seatGeneral(g, cp); chron(g, cp.name + ' quy hàng ta.'); g.queue.unshift(result(true, cp.name + ' quy hàng', cp.seat ? 'Được giao trấn ' + PD[cp.seat].city + '.' : 'Theo hầu, chờ châu mới.', '', cp.seat)); }
+    else { chron(g, cp.name + ' không hàng, bị chém.'); g.queue.unshift(result(false, cp.name + ' không hàng', 'Thà chết không thờ hai chủ.', '')); }
+  }
+  function bribe(g, c, yes) {
+    if (!yes) return;
+    luong(g, -400); var pb = g.prov[c.to], gb = pb.gov;
+    if (pb.owner !== g.emp && gb && rnd(g) < c.p) { var ob = pb.owner; pb.owner = g.emp; pb.binh = r100(pb.binh * 0.8); gb.loyal = 60; g.gens.push(gb); chron(g, gb.name + ' phản ' + FAC2[ob].name + ', dâng ' + PD[c.to].city + '.'); g.queue.unshift(result(true, gb.name + ' trở giáo', PD[c.to].city + ' về tay ta với ' + fmt(pb.binh) + ' quân, không mất một mũi tên.', '', c.to)); if (!own2(g, ob).length) fall(g, ob, g.emp); }
+    else if (gb) { gb.loyal = Math.max(0, gb.loyal - 15); g.queue.unshift(result(false, gb.name + ' nhận vàng rồi im', 'Lòng trung còn ' + gb.loyal + '. Lần sau dễ hơn.', '', c.to)); }
+  }
+  function exileAttack(g, c, yes) {
+    var me = g.emp, ex = g.exile;
+    if (!yes) { ex.binh += 800; return; }
+    var pv = g.prov[c.to], ap = ex.binh * genMul(EMP[me]) * 1.2, dp = pv.binh * defMul(g, c.to), win = roll(g, ap, dp);
+    if (win) { var old = pv.owner; pv.owner = me; pv.binh = r100(ex.binh * 0.7); pv.fort = 0; pv.gov = { name: EMP[me].name, vo: EMP[me].vo, trait: EMP[me].trait, loyal: 100, leader: me }; g.exile = null; chron(g, 'Từ lưu vong đoạt lại ' + PD[c.to].city + '.'); g.queue.unshift(result(true, 'Đoạt lại ' + PD[c.to].city, 'Tàn quân phá cổng. Ta trở lại tranh thiên hạ.', 'Ta ' + fmt(ap) + ' · họ ' + fmt(dp), c.to)); if (old !== 'neutral' && !own2(g, old).length) fall(g, old, me); }
+    else { ex.binh = r100(ex.binh * 0.6); g.queue.unshift(result(false, 'Bại dưới thành ' + PD[c.to].city, 'Tàn quân còn ' + fmt(ex.binh) + '.', 'Ta ' + fmt(ap) + ' · họ ' + fmt(dp), c.to)); }
+  }
+
+  // ------------------------------------------------------------------ sang chương 2
+  function toChapter2(g) {
+    var me = g.emp, army = army1(g), n = myTowns(g).length;
+    g.chapter = 2; g.ch2Start = g.season; g.truceUntil = g.season + TRUCE - 1; g.fac = {}; g.prov = {};
+    Object.keys(START2).forEach(function (p) { var s = START2[p]; g.prov[p] = { owner: s[0], binh: s[1], fort: s[2], tier: 0, gov: clone(s[3]) }; });
+    Object.keys(EMP).forEach(function (e) {
+      var p = EMP[e].prov, E = EMP[e];
+      if (e === me) g.prov[p] = { owner: e, binh: Math.max(3000, r100(army + 600 * n)), fort: e === 'li_shimin' ? 2 : 1, tier: n >= 5 ? 1 : 0, gov: { name: E.name, vo: E.vo, trait: E.trait, loyal: 100, leader: e } };
+      else g.prov[p] = { owner: e, binh: 2500 + r100(rnd(g) * 1000), fort: 0, tier: 0, gov: { name: E.name, vo: E.vo, trait: E.trait, loyal: 100, leader: e } };
+    });
+    Object.keys(FAC2).forEach(function (f) { if (f !== 'neutral') g.fac[f] = { alive: true }; });
+    g.luong += 200;
+    chron(g, 'Làm chủ ' + n + '/5 thành ' + g.home + ', ' + fmt(army) + ' quân cộng ' + fmt(600 * n) + ' trai tráng các thành theo, bước ra 20 châu.');
+  }
+
+  function attack2(g, f, to, isPlayer, aiShares) {
+    var pv = g.prov[to], defO = pv.owner, shares, commit = 0, gv = null;
+    if (isPlayer) { var pl = plan2(g, to); shares = pl.shares; commit = pl.commit; gv = pl.gv; }
+    else { shares = aiShares; shares.forEach(function (x) { commit += x.n; var gx = govOf(g, x.id); if (!gv || gx.vo > gv.vo) gv = gx; }); }
+    if (commit < 500) return false;
+    var ap = commit * atkMul(gv, to, f), dp = pv.binh * defMul(g, to) + reinf(g, to), win = roll(g, ap, dp);
+    shares.forEach(function (s) { g.prov[s.id].binh -= s.n; });
+    var loss = win ? r100(commit * Math.min(0.45, 0.12 + 0.3 * dp / ap)) : r100(commit * Math.min(0.6, 0.25 + 0.25 * ap / dp)), fate = '';
+    if (win) {
+      var og = pv.gov;
+      if (og && og.leader) { var rest = own2(g, defO).filter(function (x) { return x !== to; }); if (rest.length) { var dst = rest.sort(function (x, y) { return g.prov[y].binh - g.prov[x].binh; })[0]; g.prov[dst].gov = og; fate = og.name + ' chạy về ' + PD[dst].city + '.'; } else fate = og.name + ' mất hết đất.'; }
+      else if (og && og.name !== 'Tướng vô danh') { if (isPlayer) { g.captives.push(og); fate = 'Bắt sống ' + og.name + '.'; } else fate = og.name + ' tử trận.'; }
+      pv.owner = f; pv.binh = Math.max(500, commit - loss + r100(pv.binh * 0.15)); pv.fort = Math.max(0, pv.fort - 1); pv.gov = { name: 'Tướng vô danh', vo: 2, trait: null, loyal: 70 };
+      if (isPlayer) { var fg = freeGeneral(g); if (fg) { pv.gov = fg; fg.seat = to; } }
+      if (defO !== 'neutral' && !own2(g, defO).length) fall(g, defO, f);
+    } else {
+      var back = commit - loss; shares.forEach(function (s) { g.prov[s.id].binh += r100(back * s.n / commit); });
+      pv.binh = Math.max(500, pv.binh - r100(pv.binh * Math.min(0.3, 0.15 * ap / dp)));
+    }
+    if (isPlayer) {
+      fx(g, 'binh', -loss);
+      if (win) { uy(g, 4); chron(g, 'Chiếm ' + PD[to].city + ' (' + PNAME[to] + ') của ' + FAC2[defO].name + '.' + (fate ? ' ' + fate : '')); } else uy(g, -2);
+      g.queue.unshift(result(win, (win ? 'Chiếm ' : 'Bại ở ') + PD[to].city, (win ? PNAME[to] + ' về tay ta. ' : 'Rút quân. ') + 'Mất ' + fmt(loss) + ' quân. ' + fate, 'Ta ' + fmt(ap) + ' × may rủi · họ ' + fmt(dp) + ' × may rủi', to));
+    } else if (defO === g.emp) {
+      if (win) { note(g, '!Mất ' + PD[to].city + ' vào tay ' + FAC2[f].name + ' (' + fmt(ap) + ' đánh ' + fmt(dp) + ').'); chron(g, 'Mất ' + PD[to].city + ' vào tay ' + FAC2[f].name + '.'); }
+      else note(g, 'Giữ vững ' + PD[to].city + ' trước ' + FAC2[f].name + ' (' + fmt(ap) + ' đánh ' + fmt(dp) + ').');
+    } else if (win && (seen2(g, to).n != null || EMP[f] || EMP[defO])) note(g, FAC2[f].name + ' chiếm ' + PD[to].city + ' của ' + FAC2[defO].name + '.');
+    return win;
+  }
+  function fall(g, f, by) {
+    if (f === g.emp) {
+      if (!g.exileUsed) { var seat = EMP[f].prov; g.exile = { near: seat, binh: 2500, left: 3 }; g.exileUsed = true; chron(g, 'Mất hết đất. Lưu vong với 2.500 tàn quân.'); note(g, '!Mất châu cuối cùng. Lưu vong 3 mùa với 2.500 quân (chỉ một lần).'); }
+      else g.over = { win: false, why: 'Mất hết đất lần thứ hai. Không còn đường lưu vong.' };
+      return;
+    }
+    g.fac[f].alive = false; note(g, FAC2[f].name + ' diệt vong dưới tay ' + FAC2[by].name + '.'); chron(g, FAC2[f].name + ' diệt vong dưới tay ' + FAC2[by].name + '.');
+  }
+
+  // ------------------------------------------------------------------ hết mùa
+  function endSeason(g) {
+    var me = g.emp, title = cal(g.season) + ' → ' + cal(g.season + 1), fx0 = g.seasonFx;
+    g.log = [];
+    if (g.chapter === 1) {
+      g.townOrder.forEach(function (id) { var t = g.towns[id]; if (t.own === 'tao') t.binh += 80; else if (t.own === 'raider') t.binh += 60; else if (t.own === 'local') t.binh += 30; else t.dan += 100; });
+      var inc = Math.round(dan1(g) * 0.03 * (me === 'zhu_yuanzhang' ? 1.5 : 1)), up = Math.round(army1(g) * 0.06);
+      g.luong += inc - up; note(g, 'Thu ' + fmt(inc) + ' lương, nuôi quân ' + fmt(up) + '.');
+      if (g.luong < 0) { g.luong = 0; myTowns(g).forEach(function (id) { g.towns[id].binh = r100(g.towns[id].binh * 0.85); }); note(g, '!Kho cạn: 15% quân bỏ trốn.'); }
+      g.season += 1;
+      var rep = { kind: 'report', single: true, who: 'Tin trong châu', title: title, lines: g.log.slice(), fx: fx0, yes: { label: 'Tiếp' } };
+      if (g.season > CH1_MAX) { g.seasonFx = {}; g.queue = [rep, go2Card(g, true)]; return; }
+      startSeason(g, rep);
+      return;
+    }
+    // AI: mỗi phe một đòn, hợp binh từ tối đa hai châu kề mục tiêu
+    var thr = Math.max(0.95, 1.25 - 0.02 * (g.season - g.ch2Start)); // thiên hạ càng lâu càng loạn
+    Object.keys(g.fac).forEach(function (f) {
+      if (f === me || !g.fac[f].alive) return;
+      if (g.fac[f].rest >= g.season) return;
+      var best = null, seen = {};
+      own2(g, f).forEach(function (a) { PD[a].nb.forEach(function (q) {
+        var o = g.prov[q].owner; if (seen[q] || o === f || allied(g, f, o) || protectedFrom(g, f, q)) return; seen[q] = 1;
+        var shares = [], commit = 0, gv = null;
+        own2(g, f).filter(function (x) { return adj2(x, q) && g.prov[x].binh >= 3000; }).sort(function (x, y) { return g.prov[y].binh - g.prov[x].binh; }).slice(0, 2).forEach(function (x) { var n = r100(g.prov[x].binh * 0.6); shares.push({ id: x, n: n }); commit += n; var gx = govOf(g, x); if (!gv || gx.vo > gv.vo) gv = gx; });
+        if (!commit) return;
+        var r = commit * atkMul(gv, q, f) / (g.prov[q].binh * defMul(g, q) + reinf(g, q));
+        if (r > thr && (!best || r > best.r)) best = { q: q, shares: shares, r: r };
+      }); });
+      if (best && rnd(g) < (f === 'cao_cao' ? 0.7 : 0.55)) { attack2(g, f, best.q, false, best.shares); g.fac[f].rest = g.season + 1; }
+    });
+    Object.keys(PD).forEach(function (p) { var pv = g.prov[p]; if (pv.owner === me) return; pv.binh = Math.min(Math.max(pv.binh, cap2(g, p)), pv.binh + (pv.owner === 'neutral' ? 150 : 300)); });
+    if (g.exile) { g.exile.left -= 1; if (g.exile.left <= 0) g.over = { win: false, why: 'Ba mùa lưu vong trôi qua, không đoạt lại được đất.' }; }
+    var mine = own2(g, me), inc2 = 0;
+    mine.forEach(function (p) { inc2 += 100 + PD[p].fert * 20 + (EMP[me].prov === p ? 100 : 0) + g.prov[p].tier * 60; });
+    if (me === 'zhu_yuanzhang') inc2 = Math.round(inc2 * 1.5);
+    var up2 = Math.round(army2(g, me) * 0.04);
+    if (mine.length) { g.luong += inc2 - up2; note(g, 'Thu ' + fmt(inc2) + ' lương từ ' + mine.length + ' châu, nuôi quân ' + fmt(up2) + '.'); }
+    if (g.luong < 0) { g.luong = 0; mine.forEach(function (p) { g.prov[p].binh = r100(g.prov[p].binh * 0.85); }); note(g, '!Kho cạn: 15% quân bỏ trốn.'); }
+    if (g.uy < 15 && mine.length) { var rp = mine[Math.floor(rnd(g) * mine.length)], lost = r100(g.prov[rp].binh * 0.2); g.prov[rp].binh -= lost; note(g, '!Uy thấp: dân ' + PNAME[rp] + ' nổi loạn, mất ' + fmt(lost) + ' quân.'); }
+    if (g.season === g.truceUntil) note(g, 'Hết mùa này là hết đình chiến: kinh đô ta có thể bị đánh.');
+    g.pacts = g.pacts.filter(function (x) { if (x.until < g.season + 1) { note(g, 'Minh ước với ' + FAC2[x.b].name + ' hết hạn.'); return false; } return true; });
+    var biggest = Object.keys(g.fac).filter(function (f) { return f !== me && g.fac[f].alive; }).sort(function (a, b) { return own2(g, b).length - own2(g, a).length; })[0];
+    if (biggest) note(g, FAC2[biggest].name + ' nắm ' + own2(g, biggest).length + '/' + LOSE_PROV + ' châu.');
+    g.season += 1;
+    checkWin(g);
+    var rep2 = { kind: 'report', single: true, who: 'Tin thiên hạ', title: title, lines: g.log.slice(), fx: fx0, yes: { label: 'Tiếp' } };
+    if (g.over) { g.queue = [rep2]; return; }
+    startSeason(g, rep2);
+  }
+  function checkWin(g) {
+    if (g.over || g.chapter !== 2) return;
+    var n = own2(g, g.emp).length;
+    if (n >= WIN_PROV) { g.over = { win: true, why: 'Nắm ' + n + ' châu, xưng bá ở ' + cal(g.season) + '.' }; chron(g, 'Xưng bá với ' + n + ' châu.'); return; }
+    var big = Object.keys(g.fac).filter(function (f) { return f !== g.emp && g.fac[f].alive && own2(g, f).length >= LOSE_PROV; })[0];
+    if (big) { g.over = { win: false, why: FAC2[big].name + ' nắm ' + own2(g, big).length + ' châu trước ta. Thiên hạ đã có chủ.' }; chron(g, FAC2[big].name + ' định thiên hạ.'); }
+  }
+
+  function stats(g) {
+    if (g.chapter === 1) return { dan: dan1(g), binh: army1(g), luong: g.luong, uy: g.uy, place: g.home, count: myTowns(g).length + '/' + g.townOrder.length, unit: 'thành' };
+    return { dan: dan2(g, g.emp), binh: army2(g, g.emp) + (g.exile ? g.exile.binh : 0), luong: g.luong, uy: g.uy, place: 'Thiên hạ', count: own2(g, g.emp).length + '/' + WIN_PROV, unit: 'châu' };
+  }
+
+  return { EMP: EMP, HOMES: HOMES, PD: PD, PNAME: PNAME, POS2: POS2, FAC2: FAC2, SEATS: SEATS, TERRAIN: TERRAIN, WIN_PROV: WIN_PROV, LOSE_PROV: LOSE_PROV,
+    newGame: newGame, choose: choose, stats: stats, cal: cal, fmt: fmt, sg: sg, own2: own2, myTowns: myTowns, seen2: seen2, adj1: adj1, allied: allied, cap2: cap2 };
+})();
+
+var RATE = { qin_shihuang: 72, li_shimin: 22, zhu_yuanzhang: 32, liu_che: 45 };
+var TOWN_COLOR = { local: '#a39469', raider: '#4d4a45', tao: '#56702f' };
+var TOWN_WHO = { local: 'Hào tộc', raider: 'Khương, Hồ', tao: 'Tào' };
+var SWIPE = 90;
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { g: null, dx: 0, drag: false, anim: 'none', startX: 0, turns: 0 };
+  }
+
+  start(emp) { var seed = (Date.now() % 1000000) + 1; this.setState({ g: SW.newGame(emp, seed), dx: 0, drag: false, anim: 'none', turns: 0 }); }
+  again() { var g = this.state.g; if (g) this.start(g.emp); }
+  change() { this.setState({ g: null, dx: 0, drag: false, anim: 'none' }); }
+
+  decide(yes) {
+    var st = this.state, g = st.g;
+    if (!g || !g.queue.length || st.anim === 'fly') return;
+    var self = this;
+    this.setState({ anim: 'fly', dx: yes ? 520 : -520, drag: false });
+    setTimeout(function () { self.setState({ g: SW.choose(self.state.g, yes), dx: 0, anim: 'none', turns: self.state.turns + 1 }); }, 190);
+  }
+  down(e) {
+    if (this.state.anim === 'fly') return;
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) {}
+    this.setState({ drag: true, startX: e.clientX, dx: 0, anim: 'none' });
+  }
+  move(e) { if (this.state.drag) this.setState({ dx: e.clientX - this.state.startX }); }
+  up() {
+    if (!this.state.drag) return;
+    var dx = this.state.dx;
+    if (Math.abs(dx) > SWIPE) this.decide(dx > 0);
+    else this.setState({ drag: false, dx: 0, anim: 'snap' });
+  }
+
+  k(n, est) { if (n == null) return '?'; var t = n >= 1000 ? (Math.round(n / 100) / 10).toFixed(1).replace('.', ',') + 'k' : String(n); return (est ? '~' : '') + t; }
+  edge(a, b, bw) { var dx = b[0] - a[0], dy = b[1] - a[1]; return { x: a[0], y: a[1], w: Math.round(Math.hypot(dx, dy)), a: (Math.atan2(dy, dx) * 180 / Math.PI).toFixed(2), bw: bw }; }
+  ring(c, id) {
+    if (!c) return 'none';
+    var from = c.from || [];
+    if (c.to === id || c.at === id) return '0 0 0 3px #fbf7ec, 0 0 0 6px #b0301f';
+    if (from.indexOf(id) !== -1) return '0 0 0 3px #fbf7ec, 0 0 0 6px #c99a1c';
+    return 'none';
+  }
+
+  map1(g, c) {
+    var E = SW.EMP[g.emp], self = this, P = {};
+    g.townOrder.forEach(function (id) { var t = g.towns[id]; P[id] = [t.x + 8, Math.round(t.y * 0.72) + 14]; });
+    var edges = g.nb1.map(function (e) { return self.edge(P[e[0]], P[e[1]], 2); });
+    var nodes = g.townOrder.map(function (id) {
+      var t = g.towns[id], mine = t.own === 'me', col = mine ? E.color : TOWN_COLOR[t.own];
+      return { l: P[id][0] - 23, t: P[id][1] - 23, size: 46, bg: col, border: mine ? '3px solid #1f1a12' : '2px solid #fbf7ec', ring: self.ring(c, id), num: self.k(t.binh), numSize: 12,
+        label: t.name + (t.fort ? ' · lũy ' + t.fort : ''), sub: mine ? 'Ta' : TOWN_WHO[t.own], lw: 120, ll: P[id][0] - 60, lt: P[id][1] + 25, labelSize: 11.5 };
+    });
+    var own = {}; g.townOrder.forEach(function (id) { var o = g.towns[id].own; own[o] = (own[o] || 0) + 1; });
+    var facs = [{ name: 'Ta', n: own.me || 0, color: E.color }].concat(['local', 'raider', 'tao'].filter(function (o) { return own[o]; }).map(function (o) { return { name: TOWN_WHO[o], n: own[o], color: TOWN_COLOR[o] }; }));
+    return { edges: edges, nodes: nodes, facs: facs, clock: 'Chiếm đủ 5 thành để ra thiên hạ. Tào sẽ để ý sau ' + Math.max(0, 10 - g.season) + ' mùa.' };
+  }
+  map2(g, c) {
+    var self = this, me = g.emp, P = {};
+    Object.keys(SW.POS2).forEach(function (p) { var q = SW.POS2[p]; P[p] = [Math.round((q[0] - 115) / 690 * 318 + 22), Math.round((q[1] - 120) / 715 * 214 + 18)]; });
+    var edges = [];
+    Object.keys(SW.PD).forEach(function (a) { SW.PD[a].nb.forEach(function (b) { if (a < b) edges.push(self.edge(P[a], P[b], 1.5)); }); });
+    var nodes = Object.keys(SW.PD).map(function (p) {
+      var pv = g.prov[p], F = SW.FAC2[pv.owner], s = SW.seen2(g, p), seat = SW.SEATS[pv.owner] === p && pv.gov && pv.gov.leader === pv.owner;
+      return { l: P[p][0] - 17, t: P[p][1] - 17, size: 34, bg: F.color, border: pv.owner === me ? '3px solid #1f1a12' : seat ? '2px dashed #1f1a12' : '2px solid #fbf7ec', ring: self.ring(c, p), num: self.k(s.n, !s.exact), numSize: 10,
+        label: SW.PNAME[p], sub: '', lw: 70, ll: P[p][0] - 35, lt: P[p][1] + 17, labelSize: 9.5 };
+    });
+    var facs = Object.keys(g.fac).filter(function (f) { return g.fac[f].alive && SW.own2(g, f).length; }).map(function (f) { return { name: f === me ? 'Ta' : SW.FAC2[f].short, n: SW.own2(g, f).length, color: SW.FAC2[f].color }; });
+    var nn = SW.own2(g, 'neutral').length; if (nn) facs.push({ name: 'Tr.lập', n: nn, color: SW.FAC2.neutral.color });
+    facs.sort(function (a, b) { return b.n - a.n; });
+    var big = facs.filter(function (f) { return f.name !== 'Ta' && f.name !== 'Tr.lập'; })[0];
+    var truce = g.season <= g.truceUntil ? ' Đình chiến tới hết ' + SW.cal(g.truceUntil) + '.' : '';
+    return { edges: edges, nodes: nodes, facs: facs, clock: 'Ta ' + SW.own2(g, me).length + '/' + SW.WIN_PROV + ' châu để xưng bá. ' + (big ? big.name + ' ' + big.n + '/' + SW.LOSE_PROV + ' là ta thua.' : '') + truce };
+  }
+
+  tone(c) {
+    if (c.kind === 'result') return c.ok ? '#2f6b3a' : '#b0301f';
+    if (c.kind === 'report' || c.kind === 'intro' || c.kind === 'go2') return '#1f1a12';
+    if (c.kind === 'attack1' || c.kind === 'attack2' || c.kind === 'raid' || c.kind === 'exile_attack') return '#b0301f';
+    if (c.kind === 'know') return '#6f43bf';
+    if (c.kind === 'talent' || c.kind === 'captive' || c.kind === 'bribe' || c.kind === 'pact' || c.kind === 'annex1' || c.kind === 'annex2' || c.kind === 'scout') return '#8a6a10';
+    return '#5f5443';
+  }
+
+  renderVals() {
+    var st = this.state, g = st.g, self = this, v = {};
+    v.isStart = !g;
+    v.emps = Object.keys(SW.EMP).map(function (e) {
+      var E = SW.EMP[e], H = SW.HOMES[e];
+      return { name: E.name, color: E.color, home: 'Khởi đầu: thành ' + H.towns[0][1] + ', ' + H.title + ' · ' + SW.fmt(H.towns[0][5]) + ' quân · võ ' + E.vo, know: E.know + ': ' + E.knowText, rate: 'Máy chơi cẩn thận thắng ' + RATE[e] + '/100 ván', pick: function () { self.start(e); } };
+    });
+    v.isPlay = !!g && g.queue.length > 0;
+    v.isOver = !!g && !!g.over && !g.queue.length;
+    if (!g) return Object.assign(v, this.blank());
+    var E = SW.EMP[g.emp], c = g.queue[0] || null, s = SW.stats(g);
+    v.empName = E.name; v.empColor = E.color;
+    v.chapterLine = g.chapter === 1 ? 'Chương 1 · ' + g.home : 'Chương 2 · Thiên hạ';
+    v.calText = SW.cal(g.season); v.countText = s.count + ' ' + s.unit;
+    v.stats = [{ label: 'Dân', value: SW.fmt(s.dan) }, { label: 'Binh', value: SW.fmt(s.binh) }, { label: 'Lương', value: SW.fmt(s.luong), warn: s.luong < 200 }, { label: 'Uy', value: String(s.uy), warn: s.uy < 20 }].map(function (x) { return { label: x.label, value: x.value, color: x.warn ? '#b0301f' : '#1f1a12' }; });
+    var m = g.chapter === 1 ? this.map1(g, c) : this.map2(g, c);
+    v.edges = m.edges; v.nodes = m.nodes; v.facs = m.facs; v.clock = m.clock;
+    v.hasExile = !!g.exile; v.exileText = g.exile ? 'Lưu vong: ' + SW.fmt(g.exile.binh) + ' tàn quân, còn ' + g.exile.left + ' mùa.' : '';
+    // thẻ
+    if (c) {
+      var single = !!c.single, dx = st.dx, t = Math.max(-1, Math.min(1, dx / SWIPE));
+      v.cWho = c.who; v.cTitle = c.title; v.cText = c.text || ''; v.hasText = !!c.text;
+      v.cMath = c.math || ''; v.hasMath = !!c.math;
+      v.lines = (c.lines || []).map(function (l) { var bad = l.charAt(0) === '!'; return { t: bad ? l.slice(1) : l, color: bad ? '#b0301f' : '#3d352a', weight: bad ? 600 : 400 }; });
+      v.hasLines = v.lines.length > 0;
+      v.cSingle = single; v.cDouble = !single;
+      v.cYesLabel = c.yes.label; v.cYesFx = c.yes.fx || ''; v.cNoLabel = single ? '' : c.no.label; v.cNoFx = single ? '' : c.no.fx;
+      v.cTone = this.tone(c);
+      v.hasP = c.p != null && !single; v.pText = c.p != null ? Math.round(c.p * 100) + '%' : '';
+      var tr = st.anim === 'fly' ? 'transform .19s ease-in, opacity .19s' : st.anim === 'snap' ? 'transform .18s ease-out' : 'none';
+      v.cardStyle = 'transform: translateX(' + dx + 'px) rotate(' + (dx / 22).toFixed(1) + 'deg); transition: ' + tr + '; opacity: ' + (st.anim === 'fly' ? 0.2 : 1);
+      v.yesOp = single ? 0 : Math.max(0, t).toFixed(2); v.noOp = single ? 0 : Math.max(0, -t).toFixed(2);
+      v.goOp = single ? Math.abs(t).toFixed(2) : 0;
+      var nx = g.queue[1];
+      v.hasNext = !!nx; v.nextWho = nx ? nx.who : ''; v.nextTitle = nx ? nx.title : '';
+      v.dots = g.queue.map(function (x, i) { return { bg: i === 0 ? '#1f1a12' : '#b8a67c' }; });
+    } else Object.assign(v, this.blankCard());
+    v.down = function (e) { self.down(e); }; v.move = function (e) { self.move(e); }; v.up = function (e) { self.up(e); };
+    v.yes = function () { self.decide(true); }; v.no = function () { self.decide(false); };
+    // hết ván
+    v.overTitle = g.over ? (g.over.win ? 'Xưng bá' : 'Thất bại') : ''; v.overColor = g.over && g.over.win ? '#2f6b3a' : '#b0301f';
+    v.overWhy = g.over ? g.over.why : '';
+    v.overStats = g.over ? 'Mùa ' + g.season + ' (' + SW.cal(g.season) + ') · ' + st.turns + ' lần chạm · ' + s.count + ' ' + s.unit : '';
+    v.chronicle = g.chronicle.map(function (x) { return { t: SW.cal(x.s) + ': ' + x.t }; });
+    v.seedText = 'Ván #' + g.seed;
+    v.again = function () { self.again(); }; v.change = function () { self.change(); };
+    return v;
+  }
+  blankCard() { return { cWho: '', cTitle: '', cText: '', hasText: false, cMath: '', hasMath: false, lines: [], hasLines: false, cSingle: true, cDouble: false, cYesLabel: '', cYesFx: '', cNoLabel: '', cNoFx: '', cTone: '#1f1a12', hasP: false, pText: '', cardStyle: '', yesOp: 0, noOp: 0, goOp: 0, hasNext: false, nextWho: '', nextTitle: '', dots: [] }; }
+  blank() {
+    var self = this;
+    return Object.assign({ empName: '', empColor: '#b8a67c', chapterLine: '', calText: '', countText: '', stats: [], edges: [], nodes: [], facs: [], clock: '', hasExile: false, exileText: '',
+      down: function () {}, move: function () {}, up: function () {}, yes: function () {}, no: function () {}, overTitle: '', overColor: '#1f1a12', overWhy: '', overStats: '', chronicle: [], seedText: '', again: function () {}, change: function () { self.change(); } }, this.blankCard());
+  }
+}
+</script>
+</body>
+</html>

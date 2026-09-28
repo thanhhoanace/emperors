@@ -11,7 +11,7 @@
 5. **Số, không chữ.** Trạng thái và ước lượng hiện bằng con số ít và rõ (dân, binh, lương…), không bằng band chữ.
 6. **Thước đo "chơi được"** là ngưỡng hành vi: lựa chọn đầu dưới 60 giây không cần hướng dẫn; người quen xong ván 15–25 phút; kể lại được một lựa chọn đổi thế cờ; tự bấm ván nữa trên 40 %; đổi đế ở ván sau. Thắng 20–30 % chỉ còn là mốc cân bằng máy (`npm run play`).
 7. **Chơi thử:** chỉ chủ dự án chơi trước khi khoá luật; người lạ thử khi đã lên Pages.
-8. **Bước tiếp:** Claude làm spike 2 (trang HTML trong repo, chạy bằng `npm start`, quẹt được trên điện thoại): quẹt thẻ có / không trên bản đồ, mở ván từ thành trong một châu rồi lớn dần, số thay chữ. Chủ dự án chơi. Rồi Grok viết `GAMEPLAY-FREEZE.md` v2 từ DECISION này cộng spike 2, rồi mới code engine. Không code luật mới trước freeze v2.
+8. **Bước tiếp:** Claude làm spike 2 (trang HTML trong repo, chạy bằng `npm start`, quẹt được trên điện thoại): quẹt thẻ có / không trên bản đồ, mở ván từ thành trong một châu rồi lớn dần, số thay chữ. Chủ dự án chơi. Rồi Grok viết `GAMEPLAY-FREEZE.md` v2 từ DECISION này cộng spike 2, rồi mới code engine. Không code luật mới trước freeze v2. *(Cùng ngày, chủ dự án đổi hình thức: làm spike 2 trên canvas Design; xem `WORKING.md` mục Spike 2.)*
 
 ## Why
 
@@ -43,7 +43,7 @@ Giữ từ 27/9, không mâu thuẫn: chơi là chính, clip ở `?demo=1`; Page
 - Ván ngắn phải giữ được cảm giác "xây từ tay trắng" (mở ván nhỏ, lớn dần) mà không kéo dài; nếu người chơi thấy vừa nhập vai đã bị ngắt, xem lại độ dài hoặc hướng (`chatgpt.md` §9).
 - Bốn đế phải khác nhau ở *lựa chọn*, không chỉ ở số; hết bất ngờ ở ván 3 là "nông" (`grok.md` §2).
 - Cân bằng spike 1 còn lệch (Chu 0 % thắng, Hán Vũ chỉ giáp Tần); spike 2 đổi hình dạng nên đo lại từ đầu.
-- Canvas không bấm được với chủ dự án; spike 2 phải là trang HTML thường.
+- Canvas không bấm được với chủ dự án ở spike 1. Spike 2 vẫn lên canvas Design theo yêu cầu sau đó của chủ dự án; phải chơi ở chế độ Play. Nếu vẫn không bấm được, chuyển sang trang HTML thường.
 
 ## Revisit when
 
