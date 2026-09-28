@@ -26,15 +26,23 @@ button{font-family:inherit;color:inherit}
 </button>
 </sc-for>
 <sc-for list="{{armyLabels}}" as="a" hint-placeholder-count="0">
-<button type="button" onClick="{{a.tap}}" style="position: absolute; left: {{a.left}}px; top: {{a.top}}px; width: 140px; min-height: 40px; padding: 4px 7px 4px 5px; box-sizing: border-box; display: flex; gap: 6px; align-items: center; text-align: left; background: {{a.bg}}; border: 1px solid {{a.border}}; border-radius: 8px; cursor: pointer">
-<span style="flex: none; width: 22px; height: 30px; border-radius: 3px; background: {{a.color}}; color: #f6eedb; display: flex; align-items: center; justify-content: center; font-family: 'Noto Serif TC', serif; font-size: 15px; font-weight: 700">{{a.glyph}}</span>
+<button type="button" onClick="{{a.tap}}" style="position: absolute; left: {{a.left}}px; top: {{a.top}}px; width: 168px; min-height: 44px; padding: 4px 7px 4px 4px; box-sizing: border-box; display: flex; gap: 6px; align-items: center; text-align: left; background: {{a.bg}}; border: 1px solid {{a.border}}; border-radius: 8px; cursor: pointer">
+<sc-if value="{{a.hasImg}}" hint-placeholder-val="{{false}}"><img src="{{a.img}}" alt="" style="flex: none; width: 36px; height: 36px; border-radius: 50%; box-shadow: 0 0 0 2.5px {{a.color}}; background: #efe3c8"></sc-if>
+<sc-if value="{{a.noImg}}" hint-placeholder-val="{{true}}"><span style="flex: none; width: 22px; height: 30px; border-radius: 3px; background: {{a.color}}; color: #f6eedb; display: flex; align-items: center; justify-content: center; font-family: 'Noto Serif TC', serif; font-size: 15px; font-weight: 700">{{a.glyph}}</span></sc-if>
 <span style="display: flex; flex-direction: column; min-width: 0">
 <span style="font-size: 12px; font-weight: 700; color: #f6eedb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.name}}</span>
-<span style="font-size: 10.5px; color: #ddd0b3; white-space: nowrap; font-variant-numeric: tabular-nums">{{a.arms}}</span>
+<span style="display: flex; gap: 7px; font-size: 11px; font-weight: 600; color: #ddd0b3; white-space: nowrap; font-variant-numeric: tabular-nums"><sc-for list="{{a.arms}}" as="u" hint-placeholder-count="3"><span style="display: flex; align-items: center; gap: 2px"><sc-if value="{{u.isBo}}" hint-placeholder-val="{{true}}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#efe6d2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21L19 3"></path><path d="M15 3h4v4"></path><circle cx="8" cy="15" r="5"></circle></svg></sc-if><sc-if value="{{u.isCung}}" hint-placeholder-val="{{false}}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#efe6d2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3c9 3 9 15 0 18"></path><path d="M6 3v18"></path><path d="M3 12h15"></path><path d="M15 9l3 3-3 3"></path></svg></sc-if><sc-if value="{{u.isKy}}" hint-placeholder-val="{{false}}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#efe6d2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21l2-7-3-4 5-6 5 1 5 5-2 2-4-1-1 4 3 6"></path></svg></sc-if><sc-if value="{{u.isThuy}}" hint-placeholder-val="{{false}}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#efe6d2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15h18l-3 5H6z"></path><path d="M12 15V3l6 9h-6"></path></svg></sc-if>{{u.n}}</span></sc-for></span>
 <span style="font-size: 10px; color: {{a.ordColor}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.ord}}</span>
 </span>
 </button>
 </sc-for>
+
+<sc-if value="{{hasTip}}" hint-placeholder-val="{{false}}">
+<button type="button" onClick="{{hideTip}}" style="position: absolute; left: {{tipLeft}}px; top: {{tipTop}}px; width: 220px; padding: 6px 10px; display: flex; flex-direction: column; gap: 2px; text-align: left; border-radius: 10px; border: 1px solid #e2bf6c; background: rgba(22,18,13,.92); cursor: pointer">
+<span style="font-size: 13px; font-weight: 700; color: #f6eedb">Địa thế: {{tipName}}</span>
+<span style="font-size: 11.5px; line-height: 1.35; color: #ddd0b3">{{tipFx}}</span>
+</button>
+</sc-if>
 
 <sc-if value="{{showHud}}" hint-placeholder-val="{{true}}">
 <div style="position: absolute; left: 10px; top: 8px; display: flex; align-items: center; gap: 8px; pointer-events: none">
@@ -51,6 +59,7 @@ button{font-family:inherit;color:inherit}
 </sc-for>
 </div>
 <div style="position: absolute; right: 10px; top: 8px; display: flex; gap: 5px">
+<button type="button" aria-label="Mục tiêu và cách chơi" onClick="{{openGoal}}" style="width: 42px; height: 42px; border-radius: 10px; border: 1px solid rgba(226,191,108,.5); background: rgba(22,18,13,.82); font-family: 'Noto Serif', Georgia, serif; font-size: 19px; font-weight: 700; color: #e2bf6c; cursor: pointer">?</button>
 <sc-if value="{{hasCards}}" hint-placeholder-val="{{false}}">
 <button type="button" onClick="{{openCards}}" style="height: 42px; padding: 0 12px; border-radius: 10px; border: 1px solid #e2bf6c; background: rgba(90,62,20,.92); font-size: 13px; font-weight: 700; color: #f6e2b0; cursor: pointer">Thẻ · {{nCards}}</button>
 </sc-if>
@@ -78,7 +87,8 @@ button{font-family:inherit;color:inherit}
 <sc-if value="{{hasArmy}}" hint-placeholder-val="{{false}}">
 <div style="position: absolute; left: 10px; top: 56px; width: 300px; max-height: 322px; box-sizing: border-box; padding: 10px 12px 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; background: rgba(22,18,13,.93); border: 1px solid rgba(226,191,108,.3); border-radius: 12px">
 <div style="display: flex; gap: 9px; align-items: center">
-<div style="flex: none; width: 46px; height: 46px; border-radius: 50%; background: {{aSealBg}}; box-shadow: 0 0 0 2px rgba(246,238,219,.7); display: flex; align-items: center; justify-content: center; font-family: 'Noto Serif TC', serif; font-size: 24px; font-weight: 700; color: #f6eedb">{{aSeal}}</div>
+<sc-if value="{{aHasImg}}" hint-placeholder-val="{{false}}"><img src="{{aImg}}" alt="" style="flex: none; width: 58px; height: 58px; border-radius: 10px; box-shadow: 0 0 0 2px {{aSealBg}}"></sc-if>
+<sc-if value="{{aNoImg}}" hint-placeholder-val="{{true}}"><div style="flex: none; width: 46px; height: 46px; border-radius: 50%; background: {{aSealBg}}; box-shadow: 0 0 0 2px rgba(246,238,219,.7); display: flex; align-items: center; justify-content: center; font-family: 'Noto Serif TC', serif; font-size: 24px; font-weight: 700; color: #f6eedb">{{aSeal}}</div></sc-if>
 <div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0">
 <span style="font-family: 'Noto Serif', Georgia, serif; font-size: 17px; font-weight: 700; color: #f6eedb">{{aName}}</span>
 <span style="font-size: 11.5px; color: #c9bb9c">{{aCls}}</span>
@@ -95,9 +105,11 @@ button{font-family:inherit;color:inherit}
 </sc-for>
 </div>
 <div style="font-size: 11.5px; line-height: 1.35; color: #ddd0b3">{{aTrait}}</div>
+<sc-if value="{{aHasLoyal}}" hint-placeholder-val="{{false}}"><div style="font-size: 10.5px; line-height: 1.35; color: #c9bb9c">{{aLoyalNote}}</div></sc-if>
 <div style="display: flex; flex-wrap: wrap; gap: 5px 12px; padding: 6px 8px; border-radius: 8px; background: rgba(255,255,255,.05)">
 <sc-for list="{{aUnits}}" as="u" hint-placeholder-count="3"><span style="font-size: 12.5px; color: #c9bb9c; white-space: nowrap">{{u.arm}} <span style="font-weight: 700; color: #f6eedb; font-variant-numeric: tabular-nums">{{u.n}}</span></span></sc-for>
 <span style="width: 100%; font-size: 11px; color: #c9bb9c">{{aTotal}} · {{aWhere}}</span>
+<span style="width: 100%; font-size: 11px; color: #e2bf6c">{{aReach}}</span>
 </div>
 <sc-if value="{{aMine}}" hint-placeholder-val="{{true}}">
 <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px">
@@ -165,7 +177,8 @@ button{font-family:inherit;color:inherit}
 <div style="position: absolute; left: 0; top: 0; width: 844px; height: 390px; background: rgba(10,8,6,.45)"></div>
 <div style="position: absolute; left: 112px; top: 18px; width: 620px; height: 354px; box-sizing: border-box; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; background: rgba(24,19,14,.97); border: 1px solid #e2bf6c; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.5)">
 <div style="display: flex; gap: 10px; align-items: center">
-<div style="flex: none; width: 44px; height: 44px; border-radius: 50%; background: {{fSealBg}}; box-shadow: 0 0 0 2px rgba(246,238,219,.7); display: flex; align-items: center; justify-content: center; font-family: 'Noto Serif TC', serif; font-size: 23px; font-weight: 700; color: #f6eedb">{{fSeal}}</div>
+<sc-if value="{{fHasImg}}" hint-placeholder-val="{{false}}"><img src="{{fImg}}" alt="" style="flex: none; width: 50px; height: 50px; border-radius: 9px; box-shadow: 0 0 0 2px {{fSealBg}}"></sc-if>
+<sc-if value="{{fNoImg}}" hint-placeholder-val="{{true}}"><div style="flex: none; width: 44px; height: 44px; border-radius: 50%; background: {{fSealBg}}; box-shadow: 0 0 0 2px rgba(246,238,219,.7); display: flex; align-items: center; justify-content: center; font-family: 'Noto Serif TC', serif; font-size: 23px; font-weight: 700; color: #f6eedb">{{fSeal}}</div></sc-if>
 <div style="flex-grow: 1; display: flex; flex-direction: column">
 <span style="font-family: 'Noto Serif', Georgia, serif; font-size: 16px; font-weight: 700; color: #f6eedb">{{fWho}}</span>
 <span style="font-size: 11.5px; color: #c9bb9c">{{fWhere}} · {{fAcc}}</span>
@@ -213,16 +226,35 @@ button{font-family:inherit;color:inherit}
 
 <sc-if value="{{hasCard}}" hint-placeholder-val="{{false}}">
 <div style="position: absolute; left: 0; top: 0; width: 844px; height: 390px; background: rgba(10,8,6,.4)"></div>
-<div style="position: absolute; left: 172px; top: 40px; width: 500px; height: 310px; box-sizing: border-box; padding: 14px 18px; display: flex; flex-direction: column; gap: 8px; background: rgba(24,19,14,.97); border: 1px solid #e2bf6c; border-radius: 16px; box-shadow: 0 12px 40px rgba(0,0,0,.5)">
+<div style="position: absolute; left: 142px; top: 14px; width: 560px; max-height: 362px; box-sizing: border-box; padding: 12px 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; background: rgba(24,19,14,.97); border: 1px solid #e2bf6c; border-radius: 16px; box-shadow: 0 12px 40px rgba(0,0,0,.5)">
 <div style="display: flex; gap: 11px; align-items: center">
-<div style="flex: none; width: 52px; height: 52px; border-radius: 50%; background: {{cSealBg}}; box-shadow: 0 0 0 2px rgba(246,238,219,.7); display: flex; align-items: center; justify-content: center; font-family: 'Noto Serif TC', serif; font-size: 27px; font-weight: 700; color: #f6eedb">{{cSeal}}</div>
+<sc-if value="{{cHasImg}}" hint-placeholder-val="{{false}}"><img src="{{cImg}}" alt="" style="flex: none; width: 64px; height: 64px; border-radius: 10px; box-shadow: 0 0 0 2px {{cSealBg}}"></sc-if>
+<sc-if value="{{cNoImg}}" hint-placeholder-val="{{true}}"><div style="flex: none; width: 52px; height: 52px; border-radius: 50%; background: {{cSealBg}}; box-shadow: 0 0 0 2px rgba(246,238,219,.7); display: flex; align-items: center; justify-content: center; font-family: 'Noto Serif TC', serif; font-size: 27px; font-weight: 700; color: #f6eedb">{{cSeal}}</div></sc-if>
 <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0">
 <span style="font-size: 11.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: {{cTone}}">{{cWho}} · {{cCount}}</span>
 <span style="font-family: 'Noto Serif', Georgia, serif; font-size: 19px; font-weight: 700; line-height: 1.2; color: #f6eedb">{{cTitle}}</span>
 </div>
 <button type="button" onClick="{{later}}" style="flex: none; height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid rgba(226,191,108,.3); background: transparent; font-size: 12px; cursor: pointer">Để sau</button>
 </div>
-<div style="flex-grow: 1; font-size: 14px; line-height: 1.5; color: #e6dbc3">{{cText}}</div>
+<div style="font-size: 13.5px; line-height: 1.45; color: #e6dbc3">{{cText}}</div>
+<sc-if value="{{cHasGen}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 5px; padding: 7px 10px; border-radius: 10px; background: rgba(255,255,255,.05); border: 1px solid rgba(226,191,108,.2)">
+<span style="font-size: 12px; color: #ddd0b3"><span style="font-weight: 700; color: #f6eedb">{{cGenName}}</span> · {{cGenCls}}</span>
+<div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; align-items: end">
+<sc-for list="{{cStats}}" as="s" hint-placeholder-count="5">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 10.5px; color: #c9bb9c">{{s.label}} <span style="font-weight: 700; color: {{s.color}}">{{s.v}}</span></span>
+<span style="height: 4px; border-radius: 2px; background: rgba(255,255,255,.1); overflow: hidden"><span style="display: block; height: 4px; width: {{s.w}}; background: {{s.color}}"></span></span>
+</div>
+</sc-for>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 10.5px; font-weight: 700; color: {{cLoyalColor}}">{{cLoyal}}</span>
+<span style="height: 4px; border-radius: 2px; background: rgba(255,255,255,.1); overflow: hidden"><span style="display: block; height: 4px; width: {{cLoyalW}}; background: {{cLoyalColor}}"></span></span>
+</div>
+</div>
+<span style="font-size: 10.5px; line-height: 1.35; color: #c9bb9c">{{cLoyalNote}}</span>
+</div>
+</sc-if>
 <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
 <button type="button" onClick="{{no}}" style="min-height: 64px; padding: 7px 11px; display: flex; flex-direction: column; gap: 2px; text-align: left; border-radius: 11px; border: 1px solid rgba(226,191,108,.4); background: rgba(255,255,255,.05); cursor: pointer">
 <span style="font-size: 14px; font-weight: 700; color: #f6eedb">{{cNo}}</span>
@@ -308,6 +340,34 @@ button{font-family:inherit;color:inherit}
 <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; overflow-y: auto; padding: 12px 14px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid rgba(226,191,108,.25)">
 <span style="font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #c9bb9c">Biên niên</span>
 <sc-for list="{{chron}}" as="c" hint-placeholder-count="6"><span style="font-size: 12.5px; line-height: 1.4; color: #e6dbc3">{{c.t}}</span></sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isGoal}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 0; top: 0; width: 844px; height: 390px; background: rgba(10,8,6,.55)"></div>
+<div style="position: absolute; left: 62px; top: 16px; width: 720px; height: 358px; box-sizing: border-box; padding: 14px 20px; display: flex; flex-direction: column; gap: 10px; background: rgba(24,19,14,.97); border: 1px solid #e2bf6c; border-radius: 16px">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
+<span style="font-family: 'Noto Serif', Georgia, serif; font-size: 22px; font-weight: 700; color: #f6eedb">Thu 219. Chu Nguyên Chương ở Hoài Nam.</span>
+<span style="font-size: 11.5px; color: #c9bb9c">Demo 1 · một mùa, chơi tiếp được</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+<div style="display: flex; flex-direction: column; gap: 4px; padding: 9px 11px; border-radius: 11px; background: rgba(152,212,148,.08); border: 1px solid rgba(152,212,148,.4)">
+<span style="font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #98d494">Thắng</span>
+<span style="font-size: 13px; line-height: 1.4; color: #e6dbc3">Nắm đủ 5 thành Hoài Nam: Chung Ly, Âm Lăng (của ta), Thọ Xuân (Tào), Hu Dị, Lịch Dương (hào tộc).</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px; padding: 9px 11px; border-radius: 11px; background: rgba(240,138,114,.08); border: 1px solid rgba(240,138,114,.4)">
+<span style="font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #f08a72">Thua</span>
+<span style="font-size: 13px; line-height: 1.4; color: #e6dbc3">Mất hết thành. Hoặc Lương âm hai mùa liền (binh biến), Uy về 0 hai mùa liền (dân nổi loạn). Mùa đầu chạm đáy chỉ bị cảnh báo.</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px; padding: 9px 11px; border-radius: 11px; background: rgba(226,191,108,.08); border: 1px solid rgba(226,191,108,.4)">
+<span style="font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #e2bf6c">Mỗi mùa</span>
+<span style="font-size: 13px; line-height: 1.4; color: #e6dbc3">1. Đọc thẻ (sứ giả, tướng, ký ức). 2. Chạm từng đạo quân: Đi, Đánh, Vây, Giữ; vòng vàng là tầm một mùa. 3. Chạm thành ta: giao một việc. 4. Hết mùa.</span>
+</div>
+</div>
+<div style="display: flex; gap: 12px; align-items: center">
+<span style="flex-grow: 1; font-size: 12px; line-height: 1.45; color: #c9bb9c">Tào có Trương Liêu (6.000 quân, 3.500 kỵ) ở Thọ Xuân. Ngô có thuyền Chu Thái ở Lịch Dương. Trước khi đánh, tướng Mưu cao nhất của ta đoán trận; Mưu càng cao càng đoán sát. Chạm đất để xem địa thế.</span>
+<button type="button" onClick="{{goalGo}}" style="flex: none; width: 190px; height: 50px; border-radius: 12px; border: 1px solid #f3d58f; background: #9e2a1e; font-family: 'Noto Serif', Georgia, serif; font-size: 16px; font-weight: 700; color: #fbf1dc; cursor: pointer">{{goalBtn}}</button>
 </div>
 </div>
 </sc-if>

@@ -143,13 +143,13 @@
       c.push({ id: 'history_fan', kind: 'history', who: 'Ký ức người xuyên không', title: 'Quan Vũ sắp dìm bảy quân ở Phàn Thành', text: 'Tháng 8 năm 219. Ta nhớ: Tào Tháo sẽ gọi quân Hoài Nam về cứu Tương Dương. Trương Liêu có thể rời Thọ Xuân ngay mùa này, hoặc không.', yes: { label: 'Tung tin Hoài Nam yếu', fx: 'Tào rút Trương Liêu: 85% · Uy −5' }, no: { label: 'Im lặng chờ', fx: 'Tào rút Trương Liêu: 50%' } });
       c.push({ id: 'envoy_wu', kind: 'envoy', who: 'Sứ Ngô', gen: 'zhou_tai', title: 'Tôn Quyền xin kết minh đánh Tào', text: 'Ngô không động tới đất ta. Đổi lại Ngô lấy Lịch Dương. Thuyền Ngô giúp ta khi ta đánh ven sông.', yes: { label: 'Kết minh', fx: 'Ngô lấy Lịch Dương · +1.200 thủy Ngô khi ta đánh ven sông' }, no: { label: 'Từ chối', fx: 'Ngô tự do · Lịch Dương còn bỏ ngỏ' } });
       c.push({ id: 'local_hudi', kind: 'envoy', who: 'Hào tộc Hu Dị', gen: 'tran', title: 'Trần Kiểu xin quy thuận', text: 'Ông mở cổng Hu Dị nếu ta tha thuế hai mùa và giữ ông làm huyện lệnh.', yes: { label: 'Nhận', fx: 'Hu Dị về ta · Lương −300 · miễn thuế 2 mùa' }, no: { label: 'Đòi hàng vô điều kiện', fx: 'Uy +3 · muốn Hu Dị thì phải đánh' } });
-      c.push({ id: 'gen_zhuhuan', kind: 'general', who: 'Tướng dưới trướng', gen: 'zhu_huan', title: 'Chu Hoàn xin làm tiên phong', text: 'Ông muốn dẫn thuyền đánh trước để lập công. Lòng trung hiện 72.', yes: { label: 'Cho làm tiên phong', fx: 'Trung +10 · đạo thủy phải đánh mùa này, không thì Trung −15' }, no: { label: 'Bắt chờ lệnh', fx: 'Trung −12' } });
+      c.push({ id: 'gen_zhuhuan', kind: 'general', who: 'Tướng dưới trướng', gen: 'zhu_huan', title: 'Chu Hoàn xin làm tiên phong', text: 'Tướng thủy trẻ, gan (Dũng 8) nhưng ít mưu (Mưu 3), đang cầm đạo thủy 1.800 thuyền binh và 600 bộ. Ông xin đánh trước để lập công.', yes: { label: 'Cho làm tiên phong', fx: 'Trung 72 → 82: quân ông +3 sĩ khí. Nhưng mùa này đạo thủy phải Đánh hoặc Vây, không thì Trung −15.' }, no: { label: 'Bắt chờ lệnh', fx: 'Trung 72 → 60: quân ông −3 sĩ khí khi ra trận.' } });
     }
     if (g.season === 2) {
       c.push({ id: 'history_lu', kind: 'history', who: 'Ký ức người xuyên không', title: 'Lã Mông áo trắng qua sông', text: 'Đông 219. Ngô sắp đánh úp Kinh Châu. Thuyền Chu Thái sẽ bị gọi về tây, Lịch Dương bỏ ngỏ.', yes: { label: 'Đòi Lịch Dương hàng', fx: 'Uy ≥ 45: Lịch Dương hàng ta · Ngô thù ta' }, no: { label: 'Đứng ngoài', fx: 'Không gì đổi' } });
     }
     const zh = g.gens.zhu_huan;
-    if (g.season > 1 && zh.fid === g.me && zh.loyal < 55) c.push({ id: 'gen_zhuhuan_' + g.season, kind: 'general', who: 'Tướng dưới trướng', gen: 'zhu_huan', title: 'Chu Hoàn bất mãn', text: 'Lòng trung còn ' + zh.loyal + '. Ông đòi được giữ một thành.', yes: { label: 'Giao Âm Lăng', fx: 'Trung +20' }, no: { label: 'Mắng', fx: 'Trung −10 · dưới 30 là bỏ đi' } });
+    if (g.season > 1 && zh.fid === g.me && zh.loyal < 55) c.push({ id: 'gen_zhuhuan_' + g.season, kind: 'general', who: 'Tướng dưới trướng', gen: 'zhu_huan', title: 'Chu Hoàn bất mãn', text: 'Lòng trung còn ' + zh.loyal + '. Ông đòi được giữ một thành.', yes: { label: 'Giao Âm Lăng', fx: 'Trung +20; ông làm trấn thủ Âm Lăng.' }, no: { label: 'Mắng', fx: 'Trung −10. Dưới 30 thì ông bỏ đi, mang cả đạo thủy.' } });
     for (const cp of g.captives) c.push({ id: 'captive_' + cp, kind: 'captive', who: 'Tù binh', gen: cp, title: 'Bắt sống ' + GEN[cp].name, text: GEN[cp].name + ' (' + GEN[cp].cls + ', Mưu ' + GEN[cp].muu + ', Dũng ' + GEN[cp].dung + ') bị trói trước trướng. Trung với chủ cũ ' + GEN[cp].loyal + '.', yes: { label: 'Chiêu hàng', fx: (GEN[cp].loyal >= 85 ? 25 : 60) + '% theo ta; không thì chém' }, no: { label: 'Thả về', fx: 'Uy +6' } });
     return c;
   }
@@ -186,7 +186,7 @@
   const BASE = { bo: { atk: 1.0, def: 1.1 }, cung: { atk: 0.5, def: 0.8, shoot: 0.9 }, ky: { atk: 1.3, def: 0.9 }, thuy: { atk: 1.05, def: 1.0 } };
   // lanes by battle site: open (cavalry +30 %), ford (crossing −20 %, boats +15 %), wood (cavalry −30 %, fire burns)
   const SITE = { am_lang: ['open', 'open', 'wood'], chung_ly: ['open', 'ford', 'open'], tho_xuan: ['open', 'ford', 'wood'], hu_di: ['wood', 'open', 'ford'], lich_duong: ['ford', 'open', 'open'] };
-  B.LANE_TEXT = { open: 'Đồng trống', ford: 'Bến sông', wood: 'Rừng thưa' };
+  B.LANE_TEXT = { open: 'Đồng trống', ford: 'Bến sông', wood: 'Rừng thưa', hill: 'Đồi' };
   B.ORDERS = {
     tien: { name: 'Tiến', text: 'Lên một hàng; chạm địch thì đánh.' },
     xung: { name: 'Xung phong', text: 'Lên hai hàng, cú va đầu +40%.', arms: ['ky'] },
@@ -196,6 +196,8 @@
     rut: { name: 'Rút', text: 'Lùi một hàng, hồi sĩ khí; ra khỏi trận là rời trận.' },
     hoa: { name: 'Hỏa công', text: 'Một lần mỗi trận, tướng Mưu ≥ 7: đốt cánh địch trong rừng hoặc trên thuyền.' },
   };
+  // Trung (loyalty) of a general under a lord: below 70 his men fight worse (−1 morale per 4 points, at most −8), 85+ a little better (+3)
+  R.loyalMorale = (gen) => (!gen || gen.loyal == null || gen.name === 'Chu Nguyên Chương' ? 0 : gen.loyal < 70 ? Math.max(-8, Math.round((gen.loyal - 70) / 4)) : gen.loyal >= 85 ? 3 : 0);
   const NOBODY = { name: 'Tướng giữ thành', uy: 4, tai: 4, muu: 3, dung: 4, kien: 5, trait: '' };
   const genOf = (g, gid) => (gid && g.gens[gid]) || NOBODY;
   B.genOf = genOf;
@@ -212,8 +214,12 @@
     add('thuy', thuy, 1, back);
     return w;
   };
+  // the page may give the lanes from the map's own ground: (site, fromPlace) → three of open|ford|wood|hill
+  let laneProvider = null;
+  R.setLaneProvider = (fn) => { laneProvider = fn; };
+  B.lanesFor = (plan) => (laneProvider && laneProvider(plan.site, plan.from)) || SITE[plan.site] || ['open', 'open', 'wood'];
   B.create = function (g, plan, me) {
-    const lanes = SITE[plan.site] || ['open', 'open', 'wood'];
+    const lanes = B.lanesFor(plan);
     const b = {
       site: plan.site, siege: !!plan.siege, walls: plan.defender.walls || 0, lanes, turn: 1, maxTurn: 5, over: null, log: [], fired: { A: false, D: false }, wind: true, me: me || null,
       A: { fid: plan.attacker.fid, gen: plan.attacker.gen }, D: { fid: plan.defender.fid, gen: plan.defender.gen, holding: !!plan.defender.holding },
@@ -221,7 +227,7 @@
     };
     // the day itself: wind for fire (60 %) and each side's fortune (±15 %), unknown to any forecast
     b.wind = brnd(b) < 0.6; b.luck = { A: 0.85 + 0.3 * brnd(b), D: 0.85 + 0.3 * brnd(b) };
-    for (const w of b.wings) { const gen = sideGen(g, b, w.side); w.morale = Math.min(100, 55 + gen.uy * 3 + (gen.trait === 'Xuất thân bần nông' && (w.arm === 'bo' || w.arm === 'cung') ? 7 : 0)); }
+    for (const w of b.wings) { const gen = sideGen(g, b, w.side); w.morale = Math.min(100, 55 + gen.uy * 3 + R.loyalMorale(gen) + (gen.trait === 'Xuất thân bần nông' && (w.arm === 'bo' || w.arm === 'cung') ? 7 : 0)); }
     return b;
   };
   const brnd = (b) => { b.rs = (b.rs + 0x6d2b79f5) >>> 0; let t = b.rs; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -241,6 +247,7 @@
     if (mode !== 'shoot') {
       if (w.arm === 'ky' && lane === 'open' && !wall) m(1.3, 'kỵ trên đồng trống');
       if (w.arm === 'ky' && lane === 'wood') m(0.7, 'kỵ trong rừng');
+      if (w.arm === 'ky' && lane === 'hill') m(0.85, 'kỵ lên dốc');
       if (w.arm === 'ky' && w.charge && !wall) m(gen.trait === 'Uy chấn Tiêu Dao' ? 1.75 : 1.4, gen.trait === 'Uy chấn Tiêu Dao' ? 'xung phong, Uy chấn Tiêu Dao' : 'xung phong');
       if (w.flank) m(1.5, 'đánh vào sườn');
       if (w.arm === 'bo' && w.hold && foe && foe.arm === 'ky') m(1.5, 'giáo dài chặn kỵ');
@@ -257,6 +264,7 @@
     const m = (x, why) => { k *= x; mods.push([why, Math.round((x - 1) * 100)]); };
     m(1 + (gen.kien - 5) * 0.03, 'Kiên ' + gen.kien + ' (' + gen.name + ')');
     if (w.hold) m(1.25, 'giữ trận');
+    if (b.lanes[w.lane] === 'hill' && w.side === 'D') m(1.25, 'giữ đồi');
     if (onWalls(b, w)) { const lv = b.walls + (gen.trait === 'Giữ thành' ? 1 : 0); if (lv) m(1 + 0.2 * lv, 'tường thành, lũy ' + lv + (gen.trait === 'Giữ thành' ? ' (Giữ thành)' : '')); }
     if (w.side === 'D' && b.D.holding && !b.siege) m(1.15, 'dàn trận chờ sẵn');
     return { k, mods };
@@ -384,7 +392,7 @@
       dArmies.push(e.id); for (const [k, v] of Object.entries(e.units)) dUnits[k] = (dUnits[k] || 0) + v; if (e.holding) holding = true;
       if (!dGen || genOf(g, e.gen).uy > genOf(g, dGen).uy) dGen = e.gen;
     }
-    const plan = { site, siege, attacker: { fid, gen: lead.gen, units, armies: as.map((a) => a.id) }, defender: { fid: dfid, gen: dGen, units: dUnits, walls, town, armies: dArmies, holding } };
+    const plan = { site, siege, from: as[0].at !== site ? as[0].at : null, attacker: { fid, gen: lead.gen, units, armies: as.map((a) => a.id) }, defender: { fid: dfid, gen: dGen, units: dUnits, walls, town, armies: dArmies, holding } };
     if (fid === g.me && g.allies.sun_quan && g.armies.e2 && PLACES[site].river) { plan.attacker.units = Object.assign({}, units, { thuy: (units.thuy || 0) + 1200 }); plan.ally = 1200; }
     return plan;
   };

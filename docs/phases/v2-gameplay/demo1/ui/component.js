@@ -2,10 +2,12 @@
 // world in it, HNScene draws towns, armies and battles, HNRules decides everything. Throwaway spike, landscape phone.
 var W = 844, H = 390;
 var MAP_PNG = '__MAP_PNG__';
+var PORTRAIT = __PORTRAITS__; // general id → uploaded ink portrait (portraits/*.svg)
 var SEAT_OWNERS = { xu: 'cao_cao', yan: 'cao_cao', yu: 'cao_cao', yang: 'sun_quan' };
 var STATS = [['uy', 'Uy'], ['tai', 'Tài'], ['muu', 'Mưu'], ['dung', 'Dũng'], ['kien', 'Kiên']];
 var ARM_ORDER = ['bo', 'cung', 'ky', 'thuy'];
 var ORDER_TEXT = { move: 'Đi tới', attack: 'Đánh', siege: 'Vây', hold: 'Giữ, dàn trận chờ' };
+var LOYAL_NOTE = 'Trung dưới 70: quân ông đánh kém (tới −8 sĩ khí). Dưới 30: ông bỏ đi, mang theo quân. Từ 85: +3 sĩ khí.';
 var TONE = { text: '#efe6d2', muted: '#b9ab8d', gold: '#e2bf6c', bad: '#f08a72', good: '#98d494', line: 'rgba(226,191,108,.28)' };
 
 function kfmt(n) { if (n == null) return '?'; n = Math.round(n); return n >= 10000 ? Math.round(n / 1000) + 'k' : n >= 1000 ? (Math.round(n / 100) / 10).toString().replace('.', ',') + 'k' : String(n); }
@@ -13,7 +15,7 @@ function kfmt(n) { if (n == null) return '?'; n = Math.round(n); return n >= 100
 class Component extends DCLogic {
   constructor(props) {
     super(props);
-    this.state = { phase: 'load', t0: Date.now(), loadErr: '', g: null, sel: null, pick: null, fc: null, cardsOpen: false, cardIx: 0, b: null, bsel: null, result: null, toast: '', tick: 0, busy: false, joint: false };
+    this.state = { phase: 'load', t0: Date.now(), loadErr: '', g: null, sel: null, pick: null, fc: null, cardsOpen: false, cardIx: 0, b: null, bsel: null, result: null, toast: '', tick: 0, busy: false, joint: false, goal: true, tip: null };
     this.setCanvas = (el) => { this.canvas = el; };
     this.sc = null;
   }
@@ -32,11 +34,13 @@ class Component extends DCLogic {
     var dpr = Math.min(2, window.devicePixelRatio || 1);
     var rt = await HNBoot.start({ canvas: this.canvas, width: W, height: H, dpr: dpr, mapPng: MAP_PNG, tileRadius: 64 });
     this.sc = await HNScene.create(rt, { width: W, height: H });
+    var sc = this.sc;
+    HNRules.setLaneProvider(function (site, from) { var f = from && sc.place[from]; return sc.lanesAt(site, f ? [f.x, f.z] : null); });
     var g = HNRules.newGame((Date.now() % 100000) + 1);
     this.sc.sync(this.sceneState(g));
     var self = this;
     this.sc.loop(function () { self.setState({ tick: self.state.tick + 1 }); });
-    this.setState({ phase: 'play', g: g, cardsOpen: g.cards.length > 0, cardIx: 0 });
+    this.setState({ phase: 'play', g: g, cardsOpen: false, goal: true, cardIx: 0 });
   }
 
   // ------------------------------------------------------------------ rules → scene
@@ -47,9 +51,10 @@ class Component extends DCLogic {
       var u = R.seen(g, a).units, p = R.PLACES[a.at].xz, face = a.fid === g.me ? 'tho_xuan' : 'chung_ly';
       if (face === a.at) face = a.fid === g.me ? 'am_lang' : 'tho_xuan';
       var q = R.PLACES[face].xz, dx = q[0] - p[0], dz = q[1] - p[1], L = Math.hypot(dx, dz) || 1;
-      armies.push({ id: a.id, fid: a.fid, arm: a.arm, at: a.at, dx: a.off[0], dz: a.off[1], bo: u.bo || 0, cung: u.cung || 0, ky: u.ky || 0, thuy: u.thuy || 0, fx: dx / L, fz: dz / L });
+      armies.push({ id: a.id, fid: a.fid, arm: a.arm, at: a.at, dx: a.off[0] * 2.2, dz: a.off[1] * 2.2, bo: u.bo || 0, cung: u.cung || 0, ky: u.ky || 0, thuy: u.thuy || 0, fx: dx / L, fz: dz / L, seal: R.GEN[a.gen] ? R.GEN[a.gen].seal : null });
     });
-    return { owners: owners, armies: armies };
+    var walls = {}; Object.keys(g.towns).forEach(function (t) { walls[t] = g.towns[t].walls; });
+    return { me: g.me, owners: owners, walls: walls, armies: armies };
   }
   setG(g, extra) { this.sc.sync(this.sceneState(g)); this.setState(Object.assign({ g: g }, extra || {})); }
 
@@ -60,7 +65,7 @@ class Component extends DCLogic {
     if (!this.sc) return;
     var r = e.currentTarget.getBoundingClientRect(), k = W / r.width, hit = this.sc.gesture.up(e.pointerId, (e.clientX - r.left) * k, (e.clientY - r.top) * k);
     if (!hit || this.state.phase !== 'play') return;
-    if (hit.kind === 'ground') { if (!this.state.pick) this.select(null); return; }
+    if (hit.kind === 'ground') { if (!this.state.pick) this.select(null); if (hit.terrain) { var G = this.sc.GROUND[hit.terrain]; this.setState({ tip: { x: (e.clientX - r.left) * k, y: (e.clientY - r.top) * k, name: G.name, fx: G.fx } }); } return; }
     this.tapThing(hit.kind, hit.id);
   }
   wheel(e) { if (this.sc) this.sc.gesture.wheel(e.deltaY); }
@@ -69,7 +74,12 @@ class Component extends DCLogic {
     if (st.pick) { var t = this.targets().find(function (x) { return x.kind === kind && x.id === id; }); if (t) return this.chooseTarget(t); }
     this.select({ kind: kind, id: id });
   }
-  select(sel) { this.sc.select(sel); this.sc.mark(null); this.setState({ sel: sel, pick: null }); }
+  select(sel) {
+    this.sc.select(sel); this.sc.mark(null);
+    var g = this.state.g, a = sel && sel.kind === 'army' ? g.armies[sel.id] : null;
+    this.sc.reach(a ? a.id : null, a ? HNRules.reachOf(a) : 0, a ? HNRules.targets(g, a.id) : []);
+    this.setState({ sel: sel, pick: null, tip: null });
+  }
 
   // ------------------------------------------------------------------ orders
   targets() {
@@ -87,6 +97,7 @@ class Component extends DCLogic {
   }
   cancelPick() { this.sc.mark(null); this.setState({ pick: null }); }
   giveOrder(aid, order) { var g = HNRules.setArmyOrder(this.state.g, aid, order); this.sc.mark(null); this.setState({ g: g, pick: null, fc: null }); }
+  closeGoal() { var g = this.state.g; this.setState({ goal: false, cardsOpen: !this.seenGoal && g.cards.length > 0 }); this.seenGoal = true; }
   clearOrder(aid) { this.giveOrder(aid, null); }
   chooseTarget(t) {
     var p = this.state.pick, target = { kind: t.kind, id: t.id };
@@ -122,8 +133,8 @@ class Component extends DCLogic {
   // ------------------------------------------------------------------ end of season: marches, then battles, then the report
   endSeason() {
     var self = this, g0 = this.state.g, g = HNRules.endSeason(g0);
-    this.sc.select(null); this.sc.mark(null);
-    this.setState({ busy: true, sel: null, pick: null, fc: null, cardsOpen: false });
+    this.sc.select(null); this.sc.mark(null); this.sc.reach(null);
+    this.setState({ busy: true, sel: null, pick: null, fc: null, cardsOpen: false, tip: null });
     this.sc.sync(this.sceneState(g));
     // walk each army from where it was: a move ends at its new place, an attack stops short of the enemy
     var marches = (g.moves || []).filter(function (m) { return self.sc.armies[m.id] && m.from && m.to; }).map(function (m) {
@@ -195,10 +206,10 @@ class Component extends DCLogic {
   zoom(f) { if (this.sc) this.sc.gesture.zoom(f); }
   rot(a) { if (this.sc) this.sc.gesture.rotate(a); }
   home() { if (this.sc) this.sc.flyTo({ t: [this.sc.place.chung_ly.x - 6, this.sc.place.chung_ly.z + 8], dist: 120, az: 0.25, el: 0.9 }); }
-  again() { var g = HNRules.newGame((Date.now() % 100000) + 1); this.sc.battle.end(); this.home(); this.setG(g, { phase: 'play', sel: null, pick: null, fc: null, cardsOpen: true, b: null, result: null, toast: '' }); }
+  again() { var g = HNRules.newGame((Date.now() % 100000) + 1); this.sc.battle.end(); this.sc.reach(null); this.home(); this.setG(g, { phase: 'play', sel: null, pick: null, fc: null, cardsOpen: true, b: null, result: null, toast: '' }); }
 
   // ------------------------------------------------------------------ view values
-  seal(gid) { var G = HNRules.GEN[gid], g = this.state.g, gen = g && g.gens[gid]; var fid = gen ? gen.fid : G ? G.fid : 'local'; return { ch: G ? G.seal : '?', bg: (HNRules.FAC[fid] || HNRules.FAC.local).color }; }
+  seal(gid) { var G = HNRules.GEN[gid], g = this.state.g, gen = g && g.gens[gid]; var fid = gen ? gen.fid : G ? G.fid : 'local'; return { ch: G ? G.seal : '?', bg: (HNRules.FAC[fid] || HNRules.FAC.local).color, img: PORTRAIT[gid] || '', hasImg: !!PORTRAIT[gid] }; }
   unitRows(units, spread) {
     var R = HNRules;
     return ARM_ORDER.filter(function (k) { return units[k] != null && (units[k] > 0 || units[k] === null); }).map(function (k) { return { arm: R.ARMS[k], n: units[k] == null ? '?' : R.seenText(units[k], spread), key: k }; });
@@ -255,10 +266,11 @@ class Component extends DCLogic {
     });
     v.armyLabels = cards.filter(function (c) { return c.kind === 'army' && c.visible && g.armies[c.id] && c.x > -60 && c.x < W + 60 && c.y > 0 && c.y < H + 30; }).map(function (c) {
       var a = g.armies[c.id], F = R.FAC[a.fid], s = R.seen(g, a), gen = g.gens[a.gen], mine = a.fid === me;
-      var arms = ARM_ORDER.filter(function (k) { return s.units[k]; }).map(function (k) { return R.ARMS[k][0] + ' ' + kfmt(s.units[k]); }).join(' · ');
+      var arms = ARM_ORDER.filter(function (k) { return s.units[k]; }).map(function (k) { return { n: (s.exact ? '' : '~') + kfmt(s.units[k]), isBo: k === 'bo', isCung: k === 'cung', isKy: k === 'ky', isThuy: k === 'thuy' }; });
+      var pic = self.seal(a.gen);
       var target = isT('army', c.id), on = sel && sel.kind === 'army' && sel.id === c.id;
       var ord = mine && a.order ? ORDER_TEXT[a.order.type] + (a.order.id ? ' ' + (a.order.kind === 'town' ? R.PLACES[a.order.id].name : R.armyName(g, g.armies[a.order.id])) : '') : mine ? 'Chưa có lệnh' : (s.spread < 0.3 ? 'Ước ±20%' : 'Xa: ước ±50%');
-      return { left: Math.round(c.x - 70), top: Math.round(c.y - 58), glyph: F.glyph, color: F.color, name: gen.name, arms: arms, ord: ord, ordColor: mine && !a.order ? TONE.gold : TONE.muted,
+      return { left: Math.round(c.x - 84), top: Math.round(c.y - 62), glyph: F.glyph, color: F.color, name: gen.name, arms: arms, ord: ord, img: pic.img, hasImg: pic.hasImg, noImg: !pic.hasImg, ordColor: mine && !a.order ? TONE.gold : TONE.muted,
         border: target ? '#f08a72' : on ? TONE.gold : 'rgba(226,191,108,.35)', bg: target ? 'rgba(96,28,20,.9)' : 'rgba(22,18,13,.86)', tap: function () { self.tapThing('army', c.id); } };
     });
 
@@ -268,8 +280,11 @@ class Component extends DCLogic {
     v.closeSel = function () { self.select(null); };
     if (selA) {
       var gen = g.gens[selA.gen], mine = selA.fid === me, s = R.seen(g, selA), sl = this.seal(selA.gen);
+      v.aImg = sl.img; v.aHasImg = sl.hasImg; v.aNoImg = !sl.hasImg;
+      v.aReach = 'Một mùa đi được ' + R.reachOf(selA) * 3 + ' km' + (selA.arm === 'fleet' ? ', chỉ theo sông ' + (R.PLACES[selA.at].river === 'giang' ? 'Trường Giang' : 'Hoài') : (selA.units.ky || 0) > R.total(selA.units) * 0.5 ? ' (kỵ nhiều, đi nhanh)' : '') + ': vòng trên bản đồ.';
+      v.aLoyalNote = selA.gen !== 'zhu' && gen.loyal != null ? LOYAL_NOTE : ''; v.aHasLoyal = !!v.aLoyalNote;
       v.aSeal = sl.ch; v.aSealBg = sl.bg; v.aName = gen.name; v.aCls = gen.cls + ' · ' + R.FAC[selA.fid].name; v.aStats = this.genStats(selA.gen);
-      v.aTrait = gen.trait + ': ' + gen.traitText; v.aLoyal = mine && selA.gen !== 'zhu' ? 'Trung ' + gen.loyal : '';
+      v.aTrait = gen.trait + ': ' + gen.traitText; v.aLoyal = selA.gen !== 'zhu' ? 'Trung ' + gen.loyal + ' (' + (gen.loyal < 30 ? 'sắp bỏ đi' : gen.loyal < 70 ? 'bất mãn, quân đánh kém' : gen.loyal >= 85 ? 'một lòng' : 'tạm yên') + ')' : 'Chúa công';
       v.aUnits = this.unitRows(s.units, s.spread); v.aTotal = (s.exact ? '' : '~') + R.fmt(R.total(s.units)) + ' quân' + (s.exact ? '' : s.spread < 0.3 ? ' (ước ±20%)' : ' (xa, ước ±50%)');
       v.aMine = mine; v.aTheirs = !mine;
       v.aWhere = 'Ở ' + R.PLACES[selA.at].name + (selA.besieging ? ', đang vây' : '');
@@ -315,7 +330,7 @@ class Component extends DCLogic {
     v.hasFc = !!st.fc && v.isPlay;
     if (st.fc) {
       var f = st.fc.f, an = this.seal(f.analyst), tgt = st.fc.target, pl = f.plan;
-      v.fSeal = an.ch; v.fSealBg = an.bg;
+      v.fSeal = an.ch; v.fSealBg = an.bg; v.fImg = an.img; v.fHasImg = an.hasImg; v.fNoImg = !an.hasImg;
       v.fWho = f.gen + ' phân tích';
       v.fAcc = 'Mưu ' + f.muu + ' · sai số ±' + f.band + '%';
       v.fWhere = (pl.siege ? 'Công thành ' : 'Đánh ') + (tgt.kind === 'town' ? R.PLACES[tgt.id].name : R.armyName(g, g.armies[tgt.id]) + ' ở ' + R.PLACES[pl.site].name) + (pl.siege ? ' · lũy ' + pl.defender.walls : '');
@@ -338,13 +353,24 @@ class Component extends DCLogic {
 
     // ---- cards
     var c0 = g.cards[0];
-    v.hasCard = v.isPlay && st.cardsOpen && !!c0;
+    v.hasCard = v.isPlay && st.cardsOpen && !st.goal && !!c0;
     if (c0) {
       var cs = c0.gen ? this.seal(c0.gen) : { ch: c0.kind === 'history' ? '憶' : '令', bg: c0.kind === 'history' ? '#5b3f8c' : '#6b5a3a' };
       v.cSeal = cs.ch; v.cSealBg = cs.bg; v.cWho = c0.who; v.cTitle = c0.title; v.cText = c0.text; v.cCount = '1/' + g.cards.length;
       v.cYes = c0.yes.label; v.cYesFx = c0.yes.fx; v.cNo = c0.no.label; v.cNoFx = c0.no.fx;
       v.cTone = c0.kind === 'history' ? '#c9a8ff' : c0.kind === 'captive' ? TONE.bad : TONE.gold;
+      v.cImg = cs.img || ''; v.cHasImg = !!cs.hasImg; v.cNoImg = !cs.hasImg;
+      var cg = c0.gen && (g.gens[c0.gen] || R.GEN[c0.gen]);
+      v.cHasGen = !!cg;
+      if (cg) { v.cGenName = cg.name; v.cGenCls = cg.cls + ' · ' + cg.trait + ': ' + cg.traitText; v.cStats = this.genStats(c0.gen); v.cLoyal = 'Trung ' + cg.loyal; v.cLoyalW = cg.loyal + '%'; v.cLoyalColor = cg.loyal < 30 ? TONE.bad : cg.loyal < 70 ? TONE.gold : TONE.good; v.cLoyalNote = c0.gen === 'zhu' ? '' : LOYAL_NOTE; }
     }
+    // ---- the goal screen (first thing after loading; the ? button brings it back), and the ground tip
+    v.isGoal = v.isPlay && st.goal;
+    v.goalGo = function () { self.closeGoal(); }; v.openGoal = function () { self.setState({ goal: true }); };
+    v.goalBtn = self.seenGoal ? 'Tiếp tục' : 'Vào mùa ' + R.cal(g.season);
+    v.hasTip = v.isPlay && !!st.tip && !st.goal;
+    if (st.tip) { v.tipLeft = Math.max(8, Math.min(W - 228, Math.round(st.tip.x - 110))); v.tipTop = Math.max(56, Math.round(st.tip.y - 70)); v.tipName = st.tip.name; v.tipFx = st.tip.fx; }
+    v.hideTip = function () { self.setState({ tip: null }); };
     v.yes = function () { self.answer(true); }; v.no = function () { self.answer(false); }; v.later = function () { self.setState({ cardsOpen: false }); };
 
     // ---- battle
@@ -425,11 +451,11 @@ class Component extends DCLogic {
     var f = function () {};
     return { isPlay: false, isBattle: false, showHud: false, seasonText: '', res: [], nCards: 0, hasCards: false, openCards: f, endLabel: '', endSub: '', endSeason: f, canEnd: false, toast: '', hasToast: false, hideToast: f,
       townLabels: [], seatLabels: [], armyLabels: [], hasArmy: false, hasTown: false, hasPick: false, closeSel: f,
-      aSeal: '', aSealBg: '#444', aName: '', aCls: '', aStats: [], aTrait: '', aLoyal: '', aUnits: [], aTotal: '', aMine: false, aTheirs: false, aWhere: '', aOrder: '', aOrderColor: '', aHasOrder: false, orderBtns: [], clearOrder: f,
+      aSeal: '', aSealBg: '#444', aImg: '', aHasImg: false, aNoImg: true, aReach: '', aLoyalNote: '', aHasLoyal: false, aName: '', aCls: '', aStats: [], aTrait: '', aLoyal: '', aUnits: [], aTotal: '', aMine: false, aTheirs: false, aWhere: '', aOrder: '', aOrderColor: '', aHasOrder: false, orderBtns: [], clearOrder: f,
       tName: '', tOwner: '', tDot: '#444', tTerrain: '', tFacts: [], tMine: false, tTheirs: false, tTask: '', tasks: [], tCanWork: false,
       pickTitle: '', pickSub: '', pickList: [], pickNone: false, cancelPick: f,
-      hasFc: false, fSeal: '', fSealBg: '#444', fWho: '', fAcc: '', fWhere: '', fLabel: '', fPct: '', fColor: '', fSa: '', fSd: '', fLa: '', fLd: '', fDgen: '', fAgen: '', fLanes: [], fReasons: [], fPartners: [], fHasPartners: false, fGo: f, fNo: f,
-      hasCard: false, cSeal: '', cSealBg: '#444', cWho: '', cTitle: '', cText: '', cCount: '', cYes: '', cYesFx: '', cNo: '', cNoFx: '', cTone: '', yes: f, no: f, later: f,
+      hasFc: false, fSeal: '', fSealBg: '#444', fImg: '', fHasImg: false, fNoImg: true, fWho: '', fAcc: '', fWhere: '', fLabel: '', fPct: '', fColor: '', fSa: '', fSd: '', fLa: '', fLd: '', fDgen: '', fAgen: '', fLanes: [], fReasons: [], fPartners: [], fHasPartners: false, fGo: f, fNo: f,
+      hasCard: false, cSeal: '', cSealBg: '#444', cImg: '', cHasImg: false, cNoImg: true, cHasGen: false, cGenName: '', cGenCls: '', cStats: [], cLoyal: '', cLoyalW: '0%', cLoyalColor: '', cLoyalNote: '', isGoal: false, goalGo: f, openGoal: f, goalBtn: '', hasTip: false, tipLeft: 0, tipTop: 0, tipName: '', tipFx: '', hideTip: f, cWho: '', cTitle: '', cText: '', cCount: '', cYes: '', cYesFx: '', cNo: '', cNoFx: '', cTone: '', yes: f, no: f, later: f,
       hasBattle: false, bTitle: '', bTurn: '', bGens: '', bWind: '', bFc: '', bHasFc: false, wingChips: [], laneChips: [], bLog: [], bLogTitle: '', hasWing: false, wName: '', wOrders: [], fight: f, autoFight: f, canFight: false, fightLabel: '',
       hasResult: false, rTitle: '', rColor: '', rWhere: '', rLoss: '', rMoments: [], rFc: '', rHasFc: false, rNext: f,
       hasReport: false, rpTitle: '', rpLines: [], rpNext: '', rpDemo: '', rpHasDemo: false, goNext: f,

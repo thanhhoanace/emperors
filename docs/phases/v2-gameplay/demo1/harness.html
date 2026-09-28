@@ -1,12 +1,13 @@
 <!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Demo 1 harness</title>
 <!-- Local view of the demo's 3D scene, without the canvas UI. Run build.py, serve the repo root
      (python3 -m http.server), open /docs/phases/v2-gameplay/demo1/harness.html?shot=region or ?battle=3 -->
-<style>html,body{margin:0;background:#111}canvas{display:block;width:844px;height:390px}</style></head><body>
+<style>html,body{margin:0;background:#111;overflow:hidden}canvas{display:block}#note{position:fixed;left:12px;bottom:10px;font:13px system-ui,sans-serif;color:#e8dcc0;background:rgba(0,0,0,.55);padding:6px 10px;border-radius:6px}</style></head><body>
 <canvas id="c"></canvas>
+<div id="note">Chỉ cảnh 3D của demo 1 (không có giao diện chơi). Bản chơi: canvas Design, link trong docs/status.md. ?shot=region|mid|close|far · ?battle=1..5</div>
 <script src="build/hn-bundle.js"></script>
 <script>
 (async () => {
-  const q = new URLSearchParams(location.search), W = +q.get('w') || 844, H = +q.get('h') || 390, dpr = +q.get('dpr') || 2;
+  const q = new URLSearchParams(location.search), W = +q.get('w') || innerWidth, H = +q.get('h') || innerHeight, dpr = +q.get('dpr') || Math.min(2, devicePixelRatio || 1);
   const cv = document.getElementById('c'); cv.style.width = W + 'px'; cv.style.height = H + 'px';
   try {
     const rt = await HNBoot.start({ canvas: cv, width: W, height: H, dpr, mapPng: 'build/hn-map.png' });
@@ -20,6 +21,7 @@
       for (let k = 0; k < +q.get('battle'); k++) { B.autoOrders(g, b, 'A'); B.autoOrders(g, b, 'D'); b = B.resolve(g, b); }
       sc.battle.show(b, 10);
     }
+    if (q.get('probe')) { const t = rt.terr, out = {}; for (const id of ['chung_ly', 'tho_xuan', 'am_lang', 'hu_di', 'lich_duong']) { const P = sc.place[id], hs = [], sl = [], fo = []; for (let k = 0; k < 24; k++) { const a = k / 24 * 6.283, r = 3 + (k % 3) * 2, x = P.x + Math.cos(a) * r, z = P.z + Math.sin(a) * r, e = 0.8; hs.push(t.h(x, z)); sl.push(Math.hypot(t.h(x + e, z) - t.h(x - e, z), t.h(x, z + e) - t.h(x, z - e)) / (2 * e)); fo.push(t.landAt ? t.landAt(x, z).forest : -1); } const st = (a) => [Math.min(...a), a.reduce((s, v) => s + v, 0) / a.length, Math.max(...a)].map((v) => +v.toFixed(3)); out[id] = { h: st(hs), slope: st(sl), forest: st(fo), kinds: [...new Set(hs.map((_, k) => { const a = k / 24 * 6.283, r = 3 + (k % 3) * 2; return sc.terrainAt(P.x + Math.cos(a) * r, P.z + Math.sin(a) * r); }))] }; } window.__extra = Object.assign(window.__extra || {}, { probe: out }); }
     sc.settle(); sc.loop(null);
     window.__stats = rt.stats; window.__done = true;
   } catch (e) { console.error(e); window.__error = String(e.stack || e); }

@@ -6,7 +6,7 @@
 
 ## Đang chờ
 
-- **Phase `v2-gameplay`:** tối 28/9 owner chốt lại input sau spike 2 (interview 5 vòng): chạm bản đồ 3D thật, quân/tướng/bộ-kỵ-thủy hiện trên map, thẻ chỉ cho người, trận theo lượt, tướng dự đoán trận, lát cắt Hoài Nam — [DECISION.md](phases/v2-gameplay/DECISION.md) mục Sửa 28/9 tối. **Demo 1 đã lên canvas** (một mùa ở Hoài Nam trên bản đồ 3D, điện thoại ngang): https://claude.ai/artifact/4BoowPeFYC9kTLVg7B35pf — nguồn và số đo ở `docs/phases/v2-gameplay/demo1/` và WORKING mục Demo 1. **Tiếp:** owner chơi → sửa theo phản hồi → Grok viết freeze v2. Review research dạng hình: https://claude.ai/artifact/KJAXDd1yodaWQWWo11xL16
+- **Phase `v2-gameplay`:** tối 28/9 owner chốt lại input sau spike 2 (interview 5 vòng): chạm bản đồ 3D thật, quân/tướng/bộ-kỵ-thủy hiện trên map, thẻ chỉ cho người, trận theo lượt, tướng dự đoán trận, lát cắt Hoài Nam — [DECISION.md](phases/v2-gameplay/DECISION.md) mục Sửa 28/9 tối. **Demo 1 trên canvas** (một mùa ở Hoài Nam trên bản đồ 3D, điện thoại ngang): https://claude.ai/artifact/4BoowPeFYC9kTLVg7B35pf — vòng 2 (28/9 khuya) đã sửa theo 9 ý owner: tỉ lệ Civ, tượng lính theo binh chủng, chân dung, màn mục tiêu, tầm đi, địa thế. Nguồn, cách dựng lại gói và số đo ở `docs/phases/v2-gameplay/demo1/` và WORKING mục Demo 1. **Tiếp:** owner chơi vòng 2 → chốt hướng hình (tượng low-poly hay đặt làm asset) → Grok viết freeze v2. Review research dạng hình: https://claude.ai/artifact/KJAXDd1yodaWQWWo11xL16
 - **Grok:** đọc DECISION mục Sửa 28/9 tối; chờ demo 1 rồi viết freeze v2. Không dùng bản spike có lỗi dự báo/trạng thái để chốt cảm giác chơi. Các chặn V1 bên dưới vẫn theo phạm vi riêng.
 - LLM adapter remap id: sau khi luật v2 ổn.
 

@@ -5,7 +5,7 @@ global.DCLogic = class { constructor(p) { this.props = p || {}; } setState(u, cb
 const timers = []; global.setTimeout = (f) => { timers.push(f); return 1; }; global.setInterval = () => 1; global.clearInterval = () => {};
 const tick = () => new Promise((r) => setImmediate(r));
 const flush = async () => { for (let k = 0; k < 6; k++) { await tick(); let n = 0; while (timers.length && n++ < 100) timers.shift()(); } };
-const src = fs.readFileSync(__dirname + '/component.js', 'utf8');
+const src = fs.readFileSync(__dirname + '/component.js', 'utf8').replace('__PORTRAITS__', JSON.stringify({ zhu: 'p/zhu.svg', zhu_huan: 'p/zhu_huan.svg' }));
 const Component = new Function(src + '\nreturn Component;')();
 const place = {}; for (const [k, P] of Object.entries(HNRules.PLACES)) place[k] = { x: P.xz[0], z: P.xz[1], name: P.name };
 Object.assign(place, { xu: { x: 149, z: -100, name: 'Bành Thành' }, yang: { x: 208, z: -23, name: 'Kiến Nghiệp' }, yan: { x: 113, z: -129, name: 'Xương Ấp' }, yu: { x: 55, z: -80, name: 'Hứa Xương' } });
@@ -13,6 +13,7 @@ let synced = null;
 const sc = { place, armies: {}, sync(s) { synced = s; this.armies = {}; for (const a of s.armies) this.armies[a.id] = { a }; }, select() {}, mark() {}, fly() {}, flyTo() {}, march: () => Promise.resolve(), pathBetween: (a, b) => [a, b],
   cards: () => Object.keys(place).map((id, i) => ({ kind: 'town', id, x: 100 + i * 60, y: 200, visible: true })).concat(Object.keys(sc.armies).map((id, i) => ({ kind: 'army', id, x: 200 + i * 80, y: 150, visible: true }))),
   gesture: { down() {}, move() {}, up: () => ({ kind: 'ground' }), wheel() {}, zoom() {}, rotate() {} }, stop() {},
+  reach() {}, lanesAt: () => ['open', 'ford', 'hill'], GROUND: { open: { name: 'Đồng bằng', fx: 'Kỵ +30%.' } },
   battle: { begin() {}, show() {}, end() {}, select() {}, cards: () => [{ id: 'A0', x: 300, y: 200, visible: true }, { id: 'D0', x: 400, y: 180, visible: true }], lanes: () => [{ lane: 0, x: 200, y: 300, visible: true }] } };
 let fails = 0; const ok = (c, m) => { if (!c) { fails++; console.log('FAIL', m); } else console.log('ok  ', m); };
 const holes = (v) => { const tpl = fs.readFileSync(__dirname + '/template.html', 'utf8'); const need = new Set([...tpl.matchAll(/\{\{\s*([a-zA-Z_$][\w$]*)/g)].map((m) => m[1])); const loopVars = new Set([...tpl.matchAll(/as="(\w+)"/g)].map((m) => m[1])); return [...need].filter((k) => !loopVars.has(k) && !(k in v) && k !== 'true' && k !== 'false'); };
@@ -20,7 +21,8 @@ const holes = (v) => { const tpl = fs.readFileSync(__dirname + '/template.html',
 (async () => {
 const c = new Component({});
 let v = c.renderVals(); ok(v.isLoad, 'loading screen first'); ok(holes(v).length === 0, 'every template hole has a value while loading: ' + holes(v));
-c.sc = sc; const g0 = HNRules.newGame(11); sc.sync(c.sceneState(g0)); c.setState({ phase: 'play', g: g0, cardsOpen: true });
+c.sc = sc; const g0 = HNRules.newGame(11); sc.sync(c.sceneState(g0)); c.setState({ phase: 'play', g: g0, cardsOpen: false, goal: true });
+v = c.renderVals(); ok(v.isGoal && !v.hasCard && v.goalBtn.length > 0, 'goal screen first: ' + v.goalBtn); c.closeGoal();
 v = c.renderVals(); ok(v.hasCard && v.cTitle.length > 0, 'first card shows: ' + v.cTitle); ok(holes(v).length === 0, 'holes (play): ' + holes(v));
 ok(v.townLabels.length === 5 && v.armyLabels.length === 4 && v.seatLabels.length === 4, 'labels: 5 towns, 4 armies, 4 seats');
 c.answer(true); c.answer(true); c.answer(false); c.answer(true);

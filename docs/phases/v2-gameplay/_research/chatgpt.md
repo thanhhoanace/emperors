@@ -629,3 +629,27 @@ Tất cả truy xuất 28/09/2026. Các URL dưới đây là tài liệu/trang 
 - **M20 — GameRefinery**, 15/09/2026: [Mobile Game Market Review: July–August 2026](https://www.gamerefinery.com/mobile-game-market-review-july-august-2026/). Quan sát casualized 4X và live operations, không chứng minh demand cho game solo ngắn.
 
 Nguồn nội bộ: [`claude.md`](claude.md) A–I; [`grok.md`](grok.md) B0–B7 và A; [`DECISION.md`](../DECISION.md); [`spike/rules.js`](../spike/rules.js); [`spike/sim.js`](../spike/sim.js); [`spike2/Main.dc.html`](../spike2/Main.dc.html); [`spike2/sim.js`](../spike2/sim.js); [`game.html`](../../../../game.html) và [`src/engine/perception.js`](../../../../src/engine/perception.js), tại `9d30411`.
+
+
+## C. Cảnh trận kiểu Civ VI và chân dung tướng (28/09/2026, khuya)
+
+> Chủ dự án dán vào hội thoại với Claude sau khi chơi demo 1, ghi là "Feedback từ phía team a". Giữ nguyên văn (kể cả dấu trích dẫn của ChatGPT); câu hỏi gốc không kèm theo.
+
+**Có thể làm battle scene mang cảm giác Civ VI, nhưng để đạt độ hoàn thiện hình ảnh như Civ VI là việc khó và tốn công.** Với Emperors, em sẽ nhắm tới **một cảnh giao chiến ngắn, rõ thế trận và có điểm nhấn**, thay vì mô phỏng hàng nghìn lính đánh nhau như Total War.
+
+Repo đã có nền 3D, camera hành quân, đội quân dạng instance, bụi và cờ đổi chủ. :chatgpt-content-reference{index="3"}[Prototype battle](sandbox:/workspace/scratch/7315840af024/emperors/docs/design/prototypes/real.html) cũng đã dựng đội hình, máy bắn đá và khói. Nhưng trong :chatgpt-content-reference{index="4"}[luồng game đang chạy](sandbox:/workspace/scratch/7315840af024/emperors/src/world/event-presenter.js), trận đánh vẫn là cảnh quân tới thành rồi hiện kết quả; chưa có lính thực sự giao chiến hay bộ animation trận hoàn chỉnh. :chatgpt-content-reference{index="5"}[Hướng hình ảnh hiện hành](sandbox:/workspace/scratch/7315840af024/emperors/docs/design/direction.md) đã chọn bản đồ chiến dịch kèm cắt cảnh trận, nên không phải bắt đầu từ số không.
+
+| Khó khăn chính | Vì sao khó |
+| --- | --- |
+| **Lính và animation** | Cần mẫu lính, vũ khí, đội hình, chạy, đánh, trúng đòn và rút lui trông thống nhất. Đây là khoảng cách lớn nhất giữa prototype và cảnh trận thuyết phục. |
+| **Đọc được trận trong vài giây** | Người chơi phải thấy ai đánh, địa hình có tác dụng gì, vì sao thắng hoặc thua. Nhiều hiệu ứng đẹp mà không rõ kết quả sẽ làm cảnh trận kém giá trị. |
+| **Hiệu năng mobile web** | Camera hạ thấp sẽ lộ chi tiết lính, thành và mặt đất; đồng thời tăng gánh cho GPU điện thoại. Cần giới hạn số lính nhìn thấy và dùng nhiều mức chi tiết. |
+| **Nhịp chơi** | Nếu mỗi lệnh đánh đều bắt xem một cảnh dài, ván 15–25 phút sẽ bị ngắt liên tục. Cần tua và bỏ qua được. |
+
+Em đề xuất làm **một vertical slice 3–5 giây**: một địa hình, hai phe, hai loại lính, một tướng, ba kết quả dễ phân biệt (thắng, thua, giữ thành). Luật tính kết quả trước; cảnh trận diễn lại đúng kết quả và đúng thông tin người chơi được biết. Khi lát cắt này chạy mượt trên điện thoại và anh vẫn muốn xem ở trận thứ mười, mới mở rộng số loại quân và cảnh. Đây là phạm vi khả thi để thử trong vài tuần với người làm 3D và người làm Three.js; mức hoàn thiện đồng đều như game thương mại lớn sẽ cần nhiều tháng sản xuất asset và animation. Đó là ước lượng phạm vi của em, chưa phải báo giá.
+
+**Ảnh tướng TW3K thì không nên lấy làm asset cho Emperors**, kể cả screenshot cắt mặt, texture trích từ game, ảnh fan chỉnh màu hay dùng ảnh đó để vẽ đè. EULA của SEGA giữ quyền đối với artwork, hình ảnh và nhân vật được thể hiện trong game; quyền làm mod được giới hạn cho mod dùng với sản phẩm của họ. Hướng dẫn dùng hình cho video/thumbnail cũng không cấp quyền đưa hình ấy vào một game độc lập. Muốn dùng trực tiếp cần giấy phép phù hợp từ chủ quyền. :chatgpt-content-reference{index="0"}
+
+**Mình có thể tự xây chân dung Quan Vũ, Tào Tháo, Gia Cát Lượng** từ tư liệu lịch sử và một art direction riêng: cùng ngôn ngữ ánh sáng, trang phục, bảng màu, khung chân dung; tránh sao chép khuôn mặt, giáp và bố cục đặc trưng của bản TW3K. Bản quyền bảo vệ cách thể hiện cụ thể, không bảo hộ bản thân ý tưởng lịch sử; :chatgpt-content-reference{index="6"}[tài liệu nhân vật trong repo](sandbox:/workspace/scratch/7315840af024/emperors/docs/product/characters.md) cũng đã ghi rõ dùng roster/tư liệu sử nhưng không copy portrait hay mesh. :chatgpt-content-reference{index="1"}
+
+Nếu là tiền của anh, em sẽ đầu tư trước vào **một bộ tướng và một trận mẫu có bản sắc Emperors**. Chất lượng của mẫu đó sẽ cho mình biết mục tiêu “như Civ VI” cần thêm bao nhiêu công, trước khi đặt hàng cả roster.
