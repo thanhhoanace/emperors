@@ -22,7 +22,8 @@
       sc.battle.show(b, 10);
     }
     if (q.get('probe')) { const t = rt.terr, out = {}; for (const id of ['chung_ly', 'tho_xuan', 'am_lang', 'hu_di', 'lich_duong']) { const P = sc.place[id], hs = [], sl = [], fo = []; for (let k = 0; k < 24; k++) { const a = k / 24 * 6.283, r = 3 + (k % 3) * 2, x = P.x + Math.cos(a) * r, z = P.z + Math.sin(a) * r, e = 0.8; hs.push(t.h(x, z)); sl.push(Math.hypot(t.h(x + e, z) - t.h(x - e, z), t.h(x, z + e) - t.h(x, z - e)) / (2 * e)); fo.push(t.landAt ? t.landAt(x, z).forest : -1); } const st = (a) => [Math.min(...a), a.reduce((s, v) => s + v, 0) / a.length, Math.max(...a)].map((v) => +v.toFixed(3)); out[id] = { h: st(hs), slope: st(sl), forest: st(fo), kinds: [...new Set(hs.map((_, k) => { const a = k / 24 * 6.283, r = 3 + (k % 3) * 2; return sc.terrainAt(P.x + Math.cos(a) * r, P.z + Math.sin(a) * r); }))] }; } window.__extra = Object.assign(window.__extra || {}, { probe: out }); }
-    sc.settle(); sc.loop(null);
+    sc.settle(); if (q.get('measure')) window.__extra = Object.assign(window.__extra || {}, { measure: rt.measure() });
+    sc.loop(null);
     window.__stats = rt.stats; window.__done = true;
   } catch (e) { console.error(e); window.__error = String(e.stack || e); }
 })();
