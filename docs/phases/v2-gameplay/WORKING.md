@@ -20,7 +20,7 @@ Nguyên ý, chưa phải luật. Interview 27/9 (`claude.md` B.9) được nêu 
 - Liên minh có cứu nhau và cùng đánh. Tướng đủ bốn lớp. Lật lại: lưu vong, xưng thần, phục quốc. Vùng rìa chiêu binh và buôn bán, không tính vào 20 châu.
 - Quy trình: mở freeze v2; đề xuất + prototype duyệt trước khi code; giữ hai lane; Pages đã trỏ `game.html`; LLM sau.
 
-[DECISION.md](DECISION.md) 28/9 **thay các mốc interview ở chỗ mâu thuẫn**: ván ngắn 15–25 phút khi quen, lựa chọn đầu <60 giây, quẹt có/không, scale từ thành tới châu, không khoá lượt, hiển thị số; >40% tự chơi lại là mục tiêu kiểm chứng, thắng 20–30% chỉ là mốc cân bằng máy. Owner chơi trước; người lạ sau Pages; không làm nghiên cứu 18 người trước freeze. Input **mới sau khi chơi**, qua [Grok](_research/grok.md) B0: ưu tiên mobile và YouTube, cân nhắc lệnh chính trên map; đó là đề xuất để xét lại, chưa tự thành quyết định.
+[DECISION.md](DECISION.md) 28/9 **thay các mốc interview ở chỗ mâu thuẫn**: ván ngắn 15–25 phút khi quen, lựa chọn đầu <60 giây, quẹt có/không, scale từ thành tới châu, không khoá lượt, hiển thị số; >40% tự chơi lại là mục tiêu kiểm chứng, thắng 20–30% chỉ là mốc cân bằng máy. Owner chơi trước; người lạ sau Pages; không làm nghiên cứu 18 người trước freeze. Input **mới sau khi chơi**, qua [Grok](_research/grok.md) B0: ưu tiên mobile và YouTube, cân nhắc lệnh chính trên map. **Tối 28/9 owner đã chốt qua interview 5 vòng với Claude** (ghi ở [DECISION.md](DECISION.md) mục Sửa 28/9 tối): ra lệnh bằng chạm bản đồ 3D thật; quân, tướng, bộ/kỵ/thủy hiện trên map; thẻ chỉ cho người; lát cắt Hoài Nam; demo tiếp trên canvas. Bản Loạn 12 Sứ Quân owner chơi: bản Java điện thoại, màn dọc, pixel ([video](https://www.youtube.com/watch?v=Xp0zn6YTnIM), chỉ xem được ảnh bìa).
 
 ## Evidence we trust
 

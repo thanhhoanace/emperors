@@ -6,8 +6,8 @@
 
 ## Đang chờ
 
-- **Phase `v2-gameplay`:** CHALLENGE đã tổng hợp sau feedback owner về spike 2 và research bổ sung theo yêu cầu. [WORKING.md](phases/v2-gameplay/WORKING.md) ghi điểm tin cậy, bất đồng và hướng đề xuất; [ChatGPT phần B](phases/v2-gameplay/_research/chatgpt.md#b-market-audit-sau-spike-2--28092026) có tám mặt thị trường, review Steam và lỗi demo tái hiện được. [DECISION.md](phases/v2-gameplay/DECISION.md) 28/9 vẫn giữ nguyên; trigger xem lại đã xuất hiện. **Tiếp đề xuất:** owner xét vai trò swipe/map → sửa tính nhất quán thẻ, thử lát cắt có quyền chọn và chơi lại → cập nhật quyết định cần thiết → freeze v2. Chưa sửa luật hoặc gameplay trong lượt research này.
-- **Grok:** đọc audit B1/B9 và quyết định sau khi owner xem lại trước khi viết freeze v2. Không dùng bản spike có lỗi dự báo/trạng thái để chốt cảm giác chơi. Các chặn V1 bên dưới vẫn theo phạm vi riêng.
+- **Phase `v2-gameplay`:** tối 28/9 owner chốt lại input sau spike 2 (interview 5 vòng): chạm bản đồ 3D thật, quân/tướng/bộ-kỵ-thủy hiện trên map, thẻ chỉ cho người, trận theo lượt, tướng dự đoán trận, lát cắt Hoài Nam — [DECISION.md](phases/v2-gameplay/DECISION.md) mục Sửa 28/9 tối. **Tiếp:** Claude làm demo 1 (một mùa ở Hoài Nam) trên canvas Design → owner chơi → Grok viết freeze v2. Review research dạng hình: https://claude.ai/artifact/KJAXDd1yodaWQWWo11xL16
+- **Grok:** đọc DECISION mục Sửa 28/9 tối; chờ demo 1 rồi viết freeze v2. Không dùng bản spike có lỗi dự báo/trạng thái để chốt cảm giác chơi. Các chặn V1 bên dưới vẫn theo phạm vi riêng.
 - LLM adapter remap id: sau khi luật v2 ổn.
 
 ## Vòng 9 (Claude, 27–28/9)

@@ -13,6 +13,23 @@
 7. **Chơi thử:** chỉ chủ dự án chơi trước khi khoá luật; người lạ thử khi đã lên Pages.
 8. **Bước tiếp:** Claude làm spike 2 (trang HTML trong repo, chạy bằng `npm start`, quẹt được trên điện thoại): quẹt thẻ có / không trên bản đồ, mở ván từ thành trong một châu rồi lớn dần, số thay chữ. Chủ dự án chơi. Rồi Grok viết `GAMEPLAY-FREEZE.md` v2 từ DECISION này cộng spike 2, rồi mới code engine. Không code luật mới trước freeze v2. *(Cùng ngày, chủ dự án đổi hình thức: làm spike 2 trên canvas Design; xem `WORKING.md` mục Spike 2.)*
 
+## Sửa 28/9 tối (sau spike 2)
+
+Owner chơi spike 2 thấy chán; Grok gói B và ChatGPT phần B đọc lại; owner chốt qua interview 5 vòng với Claude. Thay mục 2 và phần hình thức ở mục 8; các mục khác giữ.
+
+- **Ra lệnh bằng chạm bản đồ.** Khám phá bản đồ, zoom, chọn địa điểm, xem chi tiết quân, tướng, thành. Sức hút chính là đồ họa đẹp: **3D thật** như `game.html`, chạy trong canvas. Điện thoại cầm **ngang**.
+- **Quân hiện trên map.** Mỗi đạo quân là khối lính + cờ phe + thẻ tướng kèm số quân. **Bộ, kỵ, thủy** tách rõ; khác nhau theo địa hình và công / thủ thành (kỵ mạnh đồng bằng, yếu công thành; bộ giữ thành, mạnh núi; thủy chỉ đi sông, cần để qua Trường Giang).
+- **Đạo quân đi theo đường**, xa mất nhiều mùa và cần lương. Thấy mọi đạo quân của mọi phe; gần đất ta thì số ước ±20 %, xa thì chỉ cờ và loại quân, dò thám mới ra số đúng.
+- **Một mùa chia theo đơn vị (kiểu TW3K):** mỗi đạo quân một lệnh, mỗi thành một việc xây hoặc mộ (xong sau 2–3 mùa), ngoại giao và thẻ người làm bất kỳ lúc nào trong mùa, rồi mọi phe cùng đi.
+- **Trước trận, tướng phân tích.** Kiểu Civ (số hai bên, từng lợi thế, thương vong dự kiến, nhãn Thắng lớn / nhỏ / Ngang / Thua; không in %), nhưng do tướng đưa ra: tướng giỏi phân tích đoán sát, tướng kém đoán lệch nhiều, để người chơi phải hiểu tướng.
+- **Trận theo lượt, 3–5 lượt** trên một mảng đất 3D; mỗi bên 3–6 cánh quân, mỗi lượt ra lệnh từng cánh.
+- **Tướng năm chỉ số kiểu TW3K**, cộng đặc tính và lòng trung.
+- **Thẻ chỉ cho người:** sứ giả và liên minh, tù binh, tướng có chuyện, mốc lịch sử đế biết trước.
+- **Chạm đáy:** lương âm hoặc uy 0 thì cảnh báo một mùa; mùa sau vẫn ở đáy thì sụp (binh biến, dân nổi dậy).
+- **Lát cắt demo: Hoài Nam**, Chu Nguyên Chương giữa Tào và Ngô; 5 thành trong châu + châu kề ở cấp châu; zoom xa thấy 20 châu. **Demo 1 = một mùa đầy đủ** chơi lại được: map 3D zoom và chọn, hai đạo quân ra lệnh, một thành làm nội chính, một thẻ sứ giả, tướng dự đoán, một trận theo lượt.
+- **Gốc Loạn 12 Sứ Quân giữ:** vào là đánh, chân dung sứ quân nổi bật, diệt từng sứ quân, chơi nhanh và ngắt được.
+- **Chân dung:** owner muốn dùng asset TW3K; không dùng được (bản quyền, `design/direction.md` cấm). Thay bằng tranh khắc gỗ Tam Quốc đời Thanh và chân dung hoàng đế thuộc phạm vi công cộng.
+
 ## Why
 
 - Cả ba tool (`_research/claude.md` A, `chatgpt.md` §5, `grok.md` §6) đều khuyên ván ngắn trước, vì lời hứa dễ thử, đo được, đủ sức một người + agent, và vì bỏ dở chiến dịch là hành vi đa số (Civ VI 37 % từng thắng, CK3 4 %, Old World 10 %). **Không tuyên bố thị trường thích ngắn hơn**: không có bằng chứng; ChatGPT và Grok phản đối cách nói đó.
