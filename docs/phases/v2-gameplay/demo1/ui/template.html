@@ -1,0 +1,325 @@
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Noto+Serif:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700&text=%E6%98%8E%E9%AD%8F%E5%90%B3%E8%B1%AA%E6%9C%B1%E6%A1%93%E9%81%BC%E5%AF%B5%E6%B3%B0%E7%9F%AF%E6%86%B6%E4%BB%A4&display=block" rel="stylesheet">
+<style>
+body{margin:0;background:#16120d;font-family:"Be Vietnam Pro",system-ui,sans-serif;color:#efe6d2}
+a{color:#e2bf6c}a:hover{color:#f3d58f}
+button{font-family:inherit;color:inherit}
+</style>
+</helmet>
+<div style="width: 844px; height: 390px; position: relative; overflow: hidden; background: #16120d; font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: #efe6d2; user-select: none">
+
+<canvas ref="{{setCanvas}}" width="844" height="390" style="position: absolute; left: 0; top: 0; width: 844px; height: 390px; display: block"></canvas>
+<div onPointerDown="{{down}}" onPointerMove="{{move}}" onPointerUp="{{up}}" onPointerCancel="{{up}}" onWheel="{{wheel}}" onContextMenu="{{noMenu}}" style="position: absolute; left: 0; top: 0; width: 844px; height: 390px; touch-action: none; cursor: grab"></div>
+
+<sc-for list="{{seatLabels}}" as="s" hint-placeholder-count="0">
+<div style="position: absolute; left: {{s.left}}px; top: {{s.top}}px; width: 100px; display: flex; justify-content: center; pointer-events: none">
+<span style="display: flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; background: rgba(22,18,13,.6); font-size: 11px; color: #d8cbb0; white-space: nowrap"><span style="width: 8px; height: 8px; border-radius: 50%; background: {{s.dot}}"></span>{{s.name}}</span>
+</div>
+</sc-for>
+<sc-for list="{{townLabels}}" as="t" hint-placeholder-count="0">
+<button type="button" onClick="{{t.tap}}" style="position: absolute; left: {{t.left}}px; top: {{t.top}}px; width: 120px; min-height: 34px; padding: 3px 6px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; background: {{t.bg}}; border: 1px solid {{t.border}}; border-radius: 8px; cursor: pointer">
+<span style="display: flex; align-items: center; gap: 5px; font-family: 'Noto Serif', Georgia, serif; font-size: 13px; font-weight: 700; color: #f6eedb; white-space: nowrap"><span style="width: 9px; height: 9px; border-radius: 50%; background: {{t.dot}}; box-shadow: 0 0 0 1.5px rgba(246,238,219,.7)"></span>{{t.name}}</span>
+<span style="font-size: 10.5px; color: #c9bb9c; white-space: nowrap; font-variant-numeric: tabular-nums">{{t.sub}}</span>
+</button>
+</sc-for>
+<sc-for list="{{armyLabels}}" as="a" hint-placeholder-count="0">
+<button type="button" onClick="{{a.tap}}" style="position: absolute; left: {{a.left}}px; top: {{a.top}}px; width: 140px; min-height: 40px; padding: 4px 7px 4px 5px; box-sizing: border-box; display: flex; gap: 6px; align-items: center; text-align: left; background: {{a.bg}}; border: 1px solid {{a.border}}; border-radius: 8px; cursor: pointer">
+<span style="flex: none; width: 22px; height: 30px; border-radius: 3px; background: {{a.color}}; color: #f6eedb; display: flex; align-items: center; justify-content: center; font-family: 'Noto Serif TC', serif; font-size: 15px; font-weight: 700">{{a.glyph}}</span>
+<span style="display: flex; flex-direction: column; min-width: 0">
+<span style="font-size: 12px; font-weight: 700; color: #f6eedb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.name}}</span>
+<span style="font-size: 10.5px; color: #ddd0b3; white-space: nowrap; font-variant-numeric: tabular-nums">{{a.arms}}</span>
+<span style="font-size: 10px; color: {{a.ordColor}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.ord}}</span>
+</span>
+</button>
+</sc-for>
+
+<sc-if value="{{showHud}}" hint-placeholder-val="{{true}}">
+<div style="position: absolute; left: 10px; top: 8px; display: flex; align-items: center; gap: 8px; pointer-events: none">
+<div style="width: 38px; height: 38px; border-radius: 50%; background: #b3262e; box-shadow: 0 0 0 2px rgba(246,238,219,.75); display: flex; align-items: center; justify-content: center; font-family: 'Noto Serif TC', serif; font-size: 21px; font-weight: 700; color: #f6eedb">明</div>
+<div style="display: flex; flex-direction: column; padding: 3px 9px; border-radius: 8px; background: rgba(22,18,13,.78)">
+<span style="font-family: 'Noto Serif', Georgia, serif; font-size: 14px; font-weight: 700; color: #f6eedb; white-space: nowrap">Chu Nguyên Chương</span>
+<span style="font-size: 11px; color: #c9bb9c; white-space: nowrap">{{seasonText}}</span>
+</div>
+<sc-for list="{{res}}" as="r" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; min-width: 50px; padding: 3px 8px; border-radius: 8px; background: rgba(22,18,13,.78)">
+<span style="font-size: 10.5px; color: #c9bb9c; white-space: nowrap">{{r.label}} <span style="color: #f08a72; font-weight: 700">{{r.warn}}</span></span>
+<span style="font-size: 14px; font-weight: 700; color: {{r.color}}; font-variant-numeric: tabular-nums; white-space: nowrap">{{r.value}}</span>
+</div>
+</sc-for>
+</div>
+<div style="position: absolute; right: 10px; top: 8px; display: flex; gap: 5px">
+<sc-if value="{{hasCards}}" hint-placeholder-val="{{false}}">
+<button type="button" onClick="{{openCards}}" style="height: 42px; padding: 0 12px; border-radius: 10px; border: 1px solid #e2bf6c; background: rgba(90,62,20,.92); font-size: 13px; font-weight: 700; color: #f6e2b0; cursor: pointer">Thẻ · {{nCards}}</button>
+</sc-if>
+<button type="button" aria-label="Thu nhỏ" onClick="{{zoomOut}}" style="width: 42px; height: 42px; border-radius: 10px; border: 1px solid rgba(226,191,108,.3); background: rgba(22,18,13,.82); display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#efe6d2" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"></path></svg></button>
+<button type="button" aria-label="Phóng to" onClick="{{zoomIn}}" style="width: 42px; height: 42px; border-radius: 10px; border: 1px solid rgba(226,191,108,.3); background: rgba(22,18,13,.82); display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#efe6d2" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5v14"></path></svg></button>
+<button type="button" aria-label="Xoay trái" onClick="{{rotL}}" style="width: 42px; height: 42px; border-radius: 10px; border: 1px solid rgba(226,191,108,.3); background: rgba(22,18,13,.82); display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#efe6d2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.4-5.7"></path><path d="M4 4v5h5"></path></svg></button>
+<button type="button" aria-label="Xoay phải" onClick="{{rotR}}" style="width: 42px; height: 42px; border-radius: 10px; border: 1px solid rgba(226,191,108,.3); background: rgba(22,18,13,.82); display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#efe6d2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.4-5.7"></path><path d="M20 4v5h-5"></path></svg></button>
+<button type="button" aria-label="Về Chung Ly" onClick="{{goHome}}" style="width: 42px; height: 42px; border-radius: 10px; border: 1px solid rgba(226,191,108,.3); background: rgba(22,18,13,.82); display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#efe6d2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"></circle><path d="M12 2v4M12 18v4M2 12h4M18 12h4"></path></svg></button>
+</div>
+</sc-if>
+
+<sc-if value="{{isPlay}}" hint-placeholder-val="{{false}}">
+<sc-if value="{{canEnd}}" hint-placeholder-val="{{true}}">
+<button type="button" onClick="{{endSeason}}" style="position: absolute; right: 10px; bottom: 10px; width: 176px; height: 52px; border-radius: 12px; border: 1px solid #f3d58f; background: #9e2a1e; box-shadow: 0 6px 18px rgba(0,0,0,.35); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer">
+<span style="font-family: 'Noto Serif', Georgia, serif; font-size: 17px; font-weight: 700; color: #fbf1dc">{{endLabel}}</span>
+<span style="font-size: 11px; color: #f3d9c2">{{endSub}}</span>
+</button>
+</sc-if>
+<div style="position: absolute; left: 10px; bottom: 8px; padding: 3px 9px; border-radius: 6px; background: rgba(22,18,13,.6); font-size: 11px; color: #c9bb9c; pointer-events: none">Kéo để đi · chụm hoặc lăn để zoom · chuột phải để xoay · chạm quân hay thành</div>
+<sc-if value="{{hasToast}}" hint-placeholder-val="{{false}}">
+<button type="button" onClick="{{hideToast}}" style="position: absolute; left: 322px; top: 60px; width: 200px; padding: 8px 12px; border-radius: 10px; border: 1px solid #e2bf6c; background: rgba(22,18,13,.92); font-size: 13px; font-weight: 600; color: #f6e2b0; cursor: pointer">{{toast}}</button>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{hasArmy}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 10px; top: 56px; width: 300px; max-height: 322px; box-sizing: border-box; padding: 10px 12px 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; background: rgba(22,18,13,.93); border: 1px solid rgba(226,191,108,.3); border-radius: 12px">
+<div style="display: flex; gap: 9px; align-items: center">
+<div style="flex: none; width: 46px; height: 46px; border-radius: 50%; background: {{aSealBg}}; box-shadow: 0 0 0 2px rgba(246,238,219,.7); display: flex; align-items: center; justify-content: center; font-family: 'Noto Serif TC', serif; font-size: 24px; font-weight: 700; color: #f6eedb">{{aSeal}}</div>
+<div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0">
+<span style="font-family: 'Noto Serif', Georgia, serif; font-size: 17px; font-weight: 700; color: #f6eedb">{{aName}}</span>
+<span style="font-size: 11.5px; color: #c9bb9c">{{aCls}}</span>
+<span style="font-size: 11.5px; color: #e2bf6c">{{aLoyal}}</span>
+</div>
+<button type="button" aria-label="Đóng" onClick="{{closeSel}}" style="flex: none; width: 34px; height: 34px; border-radius: 8px; border: 1px solid rgba(226,191,108,.25); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#efe6d2" stroke-width="2.4" stroke-linecap="round"><path d="M5 5l14 14M19 5L5 19"></path></svg></button>
+</div>
+<div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px">
+<sc-for list="{{aStats}}" as="s" hint-placeholder-count="5">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 10.5px; color: #c9bb9c">{{s.label}} <span style="font-weight: 700; color: {{s.color}}">{{s.v}}</span></span>
+<span style="height: 4px; border-radius: 2px; background: rgba(255,255,255,.1); overflow: hidden"><span style="display: block; height: 4px; width: {{s.w}}; background: {{s.color}}"></span></span>
+</div>
+</sc-for>
+</div>
+<div style="font-size: 11.5px; line-height: 1.35; color: #ddd0b3">{{aTrait}}</div>
+<div style="display: flex; flex-wrap: wrap; gap: 5px 12px; padding: 6px 8px; border-radius: 8px; background: rgba(255,255,255,.05)">
+<sc-for list="{{aUnits}}" as="u" hint-placeholder-count="3"><span style="font-size: 12.5px; color: #c9bb9c; white-space: nowrap">{{u.arm}} <span style="font-weight: 700; color: #f6eedb; font-variant-numeric: tabular-nums">{{u.n}}</span></span></sc-for>
+<span style="width: 100%; font-size: 11px; color: #c9bb9c">{{aTotal}} · {{aWhere}}</span>
+</div>
+<sc-if value="{{aMine}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 6px">
+<span style="font-size: 12px; font-weight: 600; color: {{aOrderColor}}">{{aOrder}}</span>
+<sc-if value="{{aHasOrder}}" hint-placeholder-val="{{false}}"><button type="button" onClick="{{clearOrder}}" style="flex: none; height: 30px; padding: 0 9px; border-radius: 7px; border: 1px solid rgba(226,191,108,.3); background: transparent; font-size: 11.5px; cursor: pointer">Bỏ lệnh</button></sc-if>
+</div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px">
+<sc-for list="{{orderBtns}}" as="o" hint-placeholder-count="4">
+<button type="button" onClick="{{o.go}}" style="height: 48px; border-radius: 9px; border: 1px solid rgba(226,191,108,.45); background: rgba(158,42,30,.55); opacity: {{o.op}}; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer">
+<span style="font-size: 14px; font-weight: 700; color: #fbf1dc">{{o.label}}</span>
+<span style="font-size: 9.5px; color: #e8d6bd; white-space: nowrap">{{o.sub}}</span>
+</button>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{aTheirs}}" hint-placeholder-val="{{false}}">
+<div style="font-size: 11.5px; line-height: 1.35; color: #c9bb9c">Thấy được mọi đạo quân; số là ước. Gần thành hay quân ta thì ước sát hơn.</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{hasTown}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 10px; top: 56px; width: 300px; max-height: 322px; box-sizing: border-box; padding: 10px 12px 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; background: rgba(22,18,13,.93); border: 1px solid rgba(226,191,108,.3); border-radius: 12px">
+<div style="display: flex; gap: 9px; align-items: center">
+<div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0">
+<span style="display: flex; align-items: center; gap: 7px; font-family: 'Noto Serif', Georgia, serif; font-size: 17px; font-weight: 700; color: #f6eedb"><span style="width: 11px; height: 11px; border-radius: 50%; background: {{tDot}}"></span>{{tName}}</span>
+<span style="font-size: 11.5px; color: #c9bb9c">{{tOwner}} · {{tTerrain}}</span>
+</div>
+<button type="button" aria-label="Đóng" onClick="{{closeSel}}" style="flex: none; width: 34px; height: 34px; border-radius: 8px; border: 1px solid rgba(226,191,108,.25); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#efe6d2" stroke-width="2.4" stroke-linecap="round"><path d="M5 5l14 14M19 5L5 19"></path></svg></button>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 10px; padding: 6px 8px; border-radius: 8px; background: rgba(255,255,255,.05)">
+<sc-for list="{{tFacts}}" as="f" hint-placeholder-count="4"><span style="font-size: 12px; color: #c9bb9c; white-space: nowrap">{{f.k}} <span style="font-weight: 700; color: #f6eedb">{{f.v}}</span></span></sc-for>
+</div>
+<sc-if value="{{tMine}}" hint-placeholder-val="{{true}}">
+<div style="font-size: 12px; font-weight: 600; color: #e2bf6c">Việc mùa này: {{tTask}}</div>
+<sc-for list="{{tasks}}" as="k" hint-placeholder-count="6">
+<button type="button" onClick="{{k.go}}" style="display: flex; flex-direction: column; gap: 1px; padding: 6px 9px; text-align: left; border-radius: 8px; border: 1px solid {{k.border}}; background: {{k.bg}}; opacity: {{k.op}}; cursor: pointer">
+<span style="font-size: 12.5px; font-weight: 700; color: #f6eedb">{{k.name}}</span>
+<span style="font-size: 10.5px; line-height: 1.3; color: #c9bb9c">{{k.sub}}</span>
+</button>
+</sc-for>
+</sc-if>
+<sc-if value="{{tTheirs}}" hint-placeholder-val="{{false}}">
+<div style="font-size: 11.5px; line-height: 1.35; color: #c9bb9c">Muốn lấy thành: chọn một đạo quân ta, rồi Đánh (một trận) hoặc Vây (mỗi mùa đồn mất 20%, lũy mất một bậc).</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{hasPick}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 10px; top: 56px; width: 300px; max-height: 322px; box-sizing: border-box; padding: 10px 12px 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; background: rgba(22,18,13,.93); border: 1px solid #f08a72; border-radius: 12px">
+<span style="font-family: 'Noto Serif', Georgia, serif; font-size: 17px; font-weight: 700; color: #f6eedb">{{pickTitle}}</span>
+<span style="font-size: 11.5px; color: #c9bb9c">{{pickSub}}. Chạm vòng đỏ trên bản đồ, hoặc chọn dưới đây.</span>
+<sc-for list="{{pickList}}" as="p" hint-placeholder-count="3">
+<button type="button" onClick="{{p.go}}" style="display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 42px; padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(240,138,114,.5); background: rgba(96,28,20,.55); cursor: pointer; text-align: left">
+<span style="font-size: 13.5px; font-weight: 700; color: #f6eedb">{{p.name}}</span>
+<span style="font-size: 11px; color: #ead2c6; white-space: nowrap">{{p.sub}}</span>
+</button>
+</sc-for>
+<sc-if value="{{pickNone}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; color: #f08a72">Không có nơi nào trong tầm một mùa.</span></sc-if>
+<button type="button" onClick="{{cancelPick}}" style="height: 40px; border-radius: 8px; border: 1px solid rgba(226,191,108,.3); background: transparent; font-size: 13px; cursor: pointer">Thôi</button>
+</div>
+</sc-if>
+
+<sc-if value="{{hasFc}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 0; top: 0; width: 844px; height: 390px; background: rgba(10,8,6,.45)"></div>
+<div style="position: absolute; left: 112px; top: 18px; width: 620px; height: 354px; box-sizing: border-box; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; background: rgba(24,19,14,.97); border: 1px solid #e2bf6c; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.5)">
+<div style="display: flex; gap: 10px; align-items: center">
+<div style="flex: none; width: 44px; height: 44px; border-radius: 50%; background: {{fSealBg}}; box-shadow: 0 0 0 2px rgba(246,238,219,.7); display: flex; align-items: center; justify-content: center; font-family: 'Noto Serif TC', serif; font-size: 23px; font-weight: 700; color: #f6eedb">{{fSeal}}</div>
+<div style="flex-grow: 1; display: flex; flex-direction: column">
+<span style="font-family: 'Noto Serif', Georgia, serif; font-size: 16px; font-weight: 700; color: #f6eedb">{{fWho}}</span>
+<span style="font-size: 11.5px; color: #c9bb9c">{{fWhere}} · {{fAcc}}</span>
+</div>
+<div style="display: flex; flex-direction: column; align-items: flex-end">
+<span style="font-family: 'Noto Serif', Georgia, serif; font-size: 24px; font-weight: 700; color: {{fColor}}">{{fLabel}}</span>
+<span style="font-size: 12px; color: {{fColor}}">{{fPct}}</span>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 7px 10px; border-radius: 9px; background: rgba(179,38,46,.18); border: 1px solid rgba(179,38,46,.5)">
+<span style="font-size: 11px; color: #c9bb9c">Ta · {{fAgen}}</span>
+<span style="font-size: 20px; font-weight: 700; color: #f6eedb; font-variant-numeric: tabular-nums">Sức {{fSa}}</span>
+<span style="font-size: 11.5px; color: #ddd0b3">Ước mất {{fLa}} quân</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 7px 10px; border-radius: 9px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.18)">
+<span style="font-size: 11px; color: #c9bb9c">Họ · {{fDgen}}</span>
+<span style="font-size: 20px; font-weight: 700; color: #f6eedb; font-variant-numeric: tabular-nums">Sức {{fSd}}</span>
+<span style="font-size: 11.5px; color: #ddd0b3">Ước mất {{fLd}} quân</span>
+</div>
+</div>
+<div style="display: flex; gap: 12px; min-height: 0; flex-grow: 1">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0">
+<span style="font-size: 11px; font-weight: 600; letter-spacing: .04em; color: #c9bb9c">Vì sao</span>
+<sc-for list="{{fReasons}}" as="r" hint-placeholder-count="5">
+<div style="display: flex; justify-content: space-between; gap: 8px; font-size: 12px"><span style="color: #ddd0b3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.t}}</span><span style="flex: none; font-weight: 700; color: {{r.color}}; font-variant-numeric: tabular-nums">{{r.pct}}</span></div>
+</sc-for>
+</div>
+<div style="flex: none; width: 176px; display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 11px; font-weight: 600; letter-spacing: .04em; color: #c9bb9c">Ba làn chiến địa</span>
+<sc-for list="{{fLanes}}" as="l" hint-placeholder-count="3"><span style="font-size: 12px; color: #ddd0b3">{{l.k}}: <span style="color: #f6eedb; font-weight: 600">{{l.v}}</span></span></sc-for>
+<sc-if value="{{fHasPartners}}" hint-placeholder-val="{{false}}">
+<span style="margin-top: 4px; font-size: 11px; font-weight: 600; letter-spacing: .04em; color: #c9bb9c">Hợp binh</span>
+<sc-for list="{{fPartners}}" as="p" hint-placeholder-count="2"><button type="button" onClick="{{p.go}}" style="height: 30px; padding: 0 8px; text-align: left; border-radius: 7px; border: 1px solid rgba(226,191,108,.4); background: {{p.bg}}; font-size: 12px; cursor: pointer">{{p.label}}</button></sc-for>
+</sc-if>
+</div>
+</div>
+<div style="display: flex; gap: 10px; align-items: center">
+<span style="flex-grow: 1; font-size: 11px; line-height: 1.35; color: #c9bb9c">Tướng Mưu cao đoán sát; Mưu thấp có thể lạc quan hay bi quan. Gió và vận trong ngày không ai biết trước.</span>
+<button type="button" onClick="{{fNo}}" style="flex: none; width: 100px; height: 44px; border-radius: 10px; border: 1px solid rgba(226,191,108,.35); background: transparent; font-size: 14px; font-weight: 600; cursor: pointer">Thôi</button>
+<button type="button" onClick="{{fGo}}" style="flex: none; width: 150px; height: 44px; border-radius: 10px; border: 1px solid #f3d58f; background: #9e2a1e; font-size: 14px; font-weight: 700; color: #fbf1dc; cursor: pointer">Hạ lệnh đánh</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{hasCard}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 0; top: 0; width: 844px; height: 390px; background: rgba(10,8,6,.4)"></div>
+<div style="position: absolute; left: 172px; top: 40px; width: 500px; height: 310px; box-sizing: border-box; padding: 14px 18px; display: flex; flex-direction: column; gap: 8px; background: rgba(24,19,14,.97); border: 1px solid #e2bf6c; border-radius: 16px; box-shadow: 0 12px 40px rgba(0,0,0,.5)">
+<div style="display: flex; gap: 11px; align-items: center">
+<div style="flex: none; width: 52px; height: 52px; border-radius: 50%; background: {{cSealBg}}; box-shadow: 0 0 0 2px rgba(246,238,219,.7); display: flex; align-items: center; justify-content: center; font-family: 'Noto Serif TC', serif; font-size: 27px; font-weight: 700; color: #f6eedb">{{cSeal}}</div>
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0">
+<span style="font-size: 11.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: {{cTone}}">{{cWho}} · {{cCount}}</span>
+<span style="font-family: 'Noto Serif', Georgia, serif; font-size: 19px; font-weight: 700; line-height: 1.2; color: #f6eedb">{{cTitle}}</span>
+</div>
+<button type="button" onClick="{{later}}" style="flex: none; height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid rgba(226,191,108,.3); background: transparent; font-size: 12px; cursor: pointer">Để sau</button>
+</div>
+<div style="flex-grow: 1; font-size: 14px; line-height: 1.5; color: #e6dbc3">{{cText}}</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<button type="button" onClick="{{no}}" style="min-height: 64px; padding: 7px 11px; display: flex; flex-direction: column; gap: 2px; text-align: left; border-radius: 11px; border: 1px solid rgba(226,191,108,.4); background: rgba(255,255,255,.05); cursor: pointer">
+<span style="font-size: 14px; font-weight: 700; color: #f6eedb">{{cNo}}</span>
+<span style="font-size: 11.5px; line-height: 1.3; color: #c9bb9c">{{cNoFx}}</span>
+</button>
+<button type="button" onClick="{{yes}}" style="min-height: 64px; padding: 7px 11px; display: flex; flex-direction: column; gap: 2px; text-align: left; border-radius: 11px; border: 1px solid #f3d58f; background: rgba(158,42,30,.8); cursor: pointer">
+<span style="font-size: 14px; font-weight: 700; color: #fbf1dc">{{cYes}}</span>
+<span style="font-size: 11.5px; line-height: 1.3; color: #f0dccb">{{cYesFx}}</span>
+</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{hasBattle}}" hint-placeholder-val="{{false}}">
+<sc-for list="{{laneChips}}" as="l" hint-placeholder-count="0">
+<div style="position: absolute; left: {{l.left}}px; top: {{l.top}}px; width: 100px; text-align: center; font-size: 10.5px; color: #f6eedb; text-shadow: 0 1px 3px #000, 0 0 6px #000; pointer-events: none; white-space: nowrap">{{l.t}}</div>
+</sc-for>
+<sc-for list="{{wingChips}}" as="w" hint-placeholder-count="0">
+<button type="button" onClick="{{w.tap}}" style="position: absolute; left: {{w.left}}px; top: {{w.top}}px; width: 68px; min-height: 32px; padding: 2px 5px 3px; box-sizing: border-box; display: flex; flex-direction: column; gap: 1px; background: {{w.bg}}; border: 1.5px solid {{w.border}}; border-radius: 7px; cursor: pointer">
+<span style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: #f6eedb; font-variant-numeric: tabular-nums"><span>{{w.arm}}</span><span>{{w.men}}</span></span>
+<span style="height: 3px; border-radius: 2px; background: rgba(255,255,255,.12); overflow: hidden"><span style="display: block; height: 3px; width: {{w.mw}}; background: {{w.mc}}"></span></span>
+<span style="font-size: 9.5px; color: #e2bf6c; white-space: nowrap">{{w.ord}}</span>
+</button>
+</sc-for>
+<div style="position: absolute; right: 10px; top: 58px; width: 250px; display: flex; flex-direction: column; gap: 5px; padding: 9px 11px; box-sizing: border-box; background: rgba(22,18,13,.9); border: 1px solid rgba(226,191,108,.3); border-radius: 12px">
+<span style="font-family: 'Noto Serif', Georgia, serif; font-size: 15px; font-weight: 700; color: #f6eedb">{{bTitle}} · {{bTurn}}</span>
+<span style="font-size: 11px; color: #c9bb9c">{{bGens}} · {{bWind}}</span>
+<sc-if value="{{bHasFc}}" hint-placeholder-val="{{false}}"><span style="font-size: 11px; color: #e2bf6c">{{bFc}}</span></sc-if>
+<span style="margin-top: 3px; font-size: 10.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: #c9bb9c">{{bLogTitle}}</span>
+<sc-for list="{{bLog}}" as="e" hint-placeholder-count="4"><span style="font-size: 11.5px; line-height: 1.3; color: {{e.color}}; font-weight: {{e.weight}}">{{e.t}}</span></sc-for>
+</div>
+<sc-if value="{{hasWing}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 10px; bottom: 10px; width: 500px; box-sizing: border-box; padding: 7px 9px; display: flex; flex-direction: column; gap: 5px; background: rgba(22,18,13,.92); border: 1px solid rgba(226,191,108,.35); border-radius: 12px">
+<span style="font-size: 12px; font-weight: 700; color: #f6eedb">{{wName}}</span>
+<div style="display: flex; gap: 5px">
+<sc-for list="{{wOrders}}" as="o" hint-placeholder-count="5">
+<button type="button" title="{{o.tip}}" onClick="{{o.go}}" style="flex: 1; height: 42px; padding: 0 4px; border-radius: 8px; border: 1px solid rgba(226,191,108,.4); background: {{o.bg}}; color: {{o.color}}; opacity: {{o.op}}; font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap">{{o.label}}</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{canFight}}" hint-placeholder-val="{{true}}">
+<div style="position: absolute; right: 10px; bottom: 10px; display: flex; gap: 8px">
+<button type="button" onClick="{{autoFight}}" style="width: 98px; height: 52px; border-radius: 12px; border: 1px solid rgba(226,191,108,.45); background: rgba(22,18,13,.9); font-size: 13px; font-weight: 600; cursor: pointer">Tự đánh hết</button>
+<button type="button" onClick="{{fight}}" style="width: 140px; height: 52px; border-radius: 12px; border: 1px solid #f3d58f; background: #9e2a1e; font-family: 'Noto Serif', Georgia, serif; font-size: 16px; font-weight: 700; color: #fbf1dc; cursor: pointer">{{fightLabel}}</button>
+</div>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{hasResult}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 0; top: 0; width: 844px; height: 390px; background: rgba(10,8,6,.45)"></div>
+<div style="position: absolute; left: 172px; top: 30px; width: 500px; height: 330px; box-sizing: border-box; padding: 14px 18px; display: flex; flex-direction: column; gap: 7px; background: rgba(24,19,14,.97); border: 1px solid #e2bf6c; border-radius: 16px">
+<span style="font-size: 11.5px; color: #c9bb9c">{{rWhere}}</span>
+<span style="font-family: 'Noto Serif', Georgia, serif; font-size: 30px; font-weight: 700; line-height: 1.1; color: {{rColor}}">{{rTitle}}</span>
+<span style="font-size: 14px; font-weight: 600; color: #f6eedb; font-variant-numeric: tabular-nums">{{rLoss}}</span>
+<sc-if value="{{rHasFc}}" hint-placeholder-val="{{false}}"><span style="font-size: 12.5px; line-height: 1.4; color: #e2bf6c">{{rFc}}</span></sc-if>
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 3px; min-height: 0; overflow-y: auto">
+<sc-for list="{{rMoments}}" as="m" hint-placeholder-count="3"><span style="font-size: 12.5px; line-height: 1.35; color: {{m.color}}">{{m.t}}</span></sc-for>
+</div>
+<button type="button" onClick="{{rNext}}" style="height: 46px; border-radius: 11px; border: 1px solid #f3d58f; background: #9e2a1e; font-size: 15px; font-weight: 700; color: #fbf1dc; cursor: pointer">Tiếp</button>
+</div>
+</sc-if>
+
+<sc-if value="{{hasReport}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 0; top: 0; width: 844px; height: 390px; background: rgba(10,8,6,.45)"></div>
+<div style="position: absolute; left: 152px; top: 22px; width: 540px; height: 346px; box-sizing: border-box; padding: 14px 18px; display: flex; flex-direction: column; gap: 7px; background: rgba(24,19,14,.97); border: 1px solid #e2bf6c; border-radius: 16px">
+<span style="font-family: 'Noto Serif', Georgia, serif; font-size: 21px; font-weight: 700; color: #f6eedb">{{rpTitle}}</span>
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow-y: auto">
+<sc-for list="{{rpLines}}" as="l" hint-placeholder-count="5"><span style="font-size: 13px; line-height: 1.4; color: {{l.color}}; font-weight: {{l.weight}}">{{l.t}}</span></sc-for>
+</div>
+<sc-if value="{{rpHasDemo}}" hint-placeholder-val="{{false}}"><span style="font-size: 11.5px; line-height: 1.35; color: #c9bb9c">{{rpDemo}}</span></sc-if>
+<button type="button" onClick="{{goNext}}" style="height: 46px; border-radius: 11px; border: 1px solid #f3d58f; background: #9e2a1e; font-size: 15px; font-weight: 700; color: #fbf1dc; cursor: pointer">{{rpNext}}</button>
+</div>
+</sc-if>
+
+<sc-if value="{{isOver}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 0; top: 0; width: 844px; height: 390px; box-sizing: border-box; padding: 20px 28px; display: flex; gap: 24px; background: rgba(16,13,9,.94)">
+<div style="flex: none; width: 300px; display: flex; flex-direction: column; gap: 10px; justify-content: center">
+<span style="font-family: 'Noto Serif', Georgia, serif; font-size: 32px; font-weight: 700; line-height: 1.15; color: {{oColor}}">{{oTitle}}</span>
+<span style="font-size: 15px; line-height: 1.45; color: #f6eedb">{{oWhy}}</span>
+<button type="button" onClick="{{again}}" style="margin-top: 8px; height: 48px; border-radius: 11px; border: 1px solid #f3d58f; background: #9e2a1e; font-size: 15px; font-weight: 700; color: #fbf1dc; cursor: pointer">Chơi lại</button>
+</div>
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; overflow-y: auto; padding: 12px 14px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid rgba(226,191,108,.25)">
+<span style="font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #c9bb9c">Biên niên</span>
+<sc-for list="{{chron}}" as="c" hint-placeholder-count="6"><span style="font-size: 12.5px; line-height: 1.4; color: #e6dbc3">{{c.t}}</span></sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isLoad}}" hint-placeholder-val="{{true}}">
+<div style="position: absolute; left: 0; top: 0; width: 844px; height: 390px; box-sizing: border-box; padding: 36px 48px; display: flex; flex-direction: column; justify-content: center; gap: 12px; background: #16120d">
+<span style="font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #c9bb9c">Tam Quốc Loạn Nhập · Demo 1</span>
+<span style="font-family: 'Noto Serif', Georgia, serif; font-size: 30px; font-weight: 700; line-height: 1.2; color: #f6eedb">Thu 219. Một mùa ở Hoài Nam.</span>
+<span style="max-width: 560px; font-size: 14.5px; line-height: 1.5; color: #e6dbc3">Chu Nguyên Chương tỉnh dậy ở Chung Ly, kẹp giữa Tào Tháo ở Thọ Xuân và Tôn Quyền bên kia Trường Giang. Mỗi đạo quân nhận một lệnh, mỗi thành một việc. Trước trận, tướng phân tích; tướng Mưu cao đoán sát hơn.</span>
+<span style="font-size: 13px; color: {{loadColor}}">{{loadText}}</span>
+</div>
+</sc-if>
+
+</div>
+</x-dc>

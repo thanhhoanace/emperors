@@ -1,0 +1,16 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-09-28T09:35:44Z" },
+  "title": "Demo 1 · Hoài Nam",
+  "launch": { "view": "focused", "file": "Main.dc.html" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 844, "h": 390, "title": "Thu 219 · một mùa ở Hoài Nam (điện thoại ngang)", "is_interactive": true, "radius": 18 }
+  },
+  "order": ["Main.dc.html"],
+  "notes": {
+    "howto": { "x": 904, "y": 0, "w": 340, "fill": "gray", "size": "s", "text": "Chơi thử\n\n1. Đọc 4 thẻ đầu mùa (ký ức, sứ Ngô, hào tộc, Chu Hoàn).\n2. Chạm một đạo quân: Đi, Đánh, Vây hoặc Giữ.\n3. Đánh: tướng phân tích trước. Mưu cao đoán sát, Mưu thấp đoán lệch.\n4. Chạm thành ta: giao một việc (ruộng, lũy, chợ, mộ quân).\n5. Hết mùa: quân hành quân, rồi trận theo lượt (tối đa 5). Chạm cánh quân ta để đổi lệnh.\n\nBản đồ 3D dựng mất vài giây đến nửa phút tùy máy." },
+    "ask": { "x": 904, "y": 470, "w": 340, "fill": "orange", "size": "s", "text": "Cần anh xem\n\n- Bản đồ chạm, zoom, xoay có đủ sướng không?\n- Quân bộ/cung/kỵ/thuyền trên map có phân biệt được không?\n- Bảng tướng phân tích có làm anh để ý Mưu của tướng không?\n- Trận theo lượt 3–5 lượt có nhanh và có điểm nhấn không?" }
+  },
+  "designSystems": []
+}

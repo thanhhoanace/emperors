@@ -1,0 +1,27 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Demo 1 harness</title>
+<!-- Local view of the demo's 3D scene, without the canvas UI. Run build.py, serve the repo root
+     (python3 -m http.server), open /docs/phases/v2-gameplay/demo1/harness.html?shot=region or ?battle=3 -->
+<style>html,body{margin:0;background:#111}canvas{display:block;width:844px;height:390px}</style></head><body>
+<canvas id="c"></canvas>
+<script src="build/hn-bundle.js"></script>
+<script>
+(async () => {
+  const q = new URLSearchParams(location.search), W = +q.get('w') || 844, H = +q.get('h') || 390, dpr = +q.get('dpr') || 2;
+  const cv = document.getElementById('c'); cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  try {
+    const rt = await HNBoot.start({ canvas: cv, width: W, height: H, dpr, mapPng: 'build/hn-map.png' });
+    const sc = (window.__sc = await HNScene.create(rt, { width: W, height: H }));
+    await sc.shot(q.get('shot') || 'region');
+    if (q.get('battle')) {
+      const R = HNRules, B = R.battle; const g = R.newGame(3); delete g.armies.e1;
+      const plan = R.battlePlan(g, ['a1', 'a2'], { kind: 'town', id: 'tho_xuan' });
+      let b = B.create(g, plan, 'A');
+      sc.battle.begin({ site: 'tho_xuan', from: [sc.place.chung_ly.x, sc.place.chung_ly.z], me: 'A', siege: plan.siege });
+      for (let k = 0; k < +q.get('battle'); k++) { B.autoOrders(g, b, 'A'); B.autoOrders(g, b, 'D'); b = B.resolve(g, b); }
+      sc.battle.show(b, 10);
+    }
+    sc.settle(); sc.loop(null);
+    window.__stats = rt.stats; window.__done = true;
+  } catch (e) { console.error(e); window.__error = String(e.stack || e); }
+})();
+</script></body></html>
