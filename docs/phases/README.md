@@ -4,4 +4,4 @@
 
 | Phase | Câu hỏi | Bước |
 | --- | --- | --- |
-| [`v2-gameplay`](v2-gameplay/WORKING.md) | Gameplay v2: vào là chơi, chiến dịch sâu, hay lai; giữ chiều sâu nào | CHALLENGE: chờ research ChatGPT/Grok + spike ván ngắn, rồi chủ dự án chốt |
+| [`v2-gameplay`](v2-gameplay/WORKING.md) | Gameplay v2: vào là chơi, chiến dịch sâu, hay lai; giữ chiều sâu nào | CHALLENGE: spike ván ngắn đã lên canvas, chờ chủ dự án chơi thử + research ChatGPT/Grok, rồi chốt |
