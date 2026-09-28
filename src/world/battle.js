@@ -32,7 +32,7 @@
   const hex = (c) => (typeof c === 'string' ? parseInt(c.replace('#', ''), 16) : c);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const yawTo = (dx, dz) => Math.atan2(-dz, dx); // the yaw that turns a model's +x toward (dx, dz)
-  const TIER = { high: { figures: 4000, wards: 48, fx: 1, lights: 3 }, mid: { figures: 2500, wards: 24, fx: 0.6, lights: 1 }, low: { figures: 1200, wards: 12, fx: 0.35, lights: 0 } };
+  const TIER = { high: { figures: 3200, wards: 48, fx: 1, lights: 3 }, mid: { figures: 2500, wards: 24, fx: 0.6, lights: 1 }, low: { figures: 1200, wards: 12, fx: 0.35, lights: 0 } };
   const SIDE_VI = { n: 'Bắc', s: 'Nam', e: 'Đông', w: 'Tây' }, DIR = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] };
   const tierOf = (q) => { const t = typeof q === 'string' ? q : q && q.tier; return TIER[t] ? t : 'high'; };
 
@@ -1112,7 +1112,9 @@
     const city = buildCity(ctx); group.add(city.group); disposables.push(city.meshes[0].material);
     // crowds: one per faction, the animated crowd.js when the integrator passes it, else the static stand-in
     const Crowd = deps.Crowd || B.Crowd;
-    const crowdA = Crowd.create({ HM, colors: { [atk.fid]: atk.color }, q: deps.q, Nature: N }), crowdD = Crowd.create({ HM, colors: { [dfd.fid]: dfd.color }, q: deps.q, Nature: N });
+    const crowdA = Crowd.create({ HM, colors: { [atk.fid]: atk.color }, q: deps.q, Nature: N, renderer: deps.renderer }), crowdD = Crowd.create({ HM, colors: { [dfd.fid]: dfd.color }, q: deps.q, Nature: N, renderer: deps.renderer });
+    // the animated crowd walks a `spear` row; ranks, guards and sentries stand (idle), everything else keeps its loop
+    const kindOf = (k) => (deps.Crowd && k === 'spear' ? 'idle' : k);
     group.add(crowdA.group, crowdD.group);
     const out = { R: { spear: [], bow: [], run: [], climb: [], pull: [] }, Gd: { spear: [], bow: [] }, Rb: [], Gb: [], riders: [], dRiders: [], horses: [], standards: [], dStandards: [] };
     // the camp on the attacker's side: the land's rectangle (its ditch is cut in the terrain), else one laid out beyond the lines
@@ -1125,10 +1127,10 @@
     // the cap holds: if the camp, the crews and the guards took the figures past it, thin every list evenly
     const all = [...Object.values(out.R), ...Object.values(out.Gd), out.riders, out.dRiders, out.horses], total = all.reduce((a, l) => a + l.length, 0);
     if (total > cap) { const r = cap / total; all.forEach((l) => { let w = 0; for (let i = 0; i < l.length; i++) if (Math.floor((i + 1) * r) > Math.floor(i * r)) l[w++] = l[i]; l.length = w; }); } // every (1/r)-th man, so the cap holds to the figure
-    for (const [kind, list] of Object.entries(out.R)) if (list.length) crowdA.add(kind, list);
+    for (const [kind, list] of Object.entries(out.R)) if (list.length) crowdA.add(kindOf(kind), list);
     if (out.riders.length) crowdA.add('rider', out.riders);
     if (out.horses.length) crowdA.add('horse', out.horses);
-    for (const [kind, list] of Object.entries(out.Gd)) if (list.length) crowdD.add(kind, list);
+    for (const [kind, list] of Object.entries(out.Gd)) if (list.length) crowdD.add(kindOf(kind), list);
     if (out.dRiders.length) crowdD.add('rider', out.dRiders);
     if (crowdA.flush) crowdA.flush(); if (crowdD.flush) crowdD.flush();
     group.add(banners(bannerCache, out.Rb.concat(out.standards), atk.color, atk.glyph), banners(bannerCache, out.Gb.concat(out.dStandards), dfd.color, dfd.glyph));

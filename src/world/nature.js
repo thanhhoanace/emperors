@@ -64,7 +64,7 @@
   };
 
   // ---------------------------------------------------------------- quality and cells
-  const tierOf = (q) => (q && q.tier) || 'high';
+  const tierOf = (q) => (typeof q === 'string' ? q : q && q.tier) || 'high'; // a tier name or a Quality tier object
   const TREES = { high: 12000, mid: 6000, low: 2500 };
   N.CELL = 80;
   // a geometry that shares another's buffers but has its own bounding sphere: three r146 culls an InstancedMesh by its
@@ -452,13 +452,14 @@
     // boulders along the tributary: on its land side (away from the big river)
     const TS = L.sides && L.sides.tributary, RS = L.sides && L.sides.river, FT = TS && FRAME[TS];
     const tribB0 = FT ? FT.to(...L.tribAt(0))[1] : 0, toRiver = RS && FT ? Math.sign(FT.to(...FRAME[RS].from(0, 1))[0]) : -1; // which way along the tributary the river lies
-    for (let k = 0; k < 20000 && B.flat().length < 420; k++) {
+    let nB = 0; // boulders placed (B.flat().length in the loop test was quadratic)
+    for (let k = 0; k < 20000 && nB < 420; k++) {
       const onHill = rnd() < 0.8 || !FT, u = rnd(), v = rnd();
       const [x, z] = onHill ? [lerp(350, 1750, u) * mx, lerp(-650, 450, v) * mz] : FT.from(lerp(-400, 900, v) * (toRiver < 0 ? 1 : -1), tribB0 - lerp(-60, 60, u));
       const hl = L.hills(x, z), sd = L.waterSD(x, z);
       if ((onHill && hl < 8) || sd < 3 || (!onHill && sd > 30)) continue;
       const s = onHill ? 4 + rnd() * 14 : 2 + rnd() * 5;
-      B[Math.floor(rnd() * 3)].push([x, L.h(x, z) - s * 0.15, z, s, s, rnd() * 6.28]);
+      B[Math.floor(rnd() * 3)].push([x, L.h(x, z) - s * 0.15, z, s, s, rnd() * 6.28]); nB++;
     }
     const m4 = new T.Matrix4(), qq = new T.Quaternion(), sc = new T.Vector3(), ps = new T.Vector3(), Y = new T.Vector3(0, 1, 0), GREY = [1, 1, 1];
     const pillarM = ([x, y, z, R, H, r], i) => m4.compose(ps.set(x, y, z), qq.setFromAxisAngle(Y, r), sc.set(R / 0.34, H, (R / 0.34) * (0.85 + 0.3 * h2(i, 3))));
@@ -760,21 +761,30 @@
   const PLANT = { high: { fine: 160, far: 900, carpet: true, under: true }, mid: { fine: 120, far: 600, carpet: false, under: true }, low: { fine: 150, far: 0, carpet: false, under: false, light: true } };
   const UNDER_D = { bush: 700, grass: 250 }; // undergrowth is only drawn this near the camera (m)
   const FINE_CELL = 2, FAR_CELL = 4, CARD_CELL = 8, UNDER_CELL = 4; // blocks of k × k cells by level (fewer draw calls)
+  const SPECIES = [
+    { kind: 'broad', tile: 0, seeds: [1.1, 2.3] }, { kind: 'broad', tile: 1, seeds: [3.7, 4.2] }, { kind: 'broad', tile: 2, seeds: [5.5] },
+    { kind: 'pine', tile: 3, seeds: [6.1, 7.9] }, { kind: 'willow', tile: 0, seeds: [8.3] },
+    { kind: 'bush', tile: 5, seeds: [9.1], small: true }, { kind: 'bush', tile: 1, seeds: [10.2], small: true }, { kind: 'bush', tile: 2, seeds: [10.9], small: true },
+    { kind: 'grass', tile: 4, seeds: [11.3], small: true, noShadow: true },
+  ];
+  // near: the fine plant (the light one at low) per variant; far and cards: the species' first variant; undergrowth
+  // has the fine plant only
+  const plantsFor = (TP) => SPECIES.map((sp) => sp.seeds.map((s, vi) => {
+    if (sp.small) return { near: TP.under ? plantOnce(sp.kind, s, sp.tile, true) : null };
+    return { near: plantOnce(sp.kind, s, sp.tile, !TP.light), far: vi || !TP.far ? null : plantOnce(sp.kind, s, sp.tile, false, true), cards: vi ? null : cardsOnce(sp.tile) };
+  }));
+  // The leaf atlas and the plant geometries depend on nothing but the tier: built once per page and shared by every
+  // battle (they were 4–5 s of a battle's 7–8 s build at high). N.warm(q) builds them ahead, when the page is idle.
+  const CACHE = { atlas: null, plants: new Map(), cards: new Map() };
+  const atlasOnce = () => CACHE.atlas || (CACHE.atlas = leafAtlas());
+  const once = (map, key, make) => { if (!map.has(key)) map.set(key, make()); return map.get(key); };
+  const plantOnce = (kind, seed, tile, hi, far) => once(CACHE.plants, [kind, seed, tile, hi, far].join(), () => plant(kind, seed, tile, hi, far));
+  const cardsOnce = (tile) => once(CACHE.cards, tile, () => cardsGeo(tile));
+  N.warm = function (q) { const TP = PLANT[tierOf(q)] || PLANT.high; atlasOnce(); plantsFor(TP); };
   N.trees = function (L, env, sun, extra = [], q) {
     const tier = tierOf(q), TP = PLANT[tier] || PLANT.high, cap = (q && q.trees) || TREES[tier] || TREES.high;
-    const atlas = leafAtlas(), TM = N.treeMaterial(atlas, env, sun), group = new T.Group();
-    const SPECIES = [
-      { kind: 'broad', tile: 0, seeds: [1.1, 2.3] }, { kind: 'broad', tile: 1, seeds: [3.7, 4.2] }, { kind: 'broad', tile: 2, seeds: [5.5] },
-      { kind: 'pine', tile: 3, seeds: [6.1, 7.9] }, { kind: 'willow', tile: 0, seeds: [8.3] },
-      { kind: 'bush', tile: 5, seeds: [9.1], small: true }, { kind: 'bush', tile: 1, seeds: [10.2], small: true }, { kind: 'bush', tile: 2, seeds: [10.9], small: true },
-      { kind: 'grass', tile: 4, seeds: [11.3], small: true, noShadow: true },
-    ];
-    // near: the fine plant (the light one at low) per variant; far and cards: the species' first variant; undergrowth
-    // has the fine plant only
-    const plants = SPECIES.map((sp) => sp.seeds.map((s, vi) => {
-      if (sp.small) return { near: TP.under ? plant(sp.kind, s, sp.tile, true) : null };
-      return { near: plant(sp.kind, s, sp.tile, !TP.light), far: vi || !TP.far ? null : plant(sp.kind, s, sp.tile, false, true), cards: vi ? null : cardsGeo(sp.tile) };
-    }));
+    const atlas = atlasOnce(), TM = N.treeMaterial(atlas, env, sun), group = new T.Group();
+    const plants = plantsFor(TP);
     const lists = SPECIES.map((sp) => sp.seeds.map(() => []));
     N.seed(77 + (L.seed || 0));
     const put = (si, x, z, H, y) => { const vi = Math.floor(rnd() * SPECIES[si].seeds.length); lists[si][vi].push([x, y ?? L.h(x, z) - 0.25, z, H, rnd() * 6.28]); };
@@ -799,15 +809,17 @@
     if (TP.under) {
       // undergrowth: shrubs and grass round the hills and along the woods' edges (its own seed: the same at every tier)
       N.seed(78 + (L.seed || 0));
-      for (let k = 0; k < 400000 && lists[5].flat().length + lists[6].flat().length + lists[7].flat().length < 7000; k++) {
+      // counters, not lists[i].flat().length in the loop test: that was O(n²), 3 s of a 4.7 s build (same draws, same trees)
+      let nBush = 0, nGrass = 0;
+      for (let k = 0; k < 400000 && nBush < 7000; k++) {
         const x = BAG[0] + (rnd() * 2 - 1) * 1000, z = BAG[1] + (rnd() * 2 - 1) * 850, w = L.woodAt(x, z), hl = L.hills(x, z);
         if (L.waterSD(x, z) < 3 || L.fieldAt(x, z) > 0.05 || L.roadD(x, z) < 5 || L.trampled(x, z) > 0.2 || (w < 0.08 && hl < 4) || L.slope(x, z) > 1.1) continue;
-        put(rnd() < 0.62 ? 5 : rnd() < 0.6 ? 6 : 7, x, z, 1.4 + rnd() * 2.2, L.h(x, z) - 0.15);
+        put(rnd() < 0.62 ? 5 : rnd() < 0.6 ? 6 : 7, x, z, 1.4 + rnd() * 2.2, L.h(x, z) - 0.15); nBush++;
       }
-      for (let k = 0; k < 600000 && lists[8].flat().length < 12000; k++) {
+      for (let k = 0; k < 600000 && nGrass < 12000; k++) {
         const x = BAG[0] + (rnd() * 2 - 1) * 1000, z = BAG[1] + (rnd() * 2 - 1) * 850;
         if (L.waterSD(x, z) < 2 || L.fieldAt(x, z) > 0.05 || L.roadD(x, z) < 4 || L.trampled(x, z) > 0.2 || L.slope(x, z) > 1.1 || (L.woodAt(x, z) < 0.05 && L.hills(x, z) < 4)) continue;
-        put(8, x, z, 0.7 + rnd() * 0.7, L.h(x, z) - 0.05);
+        put(8, x, z, 0.7 + rnd() * 0.7, L.h(x, z) - 0.05); nGrass++;
       }
     }
     for (const e of extra) if (TP.under || !SPECIES[e[2] ?? 0].small) put(e[2] ?? 0, e[0], e[1], e[3] ?? 9, e[4]);

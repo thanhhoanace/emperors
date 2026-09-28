@@ -37,7 +37,9 @@
     horse: { stand: [8, 0.3], walk: [12, 0.9], trot: [12, 1.7] },
   };
   C.tierOf = (q) => { const t = typeof q === 'string' ? q : q && q.tier; return t === 'low' || t === 'mid' ? t : 'high'; };
-  const TIER = { high: { reach: 150, maxFine: 500, shadow: true }, mid: { reach: 80, maxFine: 300, shadow: true }, low: { reach: 0, maxFine: 0, shadow: false } };
+  // shadowReach: light figures cast a shadow only this close to the focus (beyond it a 2 m man is a few pixels and his
+  // shadow pass doubled the crowd's triangles in the battle scene)
+  const TIER = { high: { reach: 150, maxFine: 400, shadow: true, shadowReach: 200 }, mid: { reach: 80, maxFine: 300, shadow: true, shadowReach: 160 }, low: { reach: 0, maxFine: 0, shadow: false, shadowReach: 0 } };
 
   // palette (sRGB hex, the prototype's); parts with a tint weight take the instance's colour × weight instead
   const SKIN = 0xc79a74, DARK = 0x2a221d, BOOT = 0x1c1613, IRON = 0x4b4f55, STRAW = 0x8f7440, SHAFT = 0x4a3423, BLADE = 0x959aa1;
@@ -401,22 +403,23 @@
     };
     // an InstancedMesh at capacity `cap`: instance colours from the start (the kit material's program trap), our own
     // per-instance loop and tint attributes on a private copy of the rig's geometry
-    const makeMesh = (b, lod, cap) => {
+    // slot 'far': the same light figures past shadowReach, without a shadow
+    const makeMesh = (b, lod, cap, slot = 'mesh') => {
       const L = b.lod[lod];
-      if (L.mesh) { group.remove(L.mesh); L.mesh.geometry.dispose(); L.mesh.dispose(); }
+      if (L[slot]) { group.remove(L[slot]); L[slot].geometry.dispose(); L[slot].dispose(); }
       const g = L.rig.geo.clone();
       g.setAttribute('aAnim', new T.InstancedBufferAttribute(new Float32Array(cap * 4), 4));
       g.setAttribute('aTint', new T.InstancedBufferAttribute(new Float32Array(cap * 3), 3));
       const m = new T.InstancedMesh(g, L.mat, cap);
       m.instanceColor = new T.InstancedBufferAttribute(new Float32Array(cap * 3).fill(1), 3);
-      m.customDepthMaterial = L.depth; m.castShadow = TQ.shadow; m.receiveShadow = true; m.frustumCulled = true; m.count = 0;
-      m.name = 'crowd:' + b.body + ':' + lod; m.userData.crowd = { body: b.body, lod };
-      L.mesh = m; L.cap = cap; group.add(m);
+      m.customDepthMaterial = L.depth; m.castShadow = TQ.shadow && slot === 'mesh'; m.receiveShadow = true; m.frustumCulled = true; m.count = 0;
+      m.name = 'crowd:' + b.body + ':' + lod + (slot === 'far' ? ':far' : ''); m.userData.crowd = { body: b.body, lod };
+      L[slot] = m; if (slot === 'mesh') L.cap = cap; group.add(m);
       return m;
     };
     // write one mesh from a list of instances: matrices, brightness, loop, tint, bounds
-    const write = (b, lod, list) => {
-      const L = b.lod[lod], m = L.mesh, n = list.length;
+    const write = (b, lod, list, slot = 'mesh') => {
+      const L = b.lod[lod], m = L[slot], n = list.length;
       if (!m) return;
       const A = m.geometry.attributes.aAnim.array, K = m.geometry.attributes.aTint.array, Cc = m.instanceColor.array;
       const c = new T.Vector3(), lo = new T.Vector3(Infinity, Infinity, Infinity), hi = new T.Vector3(-Infinity, -Infinity, -Infinity);
@@ -445,9 +448,15 @@
       }
       for (const b of all) {
         const n = b.inst.length;
-        for (const lod of lods) if (b.lod[lod].cap < n) makeMesh(b, lod, Math.max(n, b.lod[lod].cap * 2, 64));
+        const split = TQ.shadow && TQ.shadowReach > 0;
+        for (const lod of lods) if (b.lod[lod].cap < n) { const c = Math.max(n, b.lod[lod].cap * 2, 64); makeMesh(b, lod, c); if (lod === 'light' && split) makeMesh(b, lod, c, 'far'); }
         if (lods.length === 2) write(b, 'fine', b.inst.filter((s) => keep.has(s)));
-        write(b, 'light', lods.length === 2 ? b.inst.filter((s) => !keep.has(s)) : b.inst);
+        const rest = lods.length === 2 ? b.inst.filter((s) => !keep.has(s)) : b.inst;
+        if (!split) write(b, 'light', rest);
+        else { // near light figures keep their shadow, far ones go to the shadowless copy (no focus: all near)
+          const sr2 = TQ.shadowReach * TQ.shadowReach, near = (s) => !focusAt || (s.x - focusAt.x) ** 2 + (s.y - focusAt.y) ** 2 + (s.z - focusAt.z) ** 2 < sr2;
+          write(b, 'light', rest.filter(near)); write(b, 'light', rest.filter((s) => !near(s)), 'far');
+        }
       }
       dirty = false;
     };
@@ -458,7 +467,7 @@
         const K = C.KINDS[kind]; if (!K) throw new Error('Crowd: unknown kind ' + kind);
         const b = ensure(K[0]), anims = C.ANIMS[K[0]];
         for (const r of rows) {
-          let anim = r[4] || K[1];
+          let anim = typeof r[4] === 'string' ? r[4] : K[1]; // callers' rows may carry other numbers there (a lean)
           if (!anims[anim]) { if (!warned[K[0] + anim]) { warned[K[0] + anim] = 1; console.warn('Crowd: ' + K[0] + ' has no loop ' + anim + ', using ' + K[1]); } anim = K[1]; }
           const bright = 0.82 + 0.3 * rnd(), warm = (rnd() - 0.5) * 0.04, tint = kind === 'horse' ? lin(PALE).multiply(new T.Color(...COATS[Math.floor(rnd() * COATS.length)])) : (r[6] && tints[r[6]]) || defaultTint;
           b.inst.push({ order: count++, x: r[0], y: r[1], z: r[2], yaw: r[3] || 0, anim, phase: r[5] !== undefined && r[5] !== null ? r[5] : rnd(), speed: 0.92 + 0.16 * rnd(), tint, bright: [bright * (1 + warm), bright, bright * (1 - warm)] });
@@ -476,11 +485,11 @@
       get count() { return count; },
       stats() {
         let meshes = 0, frames = 0, bytes = 0, fineFigures = 0; const textures = [];
-        for (const b of Object.values(bodies)) for (const lod of lods) { const L = b.lod[lod]; if (L.mesh) { meshes++; if (lod === 'fine') fineFigures += L.mesh.count; } frames += L.bake.F; const per = mode === 'half' ? 8 : mode === 'static' ? 0 : 16; bytes += L.bake.W * L.bake.H * per; textures.push({ body: b.body, lod, w: L.bake.W, h: L.bake.H, frames: L.bake.F, verts: L.rig.V, tris: L.rig.tris }); }
+        for (const b of Object.values(bodies)) for (const lod of lods) { const L = b.lod[lod]; if (L.mesh) { meshes++; if (lod === 'fine') fineFigures += L.mesh.count; } if (L.far) meshes++; frames += L.bake.F; const per = mode === 'half' ? 8 : mode === 'static' ? 0 : 16; bytes += L.bake.W * L.bake.H * per; textures.push({ body: b.body, lod, w: L.bake.W, h: L.bake.H, frames: L.bake.F, verts: L.rig.V, tris: L.rig.tris }); }
         return { figures: count, fineFigures, meshes, frames, mode, tier, texMB: +(bytes / 1048576).toFixed(2), textures };
       },
       dispose() {
-        for (const b of Object.values(bodies)) for (const lod of lods) { const L = b.lod[lod]; if (L.mesh) { group.remove(L.mesh); L.mesh.geometry.dispose(); L.mesh.dispose(); } L.rig.geo.dispose(); L.mat.dispose(); L.depth.dispose(); if (L.u.tex.value) L.u.tex.value.dispose(); }
+        for (const b of Object.values(bodies)) for (const lod of lods) { const L = b.lod[lod]; for (const m of [L.mesh, L.far]) if (m) { group.remove(m); m.geometry.dispose(); m.dispose(); } L.rig.geo.dispose(); L.mat.dispose(); L.depth.dispose(); if (L.u.tex.value) L.u.tex.value.dispose(); }
         for (const k of Object.keys(bodies)) delete bodies[k];
         count = 0;
       },

@@ -71,17 +71,21 @@ test('crowd: add, LOD buckets, stats, dispose', () => {
     crowd.focus([0, 0, 0]); crowd.tick(1.25);
     const s = crowd.stats();
     assert.equal(crowd.count, 450); assert.equal(s.figures, 450);
-    assert.equal(s.meshes, 6 * (q === 'low' ? 1 : 2));
+    assert.equal(s.meshes, 6 * (q === 'low' ? 1 : 3)); // fine, light, and the shadowless far copy of light (high, mid)
     const reach = q === 'high' ? 150 : q === 'mid' ? 80 : 0;
     const near = Object.keys(Crowd.KINDS).length * Array.from({ length: 50 }, (_, i) => Math.hypot(i * 2, (i % 7) * 300) < reach).filter(Boolean).length;
     assert.equal(s.fineFigures, near, q + ': fine bucket');
     for (const m of crowd.group.children) {
       assert.ok(m.isInstancedMesh && m.instanceColor, m.name + ': instance colours from creation');
       assert.ok(m.customDepthMaterial, m.name + ': depth material');
-      assert.equal(m.castShadow, q !== 'low');
+      assert.equal(m.castShadow, q !== 'low' && !m.name.endsWith(':far'), m.name + ': shadow');
       if (m.count) for (let i = 0; i < m.count * 3; i++) assert.ok(m.instanceColor.array[i] > 0.8 && m.instanceColor.array[i] < 1.15);
     }
     assert.ok(s.textures.every((t) => t.frames === Object.values(Crowd.ANIMS[t.body]).reduce((a, [n]) => a + (q === 'low' ? 4 : n), 0)));
+    if (q !== 'low') { // light figures past shadowReach sit in the shadowless copy
+      const sr = q === 'high' ? 200 : 160;
+      for (const m of crowd.group.children) if (m.name.endsWith(':far')) for (let i = 0; i < m.count; i++) assert.ok(Math.hypot(m.instanceMatrix.array[i * 16 + 12], m.instanceMatrix.array[i * 16 + 14]) >= sr, m.name);
+    }
     crowd.dispose(); assert.equal(crowd.group.children.length, 0);
   }
 });
@@ -91,7 +95,7 @@ test('crowd: the fine LOD holds at most maxFine figures over all bodies, nearest
   for (const kind of ['spear', 'bow', 'rider', 'horse']) crowd.add(kind, Array.from({ length: 400 }, (_, i) => [i * 0.2, 0, 0, 0]));
   crowd.focus([0, 0, 0]);
   const s = crowd.stats();
-  assert.equal(s.fineFigures, 500);
+  assert.equal(s.fineFigures, 400);
   for (const m of crowd.group.children) if (m.userData.crowd.lod === 'fine') for (let i = 0; i < m.count; i++) assert.ok(m.instanceMatrix.array[i * 16 + 12] < 26);
   crowd.dispose();
 });

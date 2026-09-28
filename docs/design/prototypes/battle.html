@@ -19,8 +19,9 @@
 <script src="../../../node_modules/three/examples/js/geometries/RoundedBoxGeometry.js"></script>
 <script src="../../../node_modules/three/examples/js/controls/OrbitControls.js"></script>
 <script src="../../../src/world/kit.js"></script>
-<script src="siege/sg-nature.js"></script>
+<script src="../../../src/world/nature.js"></script>
 <script src="../../../src/world/han-models.js"></script>
+<script src="../../../src/world/crowd.js"></script>
 <script src="../../../src/world/battle.js"></script>
 <script>
 (async () => {
@@ -81,14 +82,17 @@
     const colors = { [atkF.id]: parseInt(atkF.color.slice(1), 16), [owner.id]: parseInt(owner.color.slice(1), 16) };
     const HM = HanModels.create({ recv: (m) => m, renderer, colors });
     const nature = new T.Group(); scene.add(nature);
-    const terrain = N.terrain(L, env, tier), water = N.water(L, env), rocks = N.rocks(L, env, tier); nature.add(terrain, water, rocks);
-    const battle = Battle.siege({ ...desc, ground: L }, { HM, Nature: N, Crowd: window.Crowd, env, sun: { dir: sunDir, color: sunColor }, q: tier, renderer, camera });
-    scene.add(battle.group);
+    const tm = {}, mark = (k, t0) => { tm[k] = Math.round(performance.now() - t0); };
+    if (q.get('warm')) { const w0 = performance.now(); N.warm(tier); tm.warm = Math.round(performance.now() - w0); } // &warm=1: the page warmed the cache before this battle
+    let t1 = performance.now(); const terrain = N.terrain(L, env, tier); mark('terrain', t1); t1 = performance.now(); const water = N.water(L, env); mark('water', t1); t1 = performance.now(); const rocks = N.rocks(L, env, tier); mark('rocks', t1); nature.add(terrain, water, rocks);
+    t1 = performance.now();
+    const battle = Battle.siege({ ...desc, ground: L }, { HM, Nature: N, Crowd: q.get('crowd') === 'static' ? null : window.Crowd, env, sun: { dir: sunDir, color: sunColor }, q: tier, renderer, camera });
+    scene.add(battle.group); mark('battle', t1);
     let trees = null;
     if (q.get('trees') !== '0') {
       const tops = [];
       rocks.userData.ledges.forEach(([x, yy, z, kind], i) => { const r = N.noise.h2(i, 17); if (kind === 'top') tops.push(r < 0.55 ? [x, z, 3, 7 + r * 9, yy - 0.5] : [x, z, 5, 2 + r * 2, yy - 0.3]); else tops.push(r < 0.3 ? [x, z, 3, 4 + r * 8, yy - 0.8] : [x, z, r < 0.65 ? 5 : 7, 1.6 + r * 1.6, yy - 0.4]); });
-      trees = N.trees(L, env, { dir: sunDir, color: sunColor }, battle.trees.concat(tops), tier); nature.add(trees);
+      t1 = performance.now(); trees = N.trees(L, env, { dir: sunDir, color: sunColor }, battle.trees.concat(tops), tier); nature.add(trees); mark('trees', t1);
     }
     const tBuild = performance.now();
 
@@ -112,7 +116,7 @@
     const setView = (v) => {
       camera.fov = v.fov; camera.aspect = W / H; camera.position.set(...v.cam); camera.lookAt(...v.target); camera.updateProjectionMatrix(); camera.updateMatrixWorld();
       if (controls) { controls.target.set(...v.target); controls.update(); }
-      aim(v); if (trees) trees.userData.focus(camera.position); rocks.userData.focus(camera.position); battle.focus(camera);
+      aim(v); if (trees) trees.userData.focus(camera); rocks.userData.focus(camera); battle.focus(camera); // the camera, not its position: nature culls shadow casters by the view
     };
     if (q.get('play') && T.OrbitControls) { controls = new T.OrbitControls(camera, cv); controls.enableDamping = true; controls.maxPolarAngle = 1.45; controls.addEventListener('change', () => aim({ ...battle.views[shot], shadow: null })); }
     if (q.get('near')) { // &near=main|attack: a close look at that gate from outside (for checking the gate houses and the khuyết)
@@ -134,7 +138,7 @@
       const all = measure();
       let nat = null; if (q.get('measure') === 'split') { battle.group.visible = false; nat = measure(); battle.group.visible = true; lens.render(); }
       window.__extra = { measure: all, part: q.get('measure') === 'nature' ? 'nature' : 'all', nature: nat && { calls: nat.calls, triangles: nat.triangles },
-        stats: battle.stats(), trees: trees ? trees.userData.count : 0, buildMs: Math.round(tBuild - t0), landMs: Math.round(tLand - t0), tier, city: cid, mode: desc.mode, shot };
+        stats: battle.stats(), trees: trees ? trees.userData.count : 0, buildMs: Math.round(tBuild - t0), parts: tm, landMs: Math.round(tLand - t0), tier, city: cid, mode: desc.mode, shot };
     }
     if (q.get('debug')) { // the battle's meshes by triangles (× instances), the heaviest first
       const rows = [], fr = new T.Frustum().setFromProjectionMatrix(new T.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)); battle.group.traverse((o) => { if (!o.isMesh && !o.isSprite) return; if (!o.visible || (o.frustumCulled && !fr.intersectsObject(o))) return; const g = o.geometry, t = (g.index ? g.index.count : g.attributes.position.count) / 3; rows.push([o.isSprite ? 'sprite' : o.isInstancedMesh ? 'inst' : 'mesh', Math.round(t), o.count || 1, Math.round(t * (o.count || 1)), o.castShadow ? 1 : 0, o.material.type + (o.material.customProgramCacheKey ? ':' + o.material.customProgramCacheKey() : '')]); });
