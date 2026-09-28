@@ -2,12 +2,12 @@
 
 > **Vai trò:** tài liệu sống duy nhất về *đang ở đâu và làm gì tiếp*.
 
-**Cập nhật:** 2026-09-28 · nhánh `claude/gracious-pasteur-6s8fmk`
+**Cập nhật:** 2026-09-28 · audit research trên `9d30411`, nhánh làm việc `codex/v2-research-location`
 
 ## Đang chờ
 
-- **Phase `v2-gameplay`:** `docs/phases/v2-gameplay/DECISION.md` chốt 28/9: v2 là ván tranh bá ngắn vào là chơi, nét riêng là quẹt thẻ có / không, mở ván từ thành trong một châu rồi scale lên 20 châu, số thay chữ, không khoá số lượt, thước đo là ngưỡng hành vi. **Tiếp:** spike 2 đã lên canvas Design (https://claude.ai/artifact/KV5Zuif1rgcZAdnZ31hU7m, bấm Play rồi quẹt; nguồn `docs/phases/v2-gameplay/spike2/`) → chủ dự án chơi → Grok viết `GAMEPLAY-FREEZE.md` v2 từ DECISION + spike 2 → code. Phần chưa chốt (việc trong châu, liên minh, vùng rìa, cách scale) ghi ở DECISION mục Preserve / Defer; không tự quyết trong lúc code.
-- **Grok:** chờ chủ dự án chơi spike 2 rồi viết freeze v2. Việc nhỏ làm được ngay: chặn 1–3 dưới, `governors` đổi theo chủ châu.
+- **Phase `v2-gameplay`:** CHALLENGE đã tổng hợp sau feedback owner về spike 2 và research bổ sung theo yêu cầu. [WORKING.md](phases/v2-gameplay/WORKING.md) ghi điểm tin cậy, bất đồng và hướng đề xuất; [ChatGPT phần B](phases/v2-gameplay/_research/chatgpt.md#b-market-audit-sau-spike-2--28092026) có tám mặt thị trường, review Steam và lỗi demo tái hiện được. [DECISION.md](phases/v2-gameplay/DECISION.md) 28/9 vẫn giữ nguyên; trigger xem lại đã xuất hiện. **Tiếp đề xuất:** owner xét vai trò swipe/map → sửa tính nhất quán thẻ, thử lát cắt có quyền chọn và chơi lại → cập nhật quyết định cần thiết → freeze v2. Chưa sửa luật hoặc gameplay trong lượt research này.
+- **Grok:** đọc audit B1/B9 và quyết định sau khi owner xem lại trước khi viết freeze v2. Không dùng bản spike có lỗi dự báo/trạng thái để chốt cảm giác chơi. Các chặn V1 bên dưới vẫn theo phạm vi riêng.
 - LLM adapter remap id: sau khi luật v2 ổn.
 
 ## Vòng 9 (Claude, 27–28/9)

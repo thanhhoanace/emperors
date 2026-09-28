@@ -1,11 +1,12 @@
 # V2 Gameplay — Working state
 
-> Cập nhật: 2026-09-28 · lượt COMPACT bởi Claude theo yêu cầu chủ dự án (lệch luật 4 trong `AGENTS.md`: Claude vừa research vừa synthesis; ghi lại để lần sau xoay tool) · nguồn: `_research/claude.md` (mục A–I), `_research/chatgpt.md` (mục 1–10), `_research/grok.md` (mục 1–6), spike 1 `spike/`, spike 2 `spike2/`.
-> Bước hiện tại: FREEZE chờ chủ dự án chơi spike 2 (đã lên canvas 28/9). Đã dùng 2/2 vòng research. `DECISION.md` chốt 28/9 (ván ngắn, quẹt thẻ có / không, scale từ thành lên châu, số thay chữ); phần chưa chốt ghi trong đó.
+> Cập nhật: 2026-09-28 · giữ bản COMPACT của Claude và nối kết quả CHALLENGE từ [ChatGPT, mục B](_research/chatgpt.md) sau khi chủ dự án chơi spike 2. Nguồn cũ: [Claude](_research/claude.md) A–I, [ChatGPT](_research/chatgpt.md) 1–10, [Grok](_research/grok.md) A, hai spike. Lượt Claude trước đã tự research và synthesis (ngoại lệ luật 4).
+> Bước hiện tại: CHALLENGE đã tổng hợp, chờ xét lại vai trò swipe trước FREEZE. [DECISION.md](DECISION.md) 28/9 vẫn ghi quyết định đã chốt; phản hồi sau khi chơi khớp điều kiện **Revisit when**, chưa có quyết định thay thế.
+> Ngoại lệ quy trình: chủ dự án trực tiếp yêu cầu thêm tám mặt market research **và tổng hợp**, dù đã dùng 2/2 vòng research. GAP mới là cảm giác agency sau spike 2, tính nhất quán của thẻ, và bằng chứng thị trường bị suy diễn; lý do vượt hạn mức theo `AGENTS.md` luật 6. Cùng tool research và synthesis ở lượt này theo yêu cầu trực tiếp của chủ dự án; chưa mở thêm vòng rộng.
 
 ## Problem
 
-Chủ dự án chơi `game.html` (27/9): "đang *xem* chứ không *chơi*"; đánh chỉ xem quân chạy; không bấm được đất, quân, tướng. Ngày 28/9 đặt ngã rẽ cho v2: (1) vào là chơi, nghĩ ít, kết quả nhanh, chơi lại như cờ; (2) chiến dịch tính toán, chi tiết, dài. Câu hỏi kèm: thị trường và người chơi thật muốn gì; gốc ý tưởng là Loạn 12 Sứ Quân cũ + trend xuyên không.
+Chủ dự án chơi `game.html` (27/9): "đang *xem* chứ không *chơi*"; đánh chỉ xem quân chạy; không bấm được đất, quân, tướng. Ngày 28/9 đặt ngã rẽ cho v2: (1) vào là chơi, nghĩ ít, kết quả nhanh, chơi lại như cờ; (2) chiến dịch tính toán, chi tiết, dài. Câu hỏi kèm: thị trường và người chơi thật muốn gì; gốc ý tưởng là Loạn 12 Sứ Quân cũ + trend xuyên không. Sau spike 1 owner thấy nhiều nút; sau spike 2 quẹt được nhưng vẫn chán, thắng/thua chưa có ý nghĩa. [Grok](_research/grok.md) B0; [ChatGPT](_research/chatgpt.md) B1.
 
 ## Owner inputs
 
@@ -19,15 +20,17 @@ Nguyên ý, chưa phải luật. Interview 27/9 (`claude.md` B.9) được nêu 
 - Liên minh có cứu nhau và cùng đánh. Tướng đủ bốn lớp. Lật lại: lưu vong, xưng thần, phục quốc. Vùng rìa chiêu binh và buôn bán, không tính vào 20 châu.
 - Quy trình: mở freeze v2; đề xuất + prototype duyệt trước khi code; giữ hai lane; Pages đã trỏ `game.html`; LLM sau.
 
+[DECISION.md](DECISION.md) 28/9 **thay các mốc interview ở chỗ mâu thuẫn**: ván ngắn 15–25 phút khi quen, lựa chọn đầu <60 giây, quẹt có/không, scale từ thành tới châu, không khoá lượt, hiển thị số; >40% tự chơi lại là mục tiêu kiểm chứng, thắng 20–30% chỉ là mốc cân bằng máy. Owner chơi trước; người lạ sau Pages; không làm nghiên cứu 18 người trước freeze. Input **mới sau khi chơi**, qua [Grok](_research/grok.md) B0: ưu tiên mobile và YouTube, cân nhắc lệnh chính trên map; đó là đề xuất để xét lại, chưa tự thành quyết định.
+
 ## Evidence we trust
 
 **Game hiện tại** (`claude.md` B.4): người chơi hợp lý thắng 0–3 %, chết trung bình lượt 12–26; 1,6–2,0 châu đổi chủ mỗi lượt vì thủ = tổng quân chia đều; đánh châu "yếu" vẫn thua 25–40 %; ván 38–41 lượt, 15–25 phút. Về *độ dài* v1 đã ở ngã rẽ 1; thiếu là *chiều sâu của một lệnh*. Grok §5 đồng ý: triệu chứng là "thiếu nước cờ", không phải "thiếu chiến dịch"; thêm thuế, hàng đợi, tin trễ trước khi mỗi lệnh đổi bàn cờ sẽ làm "xem" nặng hơn.
 
-**Chiến dịch bị bỏ dở là đa số và được chấp nhận** (`claude.md` C.2, E.2; `grok.md` §1): Civ VI 37 % từng thắng một ván, TW3K 31 %, CK3 4 %, Old World 10 % dù khoá 200 lượt; Firaxis: dưới 50 % chơi hết; cộng đồng r/civ, r/CK coi bỏ dở là bình thường, mua *quá trình* không mua *hồi kết*; phần được yêu là mở ván và bất định, phần bỏ là quản lý cuối. Cắt ngắn bằng điểm reset (Civ VII ages) sinh than "cụt" và "mất công đầu tư": không phải cắt nào cũng được.
+**Chiến dịch dài có người mua, độ dài và đoạn kết vẫn cần xét riêng** ([Claude](_research/claude.md) C.2, E.2; [Grok](_research/grok.md) A.1; [ChatGPT](_research/chatgpt.md) B8–B9): các số achievement từng thắng của Civ VI/TW3K/CK3/Old World mà lượt cũ viện dẫn **không đo tỷ lệ bỏ dở campaign hay mức hài lòng**. CK3 công bố 4 triệu bản đa nền tảng (04/2025); campaign có thị trường thật. Người chơi có thể chê reset làm đầu tư mất nghĩa; cần kiểm tra cách chuyển từ thành lên châu của chính Emperors, không suy từ achievement.
 
-**Ván ngắn có thị trường, nhưng "nông" là lời than thật** (`claude.md` C.3, E.3; `grok.md` §2; `chatgpt.md` §2–3): chess.com 8,7 triệu người/ngày; Polytopia 25 triệu tải, 30 lượt; OpenFront hơn 1 triệu người/tháng trên trình duyệt; 9 Kings hơn 1 triệu bản; Thronefall 95 % tích cực. Than trong cộng đồng Polytopia không phải "giá dài thêm" mà là "lặp recipe, hết bài toán"; chiều sâu được chấp nhận = mastery trong cùng khuôn, không = thêm sổ sách. Reigns: Three Kingdoms 52 % tích cực: chủ đề quen và thao tác dễ không tự bảo đảm.
+**Ván ngắn có thị trường, nhưng “nông” là lời than thật** ([Claude](_research/claude.md) C.3, E.3; [Grok](_research/grok.md) A.2; [ChatGPT](_research/chatgpt.md) B3, B5): Polytopia, 9 Kings, Thronefall cho các dạng chiều sâu khác nhau; 34 review Steam đọc có cả lời khen luật dễ học, tổ hợp, và lời chê recipe lặp, thua khó hiểu, không lật được snowball. Mẫu tiếng Anh có chọn lọc, không đại diện người Việt. Steam của Reigns: Three Kingdoms hiển thị 52% tích cực trên 337 review tất cả ngôn ngữ lúc kiểm tra; không suy mobile thất bại từ điểm này. Tránh so trực tiếp DAU, download, bản bán và review như cùng một thước đo.
 
-**Khẩu vị dịch về cửa vào thấp, không phải "hết người chơi strategy"** (`claude.md` C.1; `grok.md` §3; `chatgpt.md` §2): Quantic Foundry 2015→2024 điểm "strategy and planning" 50 → 33; mobile strategy vẫn tăng 26 % nửa đầu 2025, tiền ở hybrid 4X "30 giây đầu dễ, dày ở ngày 7"; SLG Tam Quốc lớn nhất là mùa giải có liên minh, thứ một người không vận hành được.
+**Cửa vào dễ là lựa chọn thiết kế, không phải kết luận strategy hết người chơi** ([Claude](_research/claude.md) C.1; [Grok](_research/grok.md) A.3; [ChatGPT](_research/chatgpt.md) B2, B8): Quantic Foundry đo thay đổi percentile *động cơ lên kế hoạch* trong mẫu tự chọn, không phải 17% người bỏ game chiến thuật. Sensor Tower báo strategy mobile tăng doanh thu, lượt tải và thời gian chơi năm 2025, chủ yếu bởi 4X dịch vụ; tiền/retention ở đó không tự chuyển sang game solo ngắn. Với Emperors, YouTube là kênh cần kiểm tra chuyển đổi chứ không phải bằng chứng sẵn có cho tệp người chơi.
 
 **Gốc ý tưởng** (`claude.md` D; `grok.md` §4; `chatgpt.md` §4): Loạn 12 Sứ Quân là ít nhất sáu game; bản game thủ Việt nhớ (Java/Android Ola–MGM) là xếp hình + lượt, "vào là đánh, mỗi lượt có kết quả", sử là áo; chưa xác nhận đó là bản chủ dự án chơi. Xuyên không bán fantasy "một người rơi vào thế giới quen, dùng thứ mình biết, đổi một cục diện"; độc giả thưởng "có lương, có quân, logic", phạt "quá bá, harem"; giúp thu hút, không tự giữ chân.
 
@@ -47,35 +50,32 @@ Hình dạng: màn điện thoại 390×844. Mỗi mùa 2–3 thẻ có / không
 
 Máy chơi 60 ván mỗi đế (cẩn thận / gật hết / nửa ngẫu nhiên): thắng Tần 72 / 80 / 30 %, Đường 22 / 30 / 20 %, Minh 32 / 8 / 2 %, Hán Vũ 45 / 55 / 35 %. Ván 28–52 mùa, trung bình 98–209 lần chạm (p90 tới 570 ở Đường); ra 20 châu ở mùa 7–10 với 3,1–4,8 / 5 thành. Cân bằng đế còn lệch (Tần dễ; Đường, Minh khó; Minh bị kẹp giữa Tào và Ngô nên lưu vong nhiều).
 
-Máy cho thấy (chưa phải cảm giác người): chương 2 cần đồng hồ thua và AI leo thang, thiếu một trong hai là ván bế tắc không hết; Hán Vũ chỉ giáp Tần nên đường ra là tri thức tơ lụa (kỵ binh vượt trần nuôi). Chờ chủ dự án chơi: giây tới thẻ đầu, phút một ván, có kể lại được một lựa chọn, có muốn ván nữa và đổi đế (ghi chú trên canvas).
+Máy cho thấy (chưa phải cảm giác người): chương 2 cần đồng hồ thua và AI leo thang, thiếu một trong hai là ván bế tắc không hết; Hán Vũ chỉ giáp Tần nên đường ra là tri thức tơ lụa (kỵ binh vượt trần nuôi). Các chỉ số cần đo từ người vẫn là giây tới lựa chọn đầu, phút một ván, một nước đi kể lại được và ý muốn đổi đế/chơi tiếp. Không đổi số chạm ra phút. [ChatGPT](_research/chatgpt.md) B1.2, B6.
+
+**Sau owner chơi:** quẹt được nhưng chán, thắng/thua chưa có sức nặng ([Grok](_research/grok.md) B0). Đọc code: thẻ thường tự chọn đích tối ưu cục bộ, tướng, 70% quân từ các thành kề; map không có thao tác ra lệnh. Audit seed `7919` tái hiện thẻ Hán Vũ mùa 3 hứa “100% giữ được” rồi UI báo mất do quân đã đổi sau thẻ trước; raid xuất phát từ đất vừa chiếm, scout đất mình vẫn tốn lương. Đây là lỗi trạng thái/dự báo cần sửa trước khi dùng cảm giác chơi để phân xử swipe với map. Máy `sense/yes/rand` là heuristic, không đo tư duy người thật. [ChatGPT](_research/chatgpt.md) B1.2–B1.4.
 
 ## Contradictions
 
-- **Cách phát biểu về thị trường.** Claude: bằng chứng nghiêng ngã rẽ 1, độ chắc trung bình. ChatGPT: không có cơ sở nói nhóm thích ngắn đông hơn; khuyên ngã rẽ 1 vì lời hứa dễ thử, đo được, đủ sức làm. Grok: không phân xử bằng doanh thu; bằng lời than thì bỏ dở chiến dịch là đa số, "cụt" ván ngắn là lời của người đo nhầm thước hoặc game hết bài toán. Cả ba thống nhất *làm ván ngắn trước*; khác nhau ở *tuyên bố*. Chưa có bằng chứng phân xử; DECISION nên ghi theo cách yếu nhất.
-- **Owner inputs 27/9 và DNA gốc.** Grok §4: sản phẩm gốc trong đầu là "ván có mặt nạ lịch sử + ego xuyên không", không phải Civ mặc áo Tam Quốc; danh sách thuế, hậu cần, hàng đợi, tướng bốn lớp có thể lệch gốc. ChatGPT §6: các lựa chọn interview vẫn là quyết định đã ghi, research không tự huỷ. Cần chủ dự án nhìn lại.
-- **Nén hệ thống và nguy cơ tái tạo v1.** ChatGPT §9: giảm hệ thống có thể tái tạo "ít việc để làm"; phải giữ agency. Grok §5: chỉ những gì là *nước cờ* (đổi bàn cờ ngay) mới đáng ở trong ván. Claude A.4–A.5 đề xuất bảng giữ/nén/lùi. Chưa thống nhất tiêu chí "nước cờ" cho từng hệ thống.
-- **Số lượt và thời lượng.** ChatGPT §6: 48 lượt trong 30 phút = 37,5 giây/lượt, không giữ được khi mỗi lượt có nhiều việc; đừng khoá số lượt chỉ để đạt thời lượng; điều kiện thắng phải hợp cốt. Claude spike: 32 mùa. Grok §6: lai yếu hai nửa nếu nhét hệ thống chiến dịch vào ván 20 phút; lai được nếu lớp sâu nằm *giữa các ván*.
-- **Thước đo.** Chủ dự án: thắng 20–30 %. ChatGPT §6, §8: diễn giải lại theo nhóm và độ khó; đo người mới có hiểu vì sao thua và tự muốn chơi lại trước khi tối ưu một tỉ lệ. Grok §6: nếu chọn ngã rẽ 1 thì đo chơi lại và độ rõ của nước đi, đừng đo bằng fantasy đế chế.
-- **Quy mô chơi thử.** ChatGPT §8: 18 người, ba nhóm, A/B hai prototype. Claude A.6: 10 người, 2 ván. Grok: chỉ cần spike.
-- **Bản Loạn 12 Sứ Quân nào.** Grok: bản Ola–MGM. ChatGPT: cần ảnh hoặc link từ chủ dự án. Chưa xác nhận.
+- **Cách phát biểu về thị trường.** [Claude](_research/claude.md) C/E và [Grok](_research/grok.md) A.1 dùng achievement và phản hồi campaign để nghiêng ngã rẽ 1; [ChatGPT](_research/chatgpt.md) B9 bác suy luận achievement = bỏ cuộc/hết nhu cầu. Cả ba vẫn khuyên thử ván ngắn trước; chưa có dữ liệu nói tệp đó đông hơn campaign. `DECISION.md` đã chọn hướng, không cần quay về tranh luận quy mô thị trường trước spike.
+- **DNA gốc và interview.** [Grok](_research/grok.md) A.4 xem Loạn 12 Sứ Quân + xuyên không là ván dễ bắt đầu; [ChatGPT](_research/chatgpt.md) B4 nhấn mạnh chưa xác nhận bản game owner nhớ, và người yêu sử chưa chắc muốn cùng một độ sâu hệ thống. Danh sách interview 27/9 còn giá trị đầu vào; `DECISION.md` thay thế chỗ mâu thuẫn, không tự bỏ mọi ý chưa chốt.
+- **Nén hệ thống, agency và swipe.** [Claude](_research/claude.md) A.4–A.5 đề xuất giữ/nén/lùi; [Grok](_research/grok.md) B0–B2 muốn bỏ swipe làm lõi sau feedback; [ChatGPT](_research/chatgpt.md) B1, B8–B10 cho rằng chưa đủ chứng minh swipe chết, nhưng spike 2 đang quyết hộ đích/tướng/quân. Đề xuất map cho lệnh chính, thẻ cho phản ứng **chờ owner quyết**. Chưa thống nhất nước cờ cụ thể nào cần giữ trong mỗi lượt.
+- **Độ dài và chỗ kết.** [Claude](_research/claude.md) spike 1 khoá 32 mùa; [Grok](_research/grok.md) A.6 ngại lai hai nửa; [ChatGPT](_research/chatgpt.md) B6 nhắc session mobile không phải độ dài ván. Owner đã chốt không khoá số mùa; cần thử đoạn kết xứng với công sức và lưu/tiếp tục trên điện thoại.
+- **AI và quy trình prototype.** [Grok](_research/grok.md) B1 đọc `engine.js` nền và nghi V1 đọc sự thật; [ChatGPT](_research/chatgpt.md) B1.4 thấy runtime `game.html` còn compose `perception.js` ghi đè `decideAll`. Chưa đủ chứng minh toàn V1 gian lận; spike 2 là runtime khác. Prototype tách riêng trước freeze là bước owner yêu cầu trong `DECISION.md`, không tự biến nó thành luật production.
+- **Bản Loạn 12 Sứ Quân nào.** [Grok](_research/grok.md) A.4 nêu Ola–MGM; [ChatGPT](_research/chatgpt.md) B4 chưa xác nhận chính bản owner chơi.
 
 ## Current hypothesis
 
-Ván tranh bá ngắn "có răng" là lời hứa chính của v2: một ván làm hoàng đế, dùng sở trường và điều mình biết để đổi thế cuộc, rồi thử lại theo cách khác. Chiều sâu = nước cờ đổi bàn ngay + bốn đế khác nhau ở nước hợp lệ + tướng và liên minh sinh chuyện; không = sổ sách. Hệ thống cần nhiều buổi lùi sang phase chiến dịch sau; lai chỉ ở lớp giữa các ván. Spike cho thấy đồn trú theo châu làm bản đồ ổn định gấp 2–3 lần; cân bằng bốn đế còn lệch (Chu, Hán Vũ).
+Ván tranh bá ngắn "có răng" là lời hứa chính của v2: một ván làm hoàng đế, dùng sở trường và điều mình biết để đổi thế cuộc, rồi thử lại theo cách khác. Chiều sâu = nước cờ đổi bàn ngay + bốn đế khác nhau ở nước hợp lệ + tướng và liên minh sinh chuyện; không = sổ sách. Hệ thống cần nhiều buổi lùi sang phase chiến dịch sau; lai chỉ ở lớp giữa các ván. Spike 1 cho thấy đồn trú theo châu giảm tốc độ đổi chủ so với v1; cả hai spike còn lệch cân bằng theo đế. [Claude](_research/claude.md) B/F; [ChatGPT](_research/chatgpt.md) B1.
 
-## Open questions (để DECISION)
+**Giả thuyết mới để thử, chưa chốt:** lệnh chính chọn trên map, thẻ cho quyết định con người/ngoại giao, một quyết định lớn mỗi lượt, có hệ quả thấy ngay và cách thử lại. Gắn việc mở rộng từ thành sang châu với ít nhất một thành quả cũ còn tác dụng. Tệp đầu giả định là người yêu sử muốn tự đổi thế và người thích chiến thuật gọn; YouTube là kênh cần đo, chưa có dữ liệu thị phần hay willingness-to-pay ở Việt Nam. [ChatGPT](_research/chatgpt.md) B2–B4, B7, B10.
 
-1. Ngã rẽ: 1, 2, hay 1 + lớp meta giữa các ván?
-2. Tệp đầu tiên: "tối nay thử làm hoàng đế một ván" hay "gây dựng triều đại nhiều buổi"?
-3. Owner input nào là nước cờ giữ trong ván, cái nào lùi sang chiến dịch?
-4. Độ dài: khoá 32 mùa như spike, hay không khoá và để điều kiện thắng theo cốt?
-5. Thước đo thay cho hoặc bên cạnh 20–30 %?
-6. Quy mô và cách chơi thử trước khi khoá luật?
-7. Bản Loạn 12 Sứ Quân gốc là bản nào?
-8. Ai viết freeze v2 từ DECISION (lane Grok) và spike có sửa tiếp trước khi code không?
+## Open questions
+
+1. Sau phản hồi spike 2, owner muốn giữ swipe làm lệnh chính, hay chuyển lệnh sang map và để swipe cho phản ứng? [Grok](_research/grok.md) B0; [ChatGPT](_research/chatgpt.md) B10.
+2. Trong input 27/9, hai hoặc ba quyền điều quân/đất nào tạo ra nước cờ đáng nhớ mà vẫn ít thao tác; kết ván và di sản từ thành lên châu cần ra sao? [Claude](_research/claude.md) B.9; [ChatGPT](_research/chatgpt.md) B10–B11.
+3. Sau khi sửa độ tin cậy thẻ và có lựa chọn thật, owner có tự muốn thử một phương án khác không? Chưa có quan sát này. [ChatGPT](_research/chatgpt.md) B1, B11.
+4. Bản Loạn 12 Sứ Quân owner từng chơi là bản nào? Chưa xác nhận. [Claude](_research/claude.md) D; [ChatGPT](_research/chatgpt.md) B4.
 
 ## Next research
 
-Không. Đã dùng 2/2 vòng. `DECISION.md` đã có; spike 2 đã lên canvas. Tiếp theo: chủ dự án chơi spike 2, ghi kết quả vào mục Spike 2 ở đây → Grok viết `GAMEPLAY-FREEZE.md` v2 từ DECISION + spike 2 → BUILD.
-
-Phản hồi spike 1 (chủ dự án, 28/9): không bấm được trên canvas; nhiều nút, nhiều lựa chọn, sai tinh thần ngã rẽ 1. Spike 1 vì vậy bị bỏ về hình thức; nguyên tắc đồn trú theo châu giữ.
+Không thêm desk research rộng trước quan sát mới. Theo [ChatGPT](_research/chatgpt.md) B11: **P0** thẻ luôn khớp trạng thái và nguồn tấn công còn hợp lệ → **P1** lát cắt nhỏ với hai kế hoạch thật → **P2** lưu/tiếp tục, thử lại cùng thế. Owner chơi trước như `DECISION.md`; sau Pages mới mời nhóm nhỏ để tìm lỗi hiểu và cảm nhận, không dùng mẫu nhỏ để chứng minh tỷ lệ chơi lại hay doanh thu. Grok đối chiếu luật, Claude thử input mobile theo hướng owner chọn; cập nhật quyết định cần thiết trước khi viết freeze v2. Chưa đổi code hoặc luật đã khóa.
