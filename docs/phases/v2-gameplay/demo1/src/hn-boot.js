@@ -66,7 +66,7 @@
     const tUnpack = performance.now() - t0;
     installFetch(); patchSetup();
     // fine tiles only round the seats the demo visits (Huai Nan and its neighbours); the rest of the core is coarse
-    const rt = await WorldRuntime.create({ world: D.world, cities: D.cities, width: o.width, height: o.height, dpr: o.dpr || 1, base: PREFIX, tileRadius: o.tileRadius ?? 64 });
+    const rt = await WorldRuntime.create({ world: D.world, cities: D.cities, width: o.width, height: o.height, dpr: o.dpr || 1, base: PREFIX, tileRadius: o.tileRadius ?? 64, hamlets: false }); // the demo draws villages at its own scale
     rt.stats.unpackMs = Math.round(tUnpack);
     rt.stats.bootMs = Math.round(performance.now() - t0);
     return rt;

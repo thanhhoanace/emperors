@@ -137,3 +137,5 @@ Chi tiết: [`frontier-games.md`](frontier-games.md).
 - Áp công thức mục 1 cho tượng lính và thành.
 - Hạ bóng và lens trên điện thoại, thêm bắt mất ngữ cảnh.
 - Đo `tools/phone-probe` trên giả lập, rồi thử trên một iPhone và một Android tầm trung (khung/giây, nóng máy sau 15 phút).
+
+**28/9 khuya:** chủ dự án chưa duyệt lát này, muốn đẹp trước. Công thức mục 1 đã áp vào demo 1 vòng 3 (không có mức điện thoại); kết quả và số đo ở `docs/phases/v2-gameplay/WORKING.md`, mục Demo 1.

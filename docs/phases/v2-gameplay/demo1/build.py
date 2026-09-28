@@ -2,7 +2,7 @@
 #   python3 docs/phases/v2-gameplay/demo1/build.py [assets.json]   (portraits: python3 portraits/make.py)
 # hn-map.png   assets/map/*.bin.gz, gzip bytes untouched, packed 3 per pixel (a canvas takes images, not .gz)
 # hn-data.js   data/world.json, data/cities.json, assets/map/meta.json + water.json, the PNG's index
-# hn-bundle.js three r146 + BufferGeometryUtils + src/world (unchanged) + hn-data + src/hn-*.js, in load order
+# hn-bundle.js three r146 + BufferGeometryUtils + RoundedBoxGeometry + src/world (unchanged) + hn-data + src/hn-*.js, in load order
 # Main.dc.html the artboard: ui/template.html + ui/component.js, pointing at the two uploaded assets
 import os, sys, json, math
 from PIL import Image
@@ -33,7 +33,7 @@ with open(os.path.join(OUT, 'hn-data.js'), 'w', encoding='utf-8') as f:
     f.write('window.HN_DATA = ' + json.dumps(data, ensure_ascii=False, separators=(',', ':')) + ';\n')
 
 # 3. one script, in load order (a canvas may load several scripts out of order)
-parts = ['node_modules/three/build/three.min.js', 'node_modules/three/examples/js/utils/BufferGeometryUtils.js'] + ['src/world/' + n for n in ('kit.js', 'city.js', 'hancity.js', 'terrain.js', 'terrain-real.js', 'flora.js', 'names.js', 'world-runtime.js')]
+parts = ['node_modules/three/build/three.min.js', 'node_modules/three/examples/js/utils/BufferGeometryUtils.js', 'node_modules/three/examples/js/geometries/RoundedBoxGeometry.js'] + ['src/world/' + n for n in ('kit.js', 'city.js', 'hancity.js', 'terrain.js', 'terrain-real.js', 'flora.js', 'names.js', 'world-runtime.js')]
 paths = [os.path.join(ROOT, p) for p in parts] + [os.path.join(OUT, 'hn-data.js')] + [os.path.join(HERE, 'src', n) for n in ('hn-boot.js', 'hn-models.js', 'hn-scene.js', 'hn-rules.js')]
 with open(os.path.join(OUT, 'hn-bundle.js'), 'w', encoding='utf-8') as f:
     for p in paths:

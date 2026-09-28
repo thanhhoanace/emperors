@@ -169,9 +169,10 @@
     const moatGeo = HanCity.moatGeometry(liteRoots);
     if (moatGeo) { const moat = new THREE.Mesh(moatGeo, waterNear.rivers.material); moat.renderOrder = 3; scene.add(moat); }
     let standards = null; // one great standard over each city, in its owner's colour
+    let hiddenCities = new Set(); // cities a page draws itself (rt.hideCities)
     const buildStandards = () => {
       if (standards) { scene.remove(standards); standards.traverse((o) => { if (o.isMesh) o.geometry.dispose(); }); } // rebuilt every turn: free the old one
-      standards = bannerGroup(Object.values(cities).map((ci) => ({ fid: owners[ci.pid], x: ci.palace[0], y: ci.palace[1] - 0.3, z: ci.palace[2], h: 1.3, s: 0.75 })));
+      standards = bannerGroup(Object.values(cities).filter((ci) => !hiddenCities.has(ci.pid)).map((ci) => ({ fid: owners[ci.pid], x: ci.palace[0], y: ci.palace[1] - 0.3, z: ci.palace[2], h: 1.3, s: 0.75 })));
       scene.add(standards);
     };
     buildStandards();
@@ -194,7 +195,8 @@
     };
 
     // ---------------------------------------------------------------- dressing
-    scene.add(...Flora.hamlets(terr, { scale: 0.38 }), Flora.greatWall(terr, { scale: 0.45, color: 0xa08e70, towerEvery: 12 }));
+    if (o.hamlets !== false) scene.add(...Flora.hamlets(terr, { scale: 0.38 })); // a page may draw its own villages
+    scene.add(Flora.greatWall(terr, { scale: 0.45, color: 0xa08e70, towerEvery: 12 }));
     const br = Flora.bridges(terr, { wet: (x, z) => terr.riverSD(x, z) < 0, deck: (a, b) => Math.max(terr.h(a[0], a[1]), terr.h(b[0], b[1])) + 0.02, scale: 0.35, maxLen: 1.3 });
     if (br) scene.add(br);
     if (smoke.length) scene.add(Flora.clouds(smoke.flatMap(([x, y, z]) => [[x, y + 0.2, z, 0.5, 0.5], [x + 0.25, y + 0.55, z - 0.1, 0.8, 0.35], [x + 0.6, y + 0.9, z - 0.2, 1.1, 0.2]]), { color: 0x6b645c }));
@@ -234,7 +236,7 @@
     // ---------------------------------------------------------------- views
     const orbit = (t, D, az, el) => [t[0] + D * Math.cos(el) * Math.sin(az), t[1] + D * Math.sin(el), t[2] + D * Math.cos(el) * Math.cos(az)];
     const seatPt = (pid) => { const c = MC[pid]; return [c.x, c.y, c.z]; };
-    const rt = { renderer, scene, camera, terr, MC, cities, world, sunDir, stats: { loadMs } };
+    const rt = { renderer, scene, camera, terr, MC, cities, world, sunDir, lens, stats: { loadMs } }; // lens: its uniforms, for pages that tune the look
     // keep the camera above the ground and its line of sight clear of ridges (raise it until the target shows)
     const clearSight = (cam, t, margin) => {
       cam = cam.slice();
@@ -335,8 +337,9 @@
       for (const w of [waterFar, waterNear]) { const on = w === (v.mode === 'far' ? waterFar : waterNear); w.rivers.visible = on; if (w.lakes) w.lakes.visible = on; }
       if (borderClouds) borderClouds.visible = !!v.clouds; // the haze beyond the border of China belongs to the whole-country view
       const cityMode = v.mode === 'city' && !!v.city;
-      liteAll.visible = !cityMode; standards.visible = !cityMode; // up close the city flies its gate banners instead
-      for (const ci of Object.values(cities)) { const full = cityMode && v.city === ci.pid; if (ci.lite) ci.lite.visible = cityMode && !full; if (ci.full) ci.full.group.visible = full; }
+      const solo = cityMode || hiddenCities.size > 0; // per-city light copies when one is up close or some are hidden
+      liteAll.visible = !solo; standards.visible = !cityMode; // up close the city flies its gate banners instead
+      for (const ci of Object.values(cities)) { const full = cityMode && v.city === ci.pid; if (ci.lite) ci.lite.visible = solo && !full && !hiddenCities.has(ci.pid); if (ci.full) ci.full.group.visible = full; }
       const treesOn = new Set(v.mode === 'far' ? [] : (v.trees || []).map((t) => t.key));
       for (const [k, g] of Object.entries(treeSets)) g.visible = treesOn.has(k);
       gu.uBorder.value = cu.uBorder.value = mode.border; gu.uBorderW.value = cu.uBorderW.value = mode.borderW; gu.uTint.value = mode.tint; cu.uTint.value = v.mode === 'far' ? mode.tint * 0.8 : 0; cu.uCanopyBorder.value = mode.canopyBorder; // on the campaign view forests carry the owner wash too
@@ -359,6 +362,8 @@
     rt.focusCity = (pid, op) => rt.setView(rt.viewCity(pid, op));
     rt.campaign = () => rt.setView(rt.viewCampaign());
     rt.render = () => lens.render();
+    // a page that draws some cities itself (its own models at those seats) hides the world's
+    rt.hideCities = (pids) => { hiddenCities = new Set(pids || []); if (hiddenCities.size) ensureLiteSolo(); buildStandards(); if (current) rt.setView(current); };
 
     // ---------------------------------------------------------------- places and paths
     rt.seatOf = (pid) => seatPt(pid);

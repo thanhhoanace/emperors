@@ -36,7 +36,7 @@
     const waterY = (x, z) => { let best = 1e9, y = 0.3; for (const rv of rivers) for (const p of rv.pts) { const d = (p[0] - x) ** 2 + (p[1] - z) ** 2; if (d < best) { best = d; y = p[2]; } } return y; };
     const inWater = (x, z) => terr.riverSD(x, z) < 0;
     const recv = (m) => Terrain.receiveBaked(m, terr, 0.8);
-    const HM = HNModels.create({ recv, colors: Object.fromEntries(Object.entries(COLOR).map(([k, v]) => [k, new T.Color(v).getHex()])) });
+    const HM = HNModels.create({ recv, renderer: rt.renderer, colors: Object.fromEntries(Object.entries(COLOR).map(([k, v]) => [k, new T.Color(v).getHex()])) });
 
     // ------------------------------------------------------------ places
     const place = {};
@@ -47,6 +47,8 @@
     }
     for (const s of SEATS) { const c = MC[s.id]; place[s.id] = { id: s.id, name: s.name, x: c.x, z: c.z, y: c.y, seat: s.id, kind: 'seat' }; }
 
+    const huai0 = place.chung_ly;
+    if (rt.hideCities) rt.hideCities(['huai']); // Chung Ly is drawn by the demo's own town model
     // ------------------------------------------------------------ ground: what kind it is (terrain data of the phase-1 map)
     // (Huai Nan sits 0.1–0.3 up; river banks are steep, so height is judged against the lowest ground 5 units around)
     const terrainAt = (x, z) => {
@@ -82,19 +84,57 @@
         g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(0, 84, 64, 12);
         if (GLYPH[fid]) { g.fillStyle = '#f3ecdc'; g.font = 'bold 40px "Noto Serif TC","Noto Serif CJK TC","Noto Serif CJK SC","Noto Serif SC",serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(GLYPH[fid], 32, 42); }
         const t = new T.CanvasTexture(cv); t.encoding = T.sRGBEncoding;
-        flagTex[fid] = new T.MeshStandardMaterial({ map: t, side: T.DoubleSide, roughness: 0.9 });
+        flagTex[fid] = HM.look(new T.MeshStandardMaterial({ map: t, side: T.DoubleSide, roughness: 0.85 }));
       }
       return flagTex[fid];
     };
-    const poleMat = new T.MeshStandardMaterial({ color: 0x3b3129, roughness: 0.8 });
+    const poleMat = new T.MeshStandardMaterial({ color: 0x3b3129, roughness: 0.8 }), finialMat = new T.MeshStandardMaterial({ color: 0xd0a64c, roughness: 0.35, metalness: 0.6 });
     // a pole and a flag with the owner's glyph; the flag's pivot turns to the camera every frame
     const standard = (fid, h, s) => {
       const g = new T.Group();
-      const pole = new T.Mesh(new T.CylinderGeometry(0.035 * s, 0.035 * s, h, 5), poleMat); pole.position.y = h / 2; g.add(pole);
+      const pole = new T.Mesh(new T.CylinderGeometry(0.03 * s, 0.04 * s, h, 7), poleMat); pole.position.y = h / 2; pole.castShadow = true; g.add(pole);
+      const tip = new T.Mesh(new T.ConeGeometry(0.06 * s, 0.2 * s, 7), finialMat); tip.position.y = h + 0.1 * s; g.add(tip);
       const piv = new T.Group(); piv.position.y = h; piv.userData.flag = true; g.add(piv);
-      const cloth = new T.Mesh(new T.PlaneGeometry(0.7 * s, 1.0 * s, 3, 1), flagMat(fid)); cloth.position.set(0.35 * s, -0.5 * s, 0); piv.add(cloth);
+      const cg = new T.PlaneGeometry(0.7 * s, 1.0 * s, 8, 1), cp = cg.attributes.position; for (let i = 0; i < cp.count; i++) cp.setZ(i, Math.sin((cp.getX(i) / s + 0.35) * 9) * 0.03 * s); cg.computeVertexNormals();
+      const cloth = new T.Mesh(cg, flagMat(fid)); cloth.position.set(0.35 * s, -0.5 * s, 0); cloth.castShadow = true; piv.add(cloth);
       return g;
     };
+
+    // ------------------------------------------------------------ trees at the towns' scale: groves and lone trees on dry, open ground
+    {
+      const pts = { leaf: [], pine: [] }, R = 70, m4 = new T.Matrix4(), q = new T.Quaternion(), sc = new T.Vector3(), ps = new T.Vector3();
+      let sd = 97; const rnd = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+      // groves where a smooth value noise is high, crowns over the phase-1 forest canopy, a few lone trees elsewhere
+      const hs = (i, j) => { const v = Math.sin(i * 127.1 + j * 311.7) * 43758.5453; return v - Math.floor(v); };
+      const vn = (x, z) => { const i = Math.floor(x), j = Math.floor(z), fx = x - i, fz = z - j, u = fx * fx * (3 - 2 * fx), v = fz * fz * (3 - 2 * fz); return (hs(i, j) * (1 - u) + hs(i + 1, j) * u) * (1 - v) + (hs(i, j + 1) * (1 - u) + hs(i + 1, j + 1) * u) * v; };
+      const grove = (x, z) => 0.65 * vn(x / 9, z / 9) + 0.35 * vn(x / 3.5 + 7, z / 3.5);
+      for (let k = 0; k < 40000 && pts.leaf.length + pts.pine.length < 2400; k++) {
+        const x = huai0.x + (rnd() * 2 - 1) * R, z = huai0.z + (rnd() * 2 - 1) * R, lift = terr.canopyLift ? terr.canopyLift(x, z) : -1, g = grove(x, z);
+        if (rnd() > (lift > 0.04 ? 0.7 : g > 0.7 ? 0.55 : g > 0.62 ? 0.12 : 0.008)) continue;
+        if (terr.riverSD(x, z) < 0.8 || Object.values(place).some((p) => Math.hypot(p.x - x, p.z - z) < (p.kind === 'town' ? 6 : 3))) continue;
+        const h = terr.h(x, z), sz = 1.4 + rnd() * 0.9, kind = h > 0.5 || rnd() < 0.2 ? 'pine' : 'leaf';
+        pts[kind].push([x, h + (lift > 0.04 ? Math.max(0, lift - 0.3 * sz) : 0), z, sz, rnd() * 6.28]);
+      }
+      // villages where the phase-1 map has its hamlets, at the towns' scale
+      const vil = [[], [], []];
+      for (const hm of terr.hamlets || []) {
+        if (Math.abs(hm.x - huai0.x) > R || Math.abs(hm.z - huai0.z) > R || terr.riverSD(hm.x, hm.z) < 1.2) continue;
+        if (Object.values(place).some((p) => Math.hypot(p.x - hm.x, p.z - hm.z) < (p.kind === 'town' ? 7 : 4))) continue;
+        vil[Math.floor(rnd() * 3)].push([hm.x, terr.h(hm.x, hm.z), hm.z, 1.9 + rnd() * 0.4, Math.round(rnd() * 4) * (Math.PI / 2) + (rnd() - 0.5) * 0.3]);
+      }
+      vil.forEach((L, v) => {
+        if (!L.length) return;
+        const m = new T.InstancedMesh(HM.hamlet(v + 1), HM.mat, L.length);
+        L.forEach(([x, y, z, s, r], i) => m.setMatrixAt(i, m4.compose(ps.set(x, y - 0.03, z), q.setFromAxisAngle(new T.Vector3(0, 1, 0), r), sc.set(s, s, s))));
+        m.castShadow = true; m.receiveShadow = true; scene.add(m);
+      });
+      for (const kind of ['leaf', 'pine']) {
+        const L = pts[kind]; if (!L.length) continue;
+        const m = new T.InstancedMesh(HM.tree(kind, kind === 'leaf' ? 3 : 1, true), HM.mat, L.length);
+        L.forEach(([x, y, z, s, r], i) => m.setMatrixAt(i, m4.compose(ps.set(x, y - 0.02, z), q.setFromAxisAngle(new T.Vector3(0, 1, 0), r), sc.set(s, s * (0.85 + (i % 5) * 0.07), s))));
+        m.castShadow = true; m.receiveShadow = true; scene.add(m);
+      }
+    }
 
     // ------------------------------------------------------------ towns: one walled model each, rebuilt when its lũy changes
     const root = new T.Group(); scene.add(root);
@@ -106,14 +146,14 @@
     const setTown = (id, fid, level) => {
       const t = towns[id], p = place[id];
       if (p.kind === 'town' && level !== t.level) {
-        if (t.model) { t.g.remove(t.model); t.model.traverse((m) => { if (m.isMesh) m.geometry.dispose(); }); }
+        if (t.model) t.g.remove(t.model); // the geometry is cached by the model kit
         t.model = HM.town({ level, seed: [...id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 2147483647, 7) || 1, size: id === 'chung_ly' ? 5.2 : 4.4 });
         t.g.add(t.model); t.level = level;
       }
       if (fid !== t.fid) {
         if (t.std) t.g.remove(t.std);
         t.fid = fid; t.std = fid ? standard(fid, p.kind === 'seat' ? 3.2 : 3.6, p.kind === 'seat' ? 1.3 : 1.7) : null;
-        if (t.std) { t.std.position.set(0, 0.05, 0); t.g.add(t.std); }
+        if (t.std) t.g.add(t.std);
       }
     };
 
@@ -151,16 +191,27 @@
       const ty = Math.max(0.2, terr.h(cam.t[0], cam.t[1])), t = [cam.t[0], ty, cam.t[1]];
       const c = [t[0] + cam.dist * Math.cos(cam.el) * Math.sin(cam.az), t[1] + cam.dist * Math.sin(cam.el), t[2] + cam.dist * Math.cos(cam.el) * Math.cos(cam.az)];
       const minY = terr.h(c[0], c[2]) + 1.5; if (c[1] < minY) c[1] = minY;
-      return cam.dist > 330 ? { name: 'hn-far', target: t, cam: c, fov: 34, mode: 'far' } : { name: 'hn', target: t, cam: c, fov: 34, mode: 'near', lod: REGION, key: 'hn-region', trees: [{ key: 'hn-trees', x: huai.x - 8, z: huai.z + 8, R: 34 }] };
+      return cam.dist > 330 ? { name: 'hn-far', target: t, cam: c, fov: 34, mode: 'far' } : { name: 'hn', target: t, cam: c, fov: 34, mode: 'near', lod: REGION, key: 'hn-region', trees: [] };
     };
-    const apply = () => { rt.setView(view()); scaleMarkers(); dirty = true; };
+    // Ryan's lens (docs/research/ryan-sael.md): a sharp band round the target that widens with the distance, blur in front
+    // and behind (the miniature look), ambient occlusion in the creases, a touch more colour and contrast
+    const LU = rt.lens && rt.lens.uniforms, blurK = rt.renderer.getDrawingBufferSize(new T.Vector2()).y / 900;
+    const setView = (v) => {
+      rt.setView(v);
+      if (!LU || v.mode === 'far') return;
+      const d = cam.dist;
+      LU.range.value = Math.max(4, 0.55 * d); LU.maxBlur.value = 5 * blurK;
+      LU.aoStrength.value = 0.85; LU.aoRadius.value = 0.05 + d * 0.004;
+      LU.saturation.value = 1.05; LU.contrast.value = 1.07; LU.vignette.value = 0.26;
+    };
+    const apply = () => { setView(view()); scaleMarkers(); dirty = true; };
     // Civ's proportions: an army about as wide as a town; pulled back, both grow (armies a little faster) so they stay readable
     const zoomK = () => Math.max(1, Math.min(4, cam.dist / 45));
     const markerScale = () => 1.45 * Math.pow(zoomK(), 0.9);
     const scaleMarkers = () => {
       const s = markerScale(), ts = Math.pow(zoomK(), 0.7);
       for (const m of Object.values(armies)) m.g.scale.setScalar(s);
-      for (const t of Object.values(towns)) { if (t.model) t.model.scale.setScalar(ts); if (t.std) t.std.scale.setScalar(ts); }
+      for (const t of Object.values(towns)) { if (t.model) t.model.scale.setScalar(ts); if (t.std) { const f = (t.model && t.model.userData.flagAt) || [0, 0.05, 0]; t.std.position.set(f[0] * ts, f[1] * ts, f[2] * ts); t.std.scale.setScalar(ts); } }
       if (!BT.on && selRing.userData.r) selRing.scale.setScalar(selRing.userData.r * (selRing.userData.army ? s : 1));
       for (const r of tgtRings) r.scale.setScalar(r.userData.r * (r.userData.army ? s : 1));
     };
@@ -327,9 +378,7 @@
       g.scale.setScalar(1.25);
       return { g, mesh: m, ashore, cap };
     };
-    const wallMat = recv(new T.MeshStandardMaterial({ color: 0xa89574, roughness: 0.95 }));
-    const wallGeo = (() => { const parts = [new T.BoxGeometry(LANE * 0.93, 0.55, 0.4).translate(0, 0.27, 0)]; for (let k = 0; k < 9; k++) parts.push(new T.BoxGeometry(0.12, 0.12, 0.42).translate(-LANE * 0.43 + k * LANE * 0.108, 0.6, 0)); return THREE.BufferGeometryUtils.mergeBufferGeometries(parts); })();
-    const towerGeo = THREE.BufferGeometryUtils.mergeBufferGeometries([new T.BoxGeometry(0.55, 0.85, 0.55).translate(0, 0.42, 0), new T.BoxGeometry(0.66, 0.12, 0.66).translate(0, 0.9, 0), new T.ConeGeometry(0.5, 0.34, 4).rotateY(Math.PI / 4).translate(0, 1.13, 0)]);
+    const SIEGE = 1.6, wallGeo = HM.siegeWall((LANE * 0.93) / SIEGE, 3), gateGeo = HM.siegeWall((LANE * 0.93) / SIEGE, 3, true), towerGeo = HM.siegeTower(3), wallMat = HM.mat;
     const battleBegin = (o) => {
       battleEnd();
       const P = place[o.site]; let u = o.from ? [P.x - o.from[0], P.z - o.from[1]] : [P.x - place.chung_ly.x, P.z - place.chung_ly.z];
@@ -341,8 +390,8 @@
       if (BT.siege && towns[o.site] && towns[o.site].model) towns[o.site].model.visible = false;
       if (BT.siege) {
         const ang = Math.atan2(-BT.v[1], BT.v[0]);
-        for (let l = 0; l < 3; l++) { const p = gridPos(l, 3.6), wall = new T.Mesh(wallGeo, wallMat); wall.position.set(p[0], p[1] - 0.05, p[2]); wall.rotation.y = ang; wall.castShadow = true; wall.receiveShadow = true; BT.g.add(wall); BT.walls.push(wall); }
-        for (let k = 0; k < 4; k++) { const p = gridPos(k - 0.5, 3.6), t = new T.Mesh(towerGeo, wallMat); t.position.set(p[0], p[1] - 0.05, p[2]); t.rotation.y = ang; t.castShadow = true; BT.g.add(t); }
+        for (let l = 0; l < 3; l++) { const p = gridPos(l, 3.6), wall = new T.Mesh(l === 1 ? gateGeo : wallGeo, wallMat); wall.position.set(p[0], p[1] - 0.05, p[2]); wall.rotation.y = ang; wall.scale.setScalar(SIEGE); wall.castShadow = true; wall.receiveShadow = true; BT.g.add(wall); BT.walls.push(wall); }
+        for (let k = 0; k < 4; k++) { const p = gridPos(k - 0.5, 3.6), t = new T.Mesh(towerGeo, wallMat); t.position.set(p[0], p[1] - 0.05, p[2]); t.rotation.y = ang; t.scale.setScalar(SIEGE); t.castShadow = true; BT.g.add(t); }
       }
       for (const m of Object.values(armies)) m.g.visible = false;
       if (reachG) reachG.visible = false;
@@ -368,7 +417,7 @@
         Wg.tw = { from: Wg.g.position.toArray(), to, t0: now, ms, lunge: w.fought ? 0.4 : 0, fwd, shake: w.hit > 0 ? Math.min(0.1, w.hit / 3000) : 0, c0: Wg.mesh.count, c1: count, fade: w.gone };
         if (w.burnt) for (let k = 0; k < 8; k++) { const f = new T.Mesh(flameGeo, flameMat); f.position.set(K.rr(-1, 0.3), 0.05, K.rr(-0.6, 0.6)); Wg.g.add(f); BT.fx.push({ kind: 'flame', m: f, parent: Wg.g, t0: now, ms: 3200, ph: Math.random() * 6 }); }
       }
-      for (const w of b.wings) if (w.breach && w.side === 'A' && BT.walls[w.lane] && !BT.walls[w.lane].userData.down) { const m = BT.walls[w.lane]; m.userData.down = true; m.scale.y = 0.4; m.rotation.x = 0.14; }
+      for (const w of b.wings) if (w.breach && w.side === 'A' && BT.walls[w.lane] && !BT.walls[w.lane].userData.down) { const m = BT.walls[w.lane]; m.userData.down = true; m.scale.y = SIEGE * 0.4; m.rotation.x = 0.14; }
       for (const w of b.wings) {
         if (!w.shot || !BT.wings[w.id] || !BT.wings[w.shot]) continue;
         const A = BT.wings[w.id].tw.to, Tg = BT.wings[w.shot].tw.to;
@@ -421,7 +470,7 @@
       if (anim) {
         const u = Math.min(1, (now - anim.t0) / anim.ms), e = ease(u), A = anim.from, B = anim.to;
         cam.t = [A.t[0] + (B.t[0] - A.t[0]) * e, A.t[1] + (B.t[1] - A.t[1]) * e]; cam.dist = Math.exp(Math.log(A.dist) + (Math.log(B.dist) - Math.log(A.dist)) * e); cam.az = A.az + (B.az - A.az) * e; cam.el = A.el + (B.el - A.el) * e;
-        rt.setView(view()); scaleMarkers(); dirty = true; if (u >= 1) anim = null;
+        setView(view()); scaleMarkers(); dirty = true; if (u >= 1) anim = null;
       }
       if (stepMarch(now)) dirty = true;
       if (stepBattle(now)) dirty = true;
@@ -432,7 +481,7 @@
     const loop = (cb) => { onFrame = cb; if (!running) { running = true; requestAnimationFrame(frame); } };
     const stop = () => { running = false; };
     // jump every animation to its end and draw (tests; also a skip)
-    const settle = () => { if (anim) { Object.assign(cam, anim.to); anim = null; rt.setView(view()); scaleMarkers(); } const far = performance.now() + 1e6; stepMarch(far); stepBattle(far); draw(); dirty = false; };
+    const settle = () => { if (anim) { Object.assign(cam, anim.to); anim = null; setView(view()); scaleMarkers(); } const far = performance.now() + 1e6; stepMarch(far); stepBattle(far); draw(); dirty = false; };
 
     // ------------------------------------------------------------ test shots (harness only)
     const demoState = () => ({

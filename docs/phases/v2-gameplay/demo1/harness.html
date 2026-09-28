@@ -3,7 +3,7 @@
      (python3 -m http.server), open /docs/phases/v2-gameplay/demo1/harness.html?shot=region or ?battle=3 -->
 <style>html,body{margin:0;background:#111;overflow:hidden}canvas{display:block}#note{position:fixed;left:12px;bottom:10px;font:13px system-ui,sans-serif;color:#e8dcc0;background:rgba(0,0,0,.55);padding:6px 10px;border-radius:6px}</style></head><body>
 <canvas id="c"></canvas>
-<div id="note">Chỉ cảnh 3D của demo 1 (không có giao diện chơi). Bản chơi: canvas Design, link trong docs/status.md. ?shot=region|mid|close|far · ?battle=1..5</div>
+<div id="note">Chỉ cảnh 3D của demo 1 (không có giao diện chơi). Bản chơi: canvas Design, link trong docs/status.md. ?shot=region|mid|close|far · ?battle=1..5 · &d=&az=&el=&tx=&tz=</div>
 <script src="build/hn-bundle.js"></script>
 <script>
 (async () => {
@@ -13,6 +13,8 @@
     const rt = await HNBoot.start({ canvas: cv, width: W, height: H, dpr, mapPng: 'build/hn-map.png' });
     const sc = (window.__sc = await HNScene.create(rt, { width: W, height: H }));
     await sc.shot(q.get('shot') || 'region');
+    // camera override: ?d=dist&az=&el=&tx=&tz= (tx, tz relative to Chung Ly)
+    if (q.get('d')) { const P = sc.place.chung_ly; Object.assign(sc.cam, { dist: +q.get('d'), az: +(q.get('az') ?? sc.cam.az), el: +(q.get('el') ?? sc.cam.el), t: [P.x + +(q.get('tx') || 0), P.z + +(q.get('tz') || 0)] }); sc.apply(); }
     if (q.get('battle')) {
       const R = HNRules, B = R.battle; const g = R.newGame(3); delete g.armies.e1;
       const plan = R.battlePlan(g, ['a1', 'a2'], { kind: 'town', id: 'tho_xuan' });
