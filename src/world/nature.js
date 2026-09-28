@@ -303,7 +303,7 @@
           #endif`);
     };
     mat.customProgramCacheKey = () => 'nature-terrain-' + (tier === 'low' ? 'low' : 'full');
-    const S = 2 * L.EXT + 200, cell = tier === 'low' ? 14 : 10; // 10 m a quad over the land-use square, a coarse ring to the horizon
+    const S = 2 * L.EXT + 200, cell = tier === 'low' ? 14 : tier === 'mid' ? 12 : 10; // 10 m a quad over the land-use square (mid 12, low 14), a coarse ring to the horizon
     const near = new T.Mesh(grid(L, 0, 0, S, Math.round(S / cell), 0), mat), far = new T.Mesh(grid(L, 0, 0, 13000, 180, L.EXT + 40), mat);
     near.receiveShadow = true; far.receiveShadow = true;
     const g = new T.Group(); g.add(near, far); return g;
@@ -778,8 +778,10 @@
   const CACHE = { atlas: null, plants: new Map(), cards: new Map() };
   const atlasOnce = () => CACHE.atlas || (CACHE.atlas = leafAtlas());
   const once = (map, key, make) => { if (!map.has(key)) map.set(key, make()); return map.get(key); };
-  const plantOnce = (kind, seed, tile, hi, far) => once(CACHE.plants, [kind, seed, tile, hi, far].join(), () => plant(kind, seed, tile, hi, far));
-  const cardsOnce = (tile) => once(CACHE.cards, tile, () => cardsGeo(tile));
+  // marked shared: a battle's disposal (battle-cut.js) leaves them for the next battle
+  const shared = (g) => { if (g) g.userData.shared = true; return g; };
+  const plantOnce = (kind, seed, tile, hi, far) => once(CACHE.plants, [kind, seed, tile, hi, far].join(), () => { const p = plant(kind, seed, tile, hi, far); shared(p.leaves); shared(p.wood); return p; });
+  const cardsOnce = (tile) => once(CACHE.cards, tile, () => shared(cardsGeo(tile)));
   N.warm = function (q) { const TP = PLANT[tierOf(q)] || PLANT.high; atlasOnce(); plantsFor(TP); };
   N.trees = function (L, env, sun, extra = [], q) {
     const tier = tierOf(q), TP = PLANT[tier] || PLANT.high, cap = (q && q.trees) || TREES[tier] || TREES.high;

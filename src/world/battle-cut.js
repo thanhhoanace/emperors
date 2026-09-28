@@ -87,7 +87,14 @@
       if (!built) return;
       scene.remove(built.root);
       built.battle.dispose();
-      built.root.traverse((m) => { if (m.isMesh && m.geometry && !m.geometry.userData.shared) m.geometry.dispose(); });
+      // the land's geometries, materials and land texture are this battle's; the leaf atlas, the plant geometries
+      // (userData.shared) and the environment map stay for the next one
+      built.root.traverse((m) => {
+        if (!m.isMesh) return;
+        if (m.geometry && !m.geometry.userData.shared) m.geometry.dispose();
+        for (const mat of Array.isArray(m.material) ? m.material : [m.material]) if (mat) mat.dispose();
+      });
+      if (built.land && built.land.landTex) built.land.landTex.dispose();
       built = null;
     };
     cut.build = (info) => {
@@ -114,7 +121,7 @@
       const tops = [];
       rocks.userData.ledges.forEach(([x, yy, z, kind], i) => { const r = N.noise.h2(i, 17); if (kind === 'top') tops.push(r < 0.55 ? [x, z, 3, 7 + r * 9, yy - 0.5] : [x, z, 5, 2 + r * 2, yy - 0.3]); else tops.push(r < 0.3 ? [x, z, 3, 4 + r * 8, yy - 0.8] : [x, z, r < 0.65 ? 5 : 7, 1.6 + r * 1.6, yy - 0.4]); });
       const trees = N.trees(L, env, { dir: sunDir, color: sunColor }, battle.trees.concat(tops), q); root.add(trees);
-      built = { key: k, root, battle, trees, rocks, water, ms: Math.round(performance.now() - t0), shots: ['approach', 'gate', 'result'].map((n) => battle.views[n]).filter(Boolean) };
+      built = { key: k, root, battle, trees, rocks, water, land: L, ms: Math.round(performance.now() - t0), shots: ['approach', 'gate', 'result'].map((n) => battle.views[n]).filter(Boolean) };
       return built;
     };
     cut.prepare = async (info) => {

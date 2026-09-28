@@ -49,7 +49,7 @@ Chuyển từ `docs/design/prototypes/siege/sg-nature.js`, giữ tên hàm để
 
 - `Crowd.create({ HM, colors, q })` → `crowd`; `crowd.add(kind, list)` với `kind` ∈ `spear | bow | run | climb | pull | idle | fight | rider | horse`, `list` là `[x, y, z, yaw, anim?, phase?]`; `crowd.group`, `crowd.tick(time)`, `crowd.count`, `crowd.stats()`, `crowd.dispose()`.
 - Cử động trên GPU: mỗi loại người là **một** InstancedMesh; khung tư thế nướng vào DataTexture (mỗi khung một cột vị trí đỉnh), shader chọn khung theo `anim`, `phase`, `uTime`; thuộc tính từng bản sao: `anim`, `phase`, `speed`. Vật liệu là `HM.mat` (nối `onBeforeCompile` với `look()` của bộ mô hình, `customProgramCacheKey` riêng). Bóng: `customDepthMaterial` cùng shader đỉnh.
-- Hai mức chi tiết theo khoảng cách; `low` chỉ 2–4 khung / vòng lặp. Màu áo theo phe từ `colors`, màu bản sao cho sắc độ.
+- Ba mức chi tiết theo khoảng cách: `fine` gần camera, `light` xa hơn, `far` (tay chân ba cạnh hở đầu, không ủng, khoảng nửa số tam giác của `light`) quá `shadowReach` và không đổ bóng; `low` chỉ `light`, 4 khung / vòng lặp. Màu áo theo phe từ `colors`, màu bản sao cho sắc độ.
 - Thay `K.Crowd` (hộp vuông) trong `kit.js` **về sau**; giờ chưa đụng.
 
 ### 5. `src/world/battle.js` — global `Battle` (cảnh trận)
@@ -82,24 +82,24 @@ Chuyển từ `docs/design/prototypes/siege/sg-nature.js`, giữ tên hàm để
 | quality.js | A | xong (`995d3c0`): pick/detect/monitor/hud, 10 test; `game.html` dò GPU trước khi dựng, `?tier=`, `?hud=1`, tự hạ SSAO/DOF khi khung chậm và nhớ mức cho lần sau |
 | nature.js | B | xong (`145e54c`): `Nature.land(spec)`, ô gộp theo khối có vùng bao và loại theo khung nhìn, ba mức; atlas lá và cây mẫu cache theo trang, `Nature.warm(q)` (`f0e7b6d`) |
 | han-models.js + battle.js | C | xong (`6ac9c11`, `dd97bd2`): thành theo `cities.json` (đường tường thật, cổng, khuyết, hào, sông), quân theo số binh, doanh trại, lửa khói instanced, sáu góc máy; `Battle.land(def, side, Nature)` dựng đất quanh đường tường thật |
-| crowd.js | D | xong (`9e28c71`): khung tư thế nướng vào texture float, một InstancedMesh mỗi thân, hai mức chi tiết, bóng chạy cùng cử động; lính nhẹ xa hơn `shadowReach` không đổ bóng |
-| nối vào game, e2e | Claude (chính) | `src/world/battle-cut.js` + `EventPresenter` (`plan.cut`, `P.cut`) + `game.html`; `tests/e2e/battle-cut.mjs` |
+| crowd.js | D | xong (`9e28c71`): khung tư thế nướng vào texture float, một InstancedMesh mỗi thân và mức chi tiết, bóng chạy cùng cử động; mức `far` quá `shadowReach` không đổ bóng (Claude, 29/9) |
+| nối vào game, e2e | Claude (chính) | xong (`1ecc451` và sau): `src/world/battle-cut.js` + `EventPresenter` (`plan.cut`, `P.cut`) + `game.html`; `tests/e2e/battle-cut.mjs` 103/103 ở cả ba mức |
 
-## Đo (28/9, GPU giả lập, 1280×720, DPR 1, cả lượt bóng)
+## Đo (29/9, GPU giả lập, 1280×720, DPR 1, cả lượt bóng)
 
-| Cảnh trận (cổng) | Mức cao | Mức vừa | Mức thấp |
+`tests/e2e/battle-cut.mjs`: hai trận của fixture chạy trong `game.html`, mỗi trận ba góc (tiếp cận, cổng, kết quả). Ảnh ở `test-results/battle-cut-*.png`.
+
+| Trận, góc nặng nhất | Mức cao | Mức vừa | Mức thấp |
 | --- | --- | --- | --- |
-| Chung Ly | 3,10 triệu · 300 lệnh vẽ | 1,76 triệu | 0,87 triệu |
-| Tương Dương | 3,26 triệu | 1,83 triệu | – |
-| Lạc Dương | 2,94 triệu | 1,85 triệu | – |
-| Trường An | – | 2,06 triệu | 0,98 triệu |
-| Dựng một trận (Chung Ly) | 4,4 giây | 3,8 giây | 2,9 giây |
+| Trường An (Tần đánh, thua) | 3,13 triệu · 276 lệnh vẽ | 1,94 triệu · 250 | 1,00 triệu · 139 |
+| Giang Lăng (Ngô đánh, thắng) | 2,84 triệu · 261 | 1,66 triệu · 236 | 0,83 triệu · 106 |
+| Dựng trận: Trường An / Giang Lăng | 2,7 / 7,0 giây | 1,9 / 6,0 giây | 1,3 / 4,3 giây |
 
-Trước khi ghép: 8,2 / 7,9 / 4,1 triệu tam giác, dựng 7,7 / 7,2 / 3,1 giây. Mức cao dành cho card rời nên cho vượt trần tích hợp tới 10 %; mức vừa, thấp dung sai 5 % (kinh đô lớn là nặng nhất). Số này không nói gì về fps thật: phải đo trên máy của chủ dự án (`game.html?hud=1`).
+Ngày 28/9 góc kết quả Trường An còn 3,56 / 2,36 triệu (cao / vừa) và dựng 4,2 giây: lính quá `shadowReach` vẽ bằng mô hình `light` chiếm một phần ba khung. Đã sửa bằng mức `far` cho lính xa, tầm bóng 150 / 120 m, tối đa 360 / 240 lính chi tiết mỗi phe, lưới đất 12 m ở mức vừa; `Battle.land` tìm đường theo ô 100 m và bỏ qua vòng lặp cạnh tường khi xa tường (dựng đất nhanh gấp đôi). Mức cao dành cho card rời nên cho vượt trần tích hợp tới 10 %; mức vừa, thấp dung sai 5 %. Số này không nói gì về fps thật: phải đo trên máy của chủ dự án (`game.html?hud=1`, `&tier=high|mid|low`).
 
 ## Nợ còn lại
 
-- Dựng trận còn chặn luồng chính 3–4 giây (thẻ "Đang dựng trận…"): phải dựng dần theo khung (dat.city: ≤ 5 ms mỗi khung) hoặc dựng trong lúc quân hành quân.
+- Dựng trận còn chặn luồng chính 1–7 giây (thẻ "Đang dựng trận…"; Giang Lăng chậm nhất vì sông và tường dài): phải dựng dần theo khung (dat.city: ≤ 5 ms mỗi khung) hoặc dựng trong lúc quân hành quân.
 - Chia quân bộ / kỵ / thủy trong cắt cảnh là đoán theo đặc tính phe và sông (`BattleCut.troopsOf`), chờ bộ mô tả trận của engine (ASSIGN.md mục 1).
 - `season`, `hour`, `deps.sun` của `Battle.siege` chưa dùng; doanh trại luôn quay bắc; ngoài tường (Linh Đài…) chưa dựng.
 - Vân bump trên vách đá nhấp nháy khối 2×2 ở GPU giả lập (kế thừa bản mẫu); mức thấp đã tắt bump đá.

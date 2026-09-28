@@ -21,18 +21,20 @@ const { Crowd, HNModels } = ctx;
 const HM = HNModels.create({ recv: (m) => m, colors: { tao: 0x9a3b2c, luu: 0x2f6b3a } });
 const BODIES = ['foot', 'bow', 'climb', 'pull', 'rider', 'horse'];
 
-test('crowd: every body rigs at both LODs, the light one lighter, within the triangle budget', () => {
+test('crowd: every body rigs at the three LODs, each lighter than the one before, within the triangle budget', () => {
   for (const body of BODIES) {
-    const fine = Crowd.rig(HM.parts, body, 'fine'), light = Crowd.rig(HM.parts, body, 'light');
-    for (const r of [fine, light]) {
+    const fine = Crowd.rig(HM.parts, body, 'fine'), light = Crowd.rig(HM.parts, body, 'light'), far = Crowd.rig(HM.parts, body, 'far');
+    for (const r of [fine, light, far]) {
       assert.equal(r.geo.attributes.vid.count, r.V);
       assert.equal(r.bone.length, r.V);
       assert.ok(r.bone.every((b) => b >= 0 && b < r.bones.length), body + ': a vertex without a bone');
     }
     assert.ok(light.tris < fine.tris, `${body}: light ${light.tris} ≥ fine ${fine.tris}`);
-    // 2,000 figures at high (≤ 500 fine) must stay near 1.5 M triangles with the shadow pass: ≤ 700 fine, ≤ 300 light
+    // 2,000 figures at high (≤ 360 fine) must stay near 1.5 M triangles with the shadow pass: ≤ 700 fine, ≤ 300 light
     assert.ok(fine.tris <= (body === 'rider' ? 1100 : 700), `${body}: fine ${fine.tris} triangles`);
     assert.ok(light.tris <= (body === 'rider' ? 520 : 320), `${body}: light ${light.tris} triangles`);
+    // past the shadow reach (the bulk of a battle's figures): at most 60 % of the light model
+    assert.ok(far.tris <= light.tris * 0.6, `${body}: far ${far.tris} vs light ${light.tris} triangles`);
   }
 });
 
@@ -71,7 +73,7 @@ test('crowd: add, LOD buckets, stats, dispose', () => {
     crowd.focus([0, 0, 0]); crowd.tick(1.25);
     const s = crowd.stats();
     assert.equal(crowd.count, 450); assert.equal(s.figures, 450);
-    assert.equal(s.meshes, 6 * (q === 'low' ? 1 : 3)); // fine, light, and the shadowless far copy of light (high, mid)
+    assert.equal(s.meshes, 6 * (q === 'low' ? 1 : 3)); // fine, light, and far without a shadow (high, mid)
     const reach = q === 'high' ? 150 : q === 'mid' ? 80 : 0;
     const near = Object.keys(Crowd.KINDS).length * Array.from({ length: 50 }, (_, i) => Math.hypot(i * 2, (i % 7) * 300) < reach).filter(Boolean).length;
     assert.equal(s.fineFigures, near, q + ': fine bucket');
@@ -82,8 +84,8 @@ test('crowd: add, LOD buckets, stats, dispose', () => {
       if (m.count) for (let i = 0; i < m.count * 3; i++) assert.ok(m.instanceColor.array[i] > 0.8 && m.instanceColor.array[i] < 1.15);
     }
     assert.ok(s.textures.every((t) => t.frames === Object.values(Crowd.ANIMS[t.body]).reduce((a, [n]) => a + (q === 'low' ? 4 : n), 0)));
-    if (q !== 'low') { // light figures past shadowReach sit in the shadowless copy
-      const sr = q === 'high' ? 200 : 160;
+    if (q !== 'low') { // figures past shadowReach take the far LOD
+      const sr = q === 'high' ? 150 : 120;
       for (const m of crowd.group.children) if (m.name.endsWith(':far')) for (let i = 0; i < m.count; i++) assert.ok(Math.hypot(m.instanceMatrix.array[i * 16 + 12], m.instanceMatrix.array[i * 16 + 14]) >= sr, m.name);
     }
     crowd.dispose(); assert.equal(crowd.group.children.length, 0);
@@ -95,7 +97,7 @@ test('crowd: the fine LOD holds at most maxFine figures over all bodies, nearest
   for (const kind of ['spear', 'bow', 'rider', 'horse']) crowd.add(kind, Array.from({ length: 400 }, (_, i) => [i * 0.2, 0, 0, 0]));
   crowd.focus([0, 0, 0]);
   const s = crowd.stats();
-  assert.equal(s.fineFigures, 400);
-  for (const m of crowd.group.children) if (m.userData.crowd.lod === 'fine') for (let i = 0; i < m.count; i++) assert.ok(m.instanceMatrix.array[i * 16 + 12] < 26);
+  assert.equal(s.fineFigures, 360); // high: maxFine 360
+  for (const m of crowd.group.children) if (m.userData.crowd.lod === 'fine') for (let i = 0; i < m.count; i++) assert.ok(m.instanceMatrix.array[i * 16 + 12] < 23);
   crowd.dispose();
 });
