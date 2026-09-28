@@ -1,0 +1,54 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mức chất lượng</title>
+<!-- Dev page for src/world/quality.js: a trivial spinning scene through K.lens, the tier detected (or forced with
+     ?tier=high|mid|low), the frame-time monitor and the ?hud=1 overlay. Serve the repo root (python3 -m http.server)
+     and open /docs/design/prototypes/quality.html?hud=1&tier=mid. tools/shoot.mjs waits for window.__done. -->
+<style>html,body{margin:0;background:#1a1712;overflow:hidden}canvas{display:block}</style></head><body>
+<script src="../../../node_modules/three/build/three.min.js"></script>
+<script src="../../../src/world/kit.js"></script>
+<script src="../../../src/world/quality.js"></script>
+<script>
+(() => {
+  const params = new URLSearchParams(location.search), W = +params.get('w') || innerWidth, H = +params.get('h') || innerHeight;
+  try {
+    // detect() needs a context: a throwaway renderer gives the GPU string, then the real one takes the tier
+    const probe = new THREE.WebGLRenderer(), pick = Quality.detect(probe);
+    probe.dispose();
+    const { renderer, scene, camera } = K.setup(W, H, { fov: 32, exposure: 0.95, quality: pick });
+    K.seed(3);
+    const { sun } = K.lights(scene, { dir: [-40, 70, 30], shadowSize: 40 });
+    sun.shadow.mapSize.set(pick.shadow || 1024, pick.shadow || 1024);
+    scene.background = new THREE.Color(0xbfd0dc);
+    const ground = K.mesh(new THREE.PlaneGeometry(120, 120).rotateX(-Math.PI / 2), 0x8a9a5a, { flat: false });
+    scene.add(ground);
+    const hall = K.hall(6, 4, 2.4, 0x3b4d33); scene.add(hall);
+    const pagoda = K.pagoda(4, 0x6a45b0); pagoda.position.set(-9, 0, -4); scene.add(pagoda);
+    const spin = new THREE.Group();
+    for (let i = 0; i < 24; i++) { const b = K.box(K.rr(0.6, 1.4), K.rr(0.8, 3), K.rr(0.6, 1.4), [0xc9a227, 0xb3262e, 0x3b6fd8, 0xe07b24][i % 4]); const a = (i / 24) * 6.283, r = 10 + K.rr(0, 4); b.position.set(Math.cos(a) * r, b.geometry.parameters.height / 2, Math.sin(a) * r); spin.add(b); }
+    scene.add(spin);
+    camera.position.set(22, 16, 26); camera.lookAt(0, 1.5, 0);
+    const lens = K.lens(renderer, scene, camera, { focus: 36, range: 14, maxBlur: 5, ao: 1.0, aoRadius: 0.6, quality: pick, bandCenter: 0.5, bandWidth: 0.3 });
+    // the monitor lowers the tier: pixel ratio, shadows and lens caps follow (no page reload)
+    let q = pick, fps = 0;
+    const apply = (next, why) => {
+      q = Quality.tier(next, why);
+      renderer.setPixelRatio(q.dpr); renderer.setSize(W, H); renderer.shadowMap.enabled = q.shadow > 0;
+      if (!q.dof) lens.uniforms.maxBlur.value = 0;
+      if (!q.ssao) lens.uniforms.aoStrength.value = 0;
+      console.log('quality drop → ' + next + ': ' + why);
+    };
+    const mon = Quality.monitor(renderer, apply);
+    const hud = Quality.hud(document.body, () => ({ tier: q.tier, reason: q.reason, fps: mon.fps, triangles: renderer.info.render.triangles, calls: renderer.info.render.calls, gpu: pick.info.gpu }));
+    let last = performance.now(), frames = 0;
+    renderer.info.autoReset = false; // count the scene pass and the lens quad together, per frame
+    const loop = (now) => {
+      const dt = now - last; last = now;
+      spin.rotation.y += dt * 0.0004; hall.rotation.y -= dt * 0.0002;
+      renderer.info.reset(); lens.render(); mon.frame(dt); hud.tick(now);
+      if (++frames === 1) { window.__extra = { pick, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles }; window.__done = true; }
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+    window.__q = { pick, mon, hud, renderer, lens, current: () => q };
+  } catch (e) { console.error(e); window.__error = String(e.stack || e); }
+})();
+</script></body></html>

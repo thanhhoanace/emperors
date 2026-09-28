@@ -3,7 +3,8 @@
 // generals and armies. Presentation only: it reads data/world.json and cities.json, and takes owners from the caller
 // (engine state); it never decides what happens in the game.
 //
-//   const rt = await WorldRuntime.create({ world, cities, width, height, dpr });
+//   const rt = await WorldRuntime.create({ world, cities, width, height, dpr, quality });
+//   quality: a Quality tier (quality.js) → pixel ratio (unless dpr is given), shadow map, SSAO / DOF caps; rt.quality
 //   rt.focusProvince('jing'); rt.focusCity('jing'); rt.campaign(); rt.render();
 //   views: rt.viewCampaign(), rt.viewOverview(), rt.viewProvince(id), rt.viewCity(id), rt.viewLook(from, to), rt.viewFollow(pts, u)
 //   rt.prepare(view) builds the level of detail a view needs (call before animating to it); rt.setView(view) places the camera.
@@ -42,8 +43,8 @@
     if (o.owners) owners = Object.assign({}, o.owners);
 
     const sunDir = new THREE.Vector3(-0.5, 0.5, -0.3).normalize(); // one sun: baked light and shadows depend on it
-    const { renderer, scene, camera } = K.setup(W, H, { dpr: o.dpr || 1, fov: 34, exposure: 0.95 });
-    renderer.shadowMap.enabled = true;
+    const q = o.quality || null; // no tier: the look as before (dpr 1, soft shadows 4096, SSAO and DOF as the modes say)
+    const { renderer, scene, camera } = K.setup(W, H, { dpr: o.dpr || (q && q.dpr) || 1, fov: 34, exposure: 0.95, quality: q });
     K.seed(21);
 
     // ---------------------------------------------------------------- terrain
@@ -228,15 +229,16 @@
     // ---------------------------------------------------------------- light, lens
     scene.add(new THREE.HemisphereLight(0xc6d6e8, 0x5a5238, 0.72));
     const sun = new THREE.DirectionalLight(0xffe4bf, 2.5);
-    sun.shadow.mapSize.set(o.shadowMap || 4096, o.shadowMap || 4096); sun.shadow.bias = -0.0002;
+    const shadowMap = o.shadowMap || (q && q.shadow) || 4096;
+    sun.shadow.mapSize.set(shadowMap, shadowMap); sun.shadow.bias = -0.0002;
     scene.add(sun, sun.target);
-    const lens = K.lens(renderer, scene, camera, { focus: 100, range: 30, maxBlur: 3.5, ao: 1.0, aoRadius: 0.12, atmos: { density: 0.012, falloff: 0.3, color: 0xbac8cf, sunColor: 0xf6d7a0, sunDir } });
+    const lens = K.lens(renderer, scene, camera, { focus: 100, range: 30, maxBlur: 3.5, ao: 1.0, aoRadius: 0.12, atmos: { density: 0.012, falloff: 0.3, color: 0xbac8cf, sunColor: 0xf6d7a0, sunDir }, quality: q });
     const LU = lens.uniforms, blurK = renderer.getDrawingBufferSize(new THREE.Vector2()).y / 900;
 
     // ---------------------------------------------------------------- views
     const orbit = (t, D, az, el) => [t[0] + D * Math.cos(el) * Math.sin(az), t[1] + D * Math.sin(el), t[2] + D * Math.cos(el) * Math.cos(az)];
     const seatPt = (pid) => { const c = MC[pid]; return [c.x, c.y, c.z]; };
-    const rt = { renderer, scene, camera, terr, MC, cities, world, sunDir, lens, stats: { loadMs } }; // lens: its uniforms, for pages that tune the look
+    const rt = { renderer, scene, camera, terr, MC, cities, world, sunDir, lens, quality: q, stats: { loadMs } }; // lens: its uniforms, for pages that tune the look
     // keep the camera above the ground and its line of sight clear of ridges (raise it until the target shows)
     const clearSight = (cam, t, margin) => {
       cam = cam.slice();
@@ -351,8 +353,8 @@
       const ss = v.mode === 'city' ? Math.max(8, dist * 0.75) : 40;
       Object.assign(sun.shadow.camera, { left: -ss, right: ss, top: ss, bottom: -ss, near: 1, far: 400 }); sun.shadow.camera.updateProjectionMatrix(); sun.shadow.normalBias = v.mode === 'city' ? 0.03 : 0.1;
       const L = mode.lens;
-      LU.focus.value = dist; LU.range.value = v.mode === 'city' ? dist * 1.6 : L.range; LU.maxBlur.value = L.maxBlur * blurK; LU.band.value.set(...L.band);
-      LU.vignette.value = L.vignette; LU.contrast.value = L.contrast; LU.saturation.value = L.saturation; LU.aoStrength.value = L.ao; LU.aoRadius.value = L.aoR || 0.4;
+      LU.focus.value = dist; LU.range.value = v.mode === 'city' ? dist * 1.6 : L.range; LU.maxBlur.value = (q && !q.dof ? 0 : L.maxBlur) * blurK; LU.band.value.set(...L.band);
+      LU.vignette.value = L.vignette; LU.contrast.value = L.contrast; LU.saturation.value = L.saturation; LU.aoStrength.value = q && !q.ssao ? 0 : L.ao; LU.aoRadius.value = L.aoR || 0.4;
       LU.atmos.value = L.atmos; LU.atmosFall.value = L.fall; LU.near.value = camera.near; LU.far.value = camera.far;
       LU.projScale.value = renderer.getDrawingBufferSize(new THREE.Vector2()).y / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
       current = v;

@@ -23,12 +23,16 @@
     sun_quan: { name: 'Tôn Quyền', glyph: '吳', color: 0xe07b24, roof: 0xd0701f },
   };
 
+  // opts.quality (a Quality tier, see quality.js) sets the pixel ratio unless opts.dpr says otherwise, and the shadows:
+  // none on `low`, plain PCF on `mid`, soft on `high` (and when no tier is given, as before).
   K.setup = function (w, h, opts = {}) {
+    const q = opts.quality || null;
     const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-    renderer.setPixelRatio(opts.dpr || 1);
+    renderer.setPixelRatio(opts.dpr || (q && q.dpr) || 1);
     renderer.setSize(w, h);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.enabled = !q || q.shadow > 0;
+    renderer.shadowMap.type = q && q.tier === 'mid' ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+    renderer.userData = Object.assign(renderer.userData || {}, { quality: q });
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = opts.exposure || 1.0;
@@ -360,7 +364,10 @@
   };
 
   // Lens pass: depth-of-field by depth + a tilt-shift band, then tone map.
+  // o.quality (a Quality tier) with ssao false keeps the AO strength at 0, with dof false the blur at 0; the shader
+  // skips both loops at 0. Pages that drive the uniforms afterwards read lens.quality for the same caps.
   K.lens = function (renderer, scene, camera, o = {}) {
+    const q = o.quality || null;
     const size = renderer.getDrawingBufferSize(new THREE.Vector2());
     const rt = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: 4 });
     rt.depthTexture = new THREE.DepthTexture(size.x, size.y);
@@ -373,7 +380,7 @@
         far: { value: camera.far },
         focus: { value: o.focus || 100 },
         range: { value: o.range || 30 },
-        maxBlur: { value: (o.maxBlur || 7) * (size.y / 900) },
+        maxBlur: { value: (q && !q.dof ? 0 : o.maxBlur || 7) * (size.y / 900) },
         band: { value: new THREE.Vector2(o.bandCenter ?? 0.5, o.bandWidth ?? 0.22) },
         tilt: { value: o.tilt ?? 1 },
         res: { value: size },
@@ -384,7 +391,7 @@
         focusR: { value: o.focusR || 0 },
         grayAmt: { value: o.gray ?? 0 },
         contrast: { value: o.contrast ?? 1.0 },
-        aoStrength: { value: o.ao ?? 0 },
+        aoStrength: { value: q && !q.ssao ? 0 : (o.ao ?? 0) },
         aoRadius: { value: o.aoRadius ?? 0.4 },
         projScale: { value: size.y / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)) },
         saturation: { value: o.saturation ?? 1.0 },
@@ -448,13 +455,15 @@
           float c = coc(vUv);
           float r = c * maxBlur;
           vec3 acc = texture2D(tColor, vUv).rgb; float wsum = 1.0;
-          for (int i = 0; i < 40; i++) {
-            float fi = float(i);
-            float rr = sqrt((fi + 0.5) / 40.0) * r;
-            float a = fi * 2.39996;
-            vec2 uv = vUv + vec2(cos(a), sin(a)) * rr / res;
-            float w = smoothstep(0.0, 1.0, coc(uv) + 0.15);
-            acc += texture2D(tColor, uv).rgb * w; wsum += w;
+          if (r > 0.0) { // in focus, or no DOF on this tier: every tap would land on this pixel, so skip them
+            for (int i = 0; i < 40; i++) {
+              float fi = float(i);
+              float rr = sqrt((fi + 0.5) / 40.0) * r;
+              float a = fi * 2.39996;
+              vec2 uv = vUv + vec2(cos(a), sin(a)) * rr / res;
+              float w = smoothstep(0.0, 1.0, coc(uv) + 0.15);
+              acc += texture2D(tColor, uv).rgb * w; wsum += w;
+            }
           }
           vec3 col = acc / wsum;
           if (aoStrength > 0.0) col *= ssao(vUv);
@@ -485,6 +494,7 @@
     const qc = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     return {
       uniforms: mat.uniforms,
+      quality: q,
       render() {
         renderer.setRenderTarget(rt);
         renderer.render(scene, camera);
