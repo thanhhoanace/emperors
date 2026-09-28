@@ -6,7 +6,7 @@
 
 ## Đang chờ
 
-- **Phase `v2-gameplay`** (`docs/phases/v2-gameplay/WORKING.md`): đang ở bước CHALLENGE. Cần (1) research của ChatGPT dán vào `_research/chatgpt.md`, Grok nếu có vào `_research/grok.md`; (2) một lượt synthesis bởi tool khác Claude; (3) chủ dự án chọn ngã rẽ (vào là chơi / chiến dịch / lai) rồi mới có `DECISION.md`. Claude có thể làm spike: prototype một ván ngắn trên canvas để bấm thử. Không code luật mới trước `DECISION.md`.
+- **Phase `v2-gameplay`** (`docs/phases/v2-gameplay/WORKING.md`): đang ở bước CHALLENGE. Đã có research của [Claude](phases/v2-gameplay/_research/claude.md), [Grok](phases/v2-gameplay/_research/grok.md) và [ChatGPT](phases/v2-gameplay/_research/chatgpt.md); bản ChatGPT được đưa vào ngày 28/9, giữ nguyên văn kèm ngày và câu hỏi. Còn (1) một lượt synthesis bởi tool khác Claude; (2) chủ dự án chọn ngã rẽ (vào là chơi / chiến dịch / lai) rồi mới có `DECISION.md`. Claude có thể làm spike: prototype một ván ngắn trên canvas để bấm thử. Không code luật mới trước `DECISION.md`.
 - **Grok:** việc nhỏ làm được ngay không chờ phase: chặn 1–3 dưới, `governors` đổi theo chủ châu.
 - LLM adapter remap id: sau khi luật v2 ổn.
 
