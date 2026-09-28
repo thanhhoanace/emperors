@@ -1,6 +1,6 @@
 # V2 Gameplay — Working state
 
-> Cập nhật: 2026-09-28 · synthesis bởi Claude · spike ván ngắn thêm cùng ngày · nguồn: `_research/claude.md` (mục A–I). `_research/chatgpt.md`, `_research/grok.md` chưa có trong repo.
+> Cập nhật: 2026-09-28 · synthesis bởi Claude · spike ván ngắn thêm cùng ngày · nguồn: `_research/claude.md` (mục A–I). `_research/chatgpt.md` và `_research/grok.md` đã vào repo 28/9 nhưng **chưa được synthesis vào file này**; lượt synthesis tới (tool khác Claude) phải đọc cả hai.
 > Luật dùng file này: `AGENTS.md`, mục phase. Chưa có `DECISION.md`: chưa chốt gì về luật v2.
 
 ## Problem
@@ -59,20 +59,20 @@ Prototype chơi được trên canvas: https://claude.ai/artifact/974asePfQJjxNq
 
 Hình dạng đang thử: 32 mùa; mỗi mùa 1 lệnh triều đình (tấn công / ngoại giao / mưu kế / nội chính) + 1 việc trong châu (mộ binh, khai hoang 2 mùa, đắp lũy, điều quân, buôn hoặc chiêu binh vùng rìa); quân đóng theo châu, trần quân theo bậc khai hoang; đế bắt đầu 4 nghìn quân, bậc 1; mỗi đế một tri thức tương lai; tướng có võ, đặc tính, lòng trung (ly gián làm phản); ước lượng trận bằng chữ từ tình báo; minh phòng thủ góp 30 % quân châu kề; tin đồn trễ một mùa, 20 % sai; thủ phủ đế được bảo hộ 8 mùa; mất hết đất thì lưu vong 3 mùa. Thắng: 6 châu, hoặc đứng đầu tứ đế khi hết mùa 32.
 
-Đo headless, 300 ván mỗi đế, chính sách người chơi hợp lý (chỉ đánh khi ước lượng "Có lợi" trở lên):
+Đo headless, 300 ván mỗi đế, chính sách người chơi hợp lý (chỉ đánh khi ước lượng "Có lợi" trở lên). Khoảng là hai lần chạy; chính sách thử có ngẫu nhiên nên lệch vài điểm:
 
 | Đế | Thắng | Chết | Chết trước mùa 16 | Châu đổi chủ mỗi mùa |
 | --- | --- | --- | --- | --- |
-| Tần Thủy Hoàng | 34 % | 0 % | 0 % | 0,61 |
-| Lý Thế Dân | 19 % | 18 % | 10 % | 0,92 |
+| Tần Thủy Hoàng | 30–34 % | 0 % | 0 % | 0,61 |
+| Lý Thế Dân | 18–19 % | 15–18 % | 9–10 % | 0,92 |
 | Chu Nguyên Chương | 0 % | 12 % | 5 % | 0,68 |
-| Hán Vũ Đế | 6 % | 0 % | 0 % | 0,54 |
+| Hán Vũ Đế | 6–8 % | 0 % | 0 % | 0,55 |
 
 So với game hiện tại (thắng 0–3 %, 1,6–2,0 châu đổi chủ mỗi mùa): đồn trú theo châu làm bản đồ ổn định gấp 2–3 lần; ván có nhịp "xây rồi mới đánh". Còn lệch: Chu quá khó (bị Tào ép bằng đồng bằng và Trương Liêu), Hán Vũ gần như không đánh được ai (chỉ giáp Tần). Đây là số của máy, chưa phải cảm giác người: câu hỏi "có vui không" vẫn chờ chủ dự án chơi (ghi chú trên canvas có 5 điều cần ghi lại).
 
 ## Contradictions
 
-- **Mức độ chắc của kết luận "ngắn hơn".** Claude (A.1): bằng chứng nghiêng rõ về ngã rẽ 1, độ chắc trung bình. ChatGPT (theo chủ dự án chuyển lại 28/9, file chưa vào repo): bằng chứng *không* chứng minh nhóm thích ngắn đông hơn nhóm thích chiến dịch; chỉ nên nói "ưu tiên test ngắn trước", không kết luận thị trường thích ngắn hơn. Hai bên thống nhất về *việc làm tiếp*, khác nhau về *cách diễn giải*. Chưa có bằng chứng phân xử.
+- **Mức độ chắc của kết luận "ngắn hơn".** Claude (A.1): bằng chứng nghiêng rõ về ngã rẽ 1, độ chắc trung bình. ChatGPT (theo chủ dự án chuyển lại 28/9; bản đầy đủ ở `_research/chatgpt.md`, chưa synthesis): bằng chứng *không* chứng minh nhóm thích ngắn đông hơn nhóm thích chiến dịch; chỉ nên nói "ưu tiên test ngắn trước", không kết luận thị trường thích ngắn hơn. Hai bên thống nhất về *việc làm tiếp*, khác nhau về *cách diễn giải*. Chưa có bằng chứng phân xử.
 - **Ngắn giúp test vòng chơi nhanh** ↔ **quá ngắn phá fantasy "xây đế chế"** mà chủ dự án muốn (mở ván từ tay trắng, xây 2–3 lượt).
 - **Owner inputs rất rộng** (quản dân, tiền, lương, thuế, hậu cần, bốn lớp tướng, ba đường lật lại) ↔ **evidence nói mỗi hệ thống thêm là sổ sách nếu không sinh chuyện**. Claude đề xuất nén (A.4–A.5); chủ dự án chưa trả lời.
 - **Campaign hỗ trợ tướng, ngoại giao, phục quốc tốt hơn** ↔ **chi phí content, AI, cân bằng** vượt sức một người + agent.
@@ -94,8 +94,8 @@ Prototype **ván ngắn trước**, không kết luận thị trường thích n
 
 Chỉ những GAP còn lại; tối đa một vòng nữa (vòng 2 trên 2).
 
-- **ChatGPT:** dán research đã có vào `_research/chatgpt.md` (nguyên văn, ghi ngày và câu hỏi). Nếu chạy tiếp: game có vòng phiên tương tự (Thronefall, 9 Kings, Polytopia) và cách chúng tạo cảm giác tiến triển trong ván ngắn.
-- **Grok:** cảm nhận cộng đồng về strategy ngắn và chiến dịch dài (Reddit, X, diễn đàn Việt), đặc biệt lời than về ván ngắn "cụt" và chiến dịch "bỏ dở".
+- **ChatGPT, Grok:** research vòng 2 đã có (`_research/chatgpt.md`, `_research/grok.md`). Không research thêm trước khi synthesis (đã dùng 2/2 vòng).
+- **Synthesis:** ChatGPT hoặc Grok (luật 4) gộp ba file research + mục Spike vào file này, bằng lệnh synthesis trong `AGENTS.md`.
 - **Claude:** spike đã có (mục Spike). Tiếp theo chỉ sửa spike theo phản hồi chơi thử của chủ dự án; không research thêm.
 - **Chủ dự án:** chơi 2 ván trên canvas, ghi 5 điều trong ghi chú cam trên canvas (phút tới lệnh đầu, phút một ván, có chơi hết và muốn chơi tiếp không, một khoảnh khắc nhớ được, chỗ thấy thiếu).
 - Synthesis lượt sau: tool khác Claude (luật 4 trong `AGENTS.md`).
