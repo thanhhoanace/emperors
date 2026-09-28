@@ -244,3 +244,27 @@ Prioritised. r146 notes: use `renderer.outputEncoding = sRGBEncoding` + `ColorMa
 12. **Emissive night instead of lights:** no point lights. Additive window quads that are `visible` only when `windowGlow > 0.015`, NaN-guarded additive shaders, and bloom with threshold ≈0.74 on ≥ medium tiers.
 13. **Boot scene + inline world config:** inline the small world JSON in `index.html`. Draw a cheap boot view (dot grid / map outline) with a tiny renderer on the first frame while the heavy scripts load, then crossfade. Fetch secondary data 2 at a time with timeouts and a seeded fallback so geometry never waits on the network.
 14. **Z-fighting discipline:** keep a single Y-layer table for flat layers (water, road, lane, plaza, selection, contact shadow) plus `polygonOffset(-2,-2)` for overlay meshes. Show fine ground detail only below a camera distance and fade it with opacity.
+
+---
+
+## 10. Why it crashes on phones (2026-09-28, second pass)
+
+Owner report: dat.city is heavy and phones crash repeatedly. Method: the current bundle (22 chunks, same structure as §1–9, three r180) plus `index.html`, CSS, the 65 district JSONs and the 64 story atlases were mirrored and served from `127.0.0.1`. Headless Chromium + SwiftShader emulated an iPhone (390×844, DPR 3, touch, iOS Safari UA), with `?fastbuild=1` so the whole city builds within minutes. `tools/phone-probe/gpu-hook.js` was injected before any page script to tally what the page asks WebGL for (buffers, textures, renderbuffers, contexts); `window.__datCity.getStats()` gave calls and triangles. Memory and call counts are real; frame times are not (software GPU).
+
+`(pointer: coarse)` matched, so the page chose **medium** (DPR cap 1, bloom, no shadows/DOF/SMAA/MSAA) and ambient "lite" counts. It still builds the whole city.
+
+| t (s) | GPU total | textures | buffers | calls | triangles |
+|---|---|---|---|---|---|
+| 11 | 144 MB | 42 MB | 88 MB | 331 | 0.20 M |
+| 27 | 229 MB | 158 MB | 64 MB | 510 | 1.41 M |
+| 44 | 342 MB | 246 MB | 89 MB | 608 | 2.27 M |
+| 78 | 523 MB | 426 MB | 90 MB | 809 | 2.79 M |
+| 112 | 743 MB | 642 MB | 95 MB | 971 | 2.90 M |
+| ≥146 | **868 MB** | **766 MB** | 95 MB | 1,183 | 3.04 M |
+
+- **Story atlases are the growth.** One `.webp` sprite sheet per built district (64 in all), 1280–1600 × 960–1280 each: 13 MB on the wire, 138.6 Mpx decoded, ≈700 MB as RGBA with mips. Each is uploaded as the district is built and never released. Without them (first run, atlases 404) the same build plateaued at ≈153 MB. The atlas URLs carry version stamps of 2026-07-10 and 07-20, after the author's 07-04 post that the city ran smoothly "on an old iPhone"; that the regression came with them is an inference.
+- **No culling:** 1,183 calls and 3.0 M triangles every frame at "medium" on a phone.
+- **No context-loss handling** in the app code (no `webglcontextlost` / `contextrestored` listener; three's own handler only stops rendering), and two WebGL contexts exist during boot (boot scene + city).
+- JS heap stays at 50–130 MB; not the cause.
+
+Takeaways for us are in [`graphics-refs.md`](graphics-refs.md) §6: a hard phone tier (GPU ≤ 200 MB and flat over time, textures ≤ 64 MB with eviction, ≤ 250 calls, ≤ 0.8 M triangles, post off), context-loss recovery, and measuring every visual change with `tools/phone-probe`.
