@@ -1,0 +1,121 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Nature harness</title>
+<!-- Harness for src/world/nature.js (the battle scenes' close-up nature, 1 unit = 1 m): land, terrain, water, rocks and
+     trees only, lit and lensed as the siege prototype (siege/sg-main.js). Serve the repo root and open
+     /docs/design/prototypes/nature.html?shot=bagong|rocks|forest|woods &tier=high|mid|low &river=n|s|e|w|none
+     &tributary=w|e|none &hills=ne|nw|se|sw|none &camp=se|sw|ne|nw &w=&h=&dpr= · &measure=1 · &play=1 (orbit) -->
+<style>html,body{margin:0;background:#1a1712;overflow:hidden}canvas{display:block}</style></head><body>
+<canvas id="c"></canvas>
+<script src="../../../node_modules/three/build/three.min.js"></script>
+<script src="../../../node_modules/three/examples/js/utils/BufferGeometryUtils.js"></script>
+<script src="../../../node_modules/three/examples/js/geometries/RoundedBoxGeometry.js"></script>
+<script src="../../../node_modules/three/examples/js/controls/OrbitControls.js"></script>
+<script src="../../../src/world/kit.js"></script>
+<script src="../../../src/world/nature.js"></script>
+<script>
+(async () => {
+  const T = THREE, qs = new URLSearchParams(location.search);
+  // the quality tiers of docs/design/visual-build.md (until src/world/quality.js lands)
+  const TIERS = {
+    high: { tier: 'high', dpr: 1.5, shadow: 4096, ssao: true, dof: true, trees: 12000 },
+    mid: { tier: 'mid', dpr: 1, shadow: 2048, ssao: false, dof: true, trees: 6000 },
+    low: { tier: 'low', dpr: 1, shadow: 0, ssao: false, dof: false, trees: 2500 },
+  };
+  const q = TIERS[qs.get('tier')] || TIERS.high;
+  const W = +qs.get('w') || innerWidth, H = +qs.get('h') || innerHeight, dpr = +qs.get('dpr') || q.dpr;
+  const side = (k, def) => (qs.has(k) ? (qs.get(k) === 'none' ? null : qs.get(k)) : def);
+  const spec = { river: side('river', 'n'), tributary: side('tributary', 'w'), hills: side('hills', 'ne'), camp: qs.get('camp') || 'se' };
+  const cv = document.getElementById('c'); cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  try {
+    const t0 = performance.now();
+    const renderer = new T.WebGLRenderer({ canvas: cv, antialias: false, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(dpr); renderer.setSize(W, H, false);
+    renderer.outputEncoding = T.sRGBEncoding; renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.92;
+    renderer.shadowMap.enabled = !!q.shadow; renderer.shadowMap.type = T.PCFSoftShadowMap;
+    const scene = new T.Scene(), camera = new T.PerspectiveCamera(40, W / H, 1, 16000);
+    const sunDir = new T.Vector3(-0.82, 0.36, 0.3).normalize(), sunColor = new T.Color(1.0, 0.72, 0.46);
+    // a warm evening sky (sg-main.js), also prefiltered as the environment
+    const skyMaterial = () => new T.ShaderMaterial({
+      side: T.BackSide, depthWrite: false, uniforms: { uSun: { value: sunDir } },
+      vertexShader: 'varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
+      fragmentShader: `varying vec3 vD; uniform vec3 uSun; ${Nature.GLSL}
+        void main(){ vec3 d = normalize(vD); float h = clamp(d.y, -.1, 1.), s = max(dot(d, normalize(uSun)), 0.);
+          vec3 zen = vec3(.1, .2, .42), hor = vec3(.84, .68, .52), warm = vec3(1.2, .58, .26);
+          vec3 c = mix(hor, zen, pow(max(h, 0.), .45));
+          c = mix(c, warm, pow(s, 2.2) * .85 * (1. - smoothstep(.02, .45, h)));
+          c += vec3(1.4, .9, .5) * pow(s, 60.) + vec3(4., 3., 2.) * pow(s, 900.);
+          float cl = smoothstep(.55, .8, fbm2(d.xz / max(d.y, .06) * 1.4 + 3.)) * smoothstep(.02, .18, d.y) * (1. - smoothstep(.4, .7, d.y));
+          c = mix(c, mix(vec3(.95, .72, .58), vec3(1.1, .75, .45), pow(s, 2.)), cl * .55);
+          if (d.y < 0.) c = hor * .8;
+          gl_FragColor = vec4(c, 1.); }`,
+    });
+    const sky = new T.Mesh(new T.SphereGeometry(15000, 48, 24), skyMaterial()); scene.add(sky);
+    const es = new T.Scene(); es.add(new T.Mesh(new T.SphereGeometry(100, 32, 16), skyMaterial()));
+    const pm = new T.PMREMGenerator(renderer), env = pm.fromScene(es, 0.03).texture; pm.dispose();
+    const sun = new T.DirectionalLight(sunColor, 2.35); sun.castShadow = !!q.shadow;
+    if (q.shadow) { sun.shadow.mapSize.set(q.shadow, q.shadow); sun.shadow.bias = -0.00025; sun.shadow.normalBias = 0.6; }
+    scene.add(sun, sun.target, new T.HemisphereLight(new T.Color(0.5, 0.6, 0.8), new T.Color(0.3, 0.24, 0.16), 0.42));
+
+    // the nature
+    const L = Nature.land(spec), tLand = performance.now();
+    scene.add(Nature.terrain(L, env, q)); const water = Nature.water(L, env); scene.add(water);
+    const rocks = Nature.rocks(L, env, q); scene.add(rocks);
+    // plants on the towers: pines and shrubs on the tops, shrubs and small pines clinging to the ledges (sg-main.js)
+    const tops = [];
+    rocks.userData.ledges.forEach(([x, yy, z, kind], i) => {
+      const r = Nature.noise.h2(i, 17);
+      if (kind === 'top') tops.push(r < 0.55 ? [x, z, 3, 7 + r * 9, yy - 0.5] : [x, z, 5, 2 + r * 2, yy - 0.3]);
+      else tops.push(r < 0.3 ? [x, z, 3, 4 + r * 8, yy - 0.8] : [x, z, r < 0.65 ? 5 : 7, 1.6 + r * 1.6, yy - 0.4]);
+    });
+    const trees = Nature.trees(L, env, { dir: sunDir, color: sunColor }, tops, q); scene.add(trees);
+    const tBuild = performance.now();
+
+    const lens = K.lens(renderer, scene, camera, { focus: 300, range: 300, maxBlur: 3, ao: 0.8, aoRadius: 2, vignette: 0.28, contrast: 1.06, saturation: 1.06,
+      atmos: { density: 0.00017, falloff: 0.005, color: 0xa7a8ad, sunColor: 0xe0a070, sunDir } });
+    const LU = lens.uniforms, blurK = renderer.getDrawingBufferSize(new T.Vector2()).y / 900;
+    LU.band.value.set(0.5, 0.5);
+
+    // the prototype's camera numbers, mirrored with the hills' corner
+    const [mx, mz] = { ne: [1, 1], nw: [-1, 1], se: [1, -1], sw: [-1, -1] }[spec.hills || 'ne'];
+    const P = (x, y, z) => [x * mx, y, z * mz], G = (x, z, dy) => P(x, L.h(x * mx, z * mz) + dy, z);
+    const VIEWS = {
+      bagong: { target: P(940, 60, -210), cam: P(480, 210, 330), fov: 38, shadow: [900 * mx, -200 * mz, 700], ao: 4 },
+      rocks: { target: P(850, 50, -120), cam: P(700, 60, 90), fov: 45, ao: 2 },
+      woods: { target: P(620, 18, 40), cam: P(560, 30, 120), fov: 45, ao: 1.2 },
+      forest: { target: G(720, -80, 5), cam: G(660, -10, 2.2), fov: 45, ao: 0.8 },
+    };
+    const v = VIEWS[qs.get('shot')] || VIEWS.bagong;
+    camera.fov = v.fov; camera.aspect = W / H; camera.position.set(...v.cam); camera.lookAt(...v.target); camera.near = 1.5; camera.far = 16000; camera.updateProjectionMatrix(); camera.updateMatrixWorld();
+    const aim = (tgt) => {
+      const dist = camera.position.distanceTo(tgt), [sx, sz, ext] = v.shadow || [tgt.x, tgt.z, Math.max(200, dist * 0.8)];
+      sun.position.set(sx, 0, sz).addScaledVector(sunDir, 3000); sun.target.position.set(sx, 0, sz); sun.target.updateMatrixWorld();
+      Object.assign(sun.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext, near: 100, far: 6000 }); sun.shadow.camera.updateProjectionMatrix();
+      LU.focus.value = dist; LU.range.value = Math.max(120, dist * 1.2); LU.maxBlur.value = q.dof ? 2.6 * blurK : 0;
+      LU.aoStrength.value = q.ssao ? 0.85 : 0; LU.aoRadius.value = v.ao || Math.max(1.5, dist * 0.006);
+      LU.near.value = camera.near; LU.far.value = camera.far;
+      LU.projScale.value = renderer.getDrawingBufferSize(new T.Vector2()).y / (2 * Math.tan(T.MathUtils.degToRad(camera.fov) / 2));
+      sky.position.copy(camera.position);
+    };
+    const refocus = () => { trees.userData.focus(camera); rocks.userData.focus(camera); }; // a camera: casters limited to the view
+    aim(new T.Vector3(...v.target)); refocus();
+    let controls = null;
+    if (qs.get('play')) {
+      controls = new T.OrbitControls(camera, cv); controls.target.set(...v.target); controls.enableDamping = true; controls.update();
+      controls.addEventListener('change', () => { v.shadow = null; aim(controls.target); });
+      controls.addEventListener('end', refocus);
+    }
+
+    let time = 0;
+    const render = (dt = 0) => { time += dt; trees.userData.U.uTime.value = time; water.userData.U.uTime.value = time; if (controls) controls.update(); lens.render(); };
+    render(0.5);
+    if (qs.get('measure')) {
+      await new Promise((r) => setTimeout(r, 500)); // let the first frame reach the screen (the software GPU drops the context on back-to-back heavy frames)
+      renderer.info.autoReset = false; renderer.info.reset(); const f0 = performance.now(); lens.render(); renderer.getContext().finish();
+      const measure = K.stats(renderer, scene, { frameMs: performance.now() - f0 }); renderer.info.autoReset = true;
+      window.__extra = { measure, lost: renderer.getContext().isContextLost(), tier: q.tier, trees: trees.userData.count, cells: trees.userData.cells, pillars: rocks.userData.pillars.length, buildMs: Math.round(tBuild - t0), landMs: Math.round(tLand - t0), spec: L.sides };
+    }
+    window.__nature = { renderer, scene, camera, land: L, rocks, trees, render };
+    window.__done = true;
+    if (controls) { let last = performance.now(); const loop = (now) => { render((now - last) / 1000); last = now; requestAnimationFrame(loop); }; requestAnimationFrame(loop); }
+  } catch (e) { console.error(e); window.__error = String(e.stack || e); }
+})();
+</script></body></html>
