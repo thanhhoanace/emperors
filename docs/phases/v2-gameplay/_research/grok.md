@@ -1,8 +1,301 @@
 # Grok research — phase v2-gameplay
 
-> **Ngày:** 2026-09-28
+> **Inbox.** Không phải SOT. Không sửa WORKING.md (đúng AGENTS.md luật 3). Mỗi tool một file; gói sau ghi nối vào đây.
+> **Nhánh đọc:** `claude/gracious-pasteur-6s8fmk`.
+
+Gói A (sáng 28/9): cảm nhận cộng đồng ngã rẽ ngắn vs chiến dịch.
+Gói B (chiều 28/9): chủ dự án chơi spike 2 — quẹt được nhưng chán; review Claude; swipe vs Civ/TW; trend 2026; RoK; gợi ý.
+
+---
+
+# GÓI B — 2026-09-28 chiều (sau playtest spike 2)
+
+> **Câu hỏi chủ dự án:** quẹt được rồi nhưng chán, trôi, win/thua không sao, không thưởng. Swipe có lượng khách / cộng đồng hào hứng không? Reigns hay Civ/TW3K? Làm mobile + YouTube, không PC. Trend 2026? Quay phase 1 nhưng đổi swipe → ra quyết định như Civ/TW còn ổn trên mobile không? RoK đông vì sao?
+> **Nguồn:** Reddit, X, Steam, blog, YouTube creator, review store. Discord chỉ qua số dev công bố (OpenFront 65k), không đọc được log nội bộ.
+> **HEAD lúc viết:** `7febf815` (spike 2 canvas).
+
+---
+
+## B0. Phản hồi chủ dự án (nguyên ý)
+
+- Quẹt được.
+- Chán. Lối chơi không hấp dẫn.
+- Quẹt thẻ = cảm giác trôi tuột.
+- Win cũng được, thua cũng không sao.
+- Không phần thưởng, không hấp dẫn.
+- Muốn dòng mobile / YouTube game, không PC.
+- Ý: bỏ swipe làm xương sống, quay phase trước, ra lệnh / ra quyết định kiểu Civ/TW.
+
+Đây là tín hiệu playtest, không phải ý kiến thị trường. Phần dưới đối chiếu với cộng đồng.
+
+---
+
+## B1. Review khó tính — cách xây, engine, gameplay Claude (spike 1–2 + UI v1)
+
+### Cách xây
+
+Trong ~12 giờ Claude: gom research, tự synthesis (lệch luật 4, tự ghi), 12 câu, `DECISION.md`, spike 1, bị chủ chê nhiều nút / không bấm canvas, spike 2 lại trên canvas Design — đúng bề mặt đã chết ở spike 1. DECISION mục 8 đã viết HTML + `npm start`; cùng ngày đổi hình thức.
+
+Hậu quả: luật v2 sống trong `spike2/Main.dc.html` (~80KB, 69 hàm), `sim.js` parse script bằng regex. Không chung một hàm với `src/engine`. Freeze v2 từ spike này là khóa file ném.
+
+Vi phạm tinh thần AGENTS: "có vui không = spike không phải báo cáo" rồi vẫn chồng markdown; "không code luật mới trước freeze v2" rồi nhét luật vào HTML design.
+
+Tối ưu *trông tiến triển*. Không tối ưu *một người chơi được một ván trên máy mình rồi muốn ván nữa*.
+
+### Engine v1 (`src/engine`)
+
+Phần lõi (Grok, trước đó): deterministic, mulberry32, không DOM, envelope lượt — ổn.
+
+Luật combat vẫn hỏng. `defenseOf` chia tổng quân đều số châu. Đo đúng 27/9 (F1, churn 1,6–2,0 châu/đánh), không sửa vì lane. Spike viết đồn theo châu; `engine.js` vẫn chia đều.
+
+Nợ biết mà để: observation mất `code` (“Biến cố trong nước”); stratagem mất `sub`; `observePact` mất `code`. Game nói dối người chơi — đúng triệu chứng "xem chứ không chơi".
+
+`decide()` đọc state thật. Perception chỉ bọc người. Máy biết tỉ lệ; người học bằng chết.
+
+### UI v1 Claude (`player-ui.js`, overlay)
+
+Năm nút lệnh, danh sách đích, checkbox bội minh, sứ giả, nhật ký. Bản đồ `pointer-events: none`. Architecture đúng (lệnh qua controller). Game sai: người muốn bấm đất. `terrain.js` 69KB là screensaver.
+
+### Spike 2 — hướng đúng hình, luật đồ chơi
+
+Có: một quyết định, hai phía, số, bản đồ khoanh chỗ.
+
+Hỏng:
+
+- Generator chọn đích dễ nhất (`p >= 0.2`). Người không chọn *ô*. Gật/lắc trên chỗ máy chọn.
+- In `%` thắng trên thẻ = spoiler. Não tắt.
+- Xưng bá 6/20 châu; thua khi nhà khác 11. Timer giả, không phải tranh bá.
+- Cân bằng 60 ván/đế: Tần gật hết **80%**; Minh gật hết **8%**; Đường cẩn thận **22%**. Gật hết Tần dễ hơn đọc bài.
+- 98–209 lần chạm / ván, p90 Đường **570**. Không phải "nghĩ ít như cờ".
+- Tri thức đế = hệ số (mộ +50%, lương +50%), không phải nước đi.
+- AI đọc sự thật. Lại v1.
+
+Chấm nhanh: kỷ luật yếu; lõi engine khá; combat v1 hỏng; UI v1 sai chỗ; spike 2 cảm giác đúng hướng, luật chưa đáng freeze.
+
+---
+
+## B2. Swipe có người chơi không? Cộng đồng có hào hứng không?
+
+### Số lượng
+
+| Game | Quy mô | Ghi chú |
+|---|---|---|
+| Reigns gốc (2016) | ~2 triệu bản tới 2019; series **~4 triệu người chơi** (Devolver, 10 năm, 2026) | Tháng đầu ~600k / ~$1tr. ~50% iOS, 30% Android, 20% Steam |
+| Reigns Steam | ~170k bản ước; CCU trung bình 10–20 | 87% positive / ~8k review — khen lúc ra |
+| Reigns: Three Kingdoms | Steam **Mixed 52%** (~320–360 review); CCU 1–3 | Cùng đề tài spike 2 |
+| Reigns: The Witcher (2026) | Steam peak launch **179 CCU**; Android đầu ~1.000 tải | IP lớn không cứu thể loại |
+| Lapse: A Forgotten Future | Play **10M+** (ước 16–17tr); 4,7★; ~30–55k tải/tháng | F2P + ads. Lượng vì miễn phí |
+
+Swipe **có** thị trường premium 2016. Không có bằng chứng thể loại đang phình 2026.
+
+### Reddit / Steam / blog / X
+
+Launch 2016: hào hứng. Jacksepticeye ~3tr view/video; series Reigns ~50tr view / ~4.000 video (Let's Play Index). Reddit: "perfect commute", "CK2 pop-up events".
+
+Sau 1–3 giờ, cùng các thread:
+
+- "Bored almost immediately… 24-hour game jam."
+- "Grew bored with GoT Reigns within an hour."
+- "Coin flip until the card you need."
+- Three Kingdoms: swipe to advance, thẻ lặp, không đổi hệ quả.
+
+X 2024–2026: chủ yếu bài phát hành Nerial/Devolver, không có scene meta.
+
+Câu Reddit đúng giá $3: *ba giờ đáng nhớ, có thể không bao giờ mở lại.* Đó là đồ chơi, không phải dòng người ta theo năm.
+
+### Vì sao Reigns gốc hút — spike 2 thiếu đúng các móc
+
+Alliot: quẹt là đồ chơi (Tinder); game sống khi gắn trọng lượng.
+
+1. Bốn thanh **căng hai đầu** — đầy cũng chết. Spike 2: số tăng, gật hết Tần 80%.
+2. Hậu quả trễ. Spike 2 in toán trên thẻ.
+3. Chết có mặt (thiêu, đảo, treo). Spike 2: "11 châu" / "mất đất lần hai".
+4. Mở giữa các mạng (thẻ, quest, nhớ kiếp). Spike 2: đổi đế / chơi lại, không mở gì.
+5. Ít thẻ, mỗi thẻ nặng. Spike 2: 200 tap.
+
+Kết luận gói này: **swipe không phải dead market 2016; swipe làm xương sống tranh bá 2026 là dead cho hướng Emperors** — vì cộng đồng không hào hứng, YouTube không sống bằng ngón cái, và chủ dự án đã chơi thấy trôi.
+
+---
+
+## B3. Reigns vs Civ / TW3K — ai làm gamer thích thú
+
+Không cùng cân. Câu hỏi là *nhiệt*, không phải so doanh thu indie vs AAA.
+
+| | Reigns series | Civ VI | TW3K |
+|---|---|---|---|
+| Quy mô | ~4tr người chơi series | >11tr bản | Steam Spy 2–5tr owner |
+| Steam CCU đỉnh | gốc nhỏ (đơn vị nghìn / trăm) | 162k+ launch | **192k** (kỷ lục RTS Steam) |
+| CCU còn sống | vài chục | hàng chục nghìn | ~3,5k TB / ~7k peak tháng |
+| YouTube | ~50tr view series | Civ VI **~1,13 tỷ view / 181k video** | clip chiến dịch + trận đều |
+| Review cảm xúc | cute / lặp / hết bài | một vòng nữa | tướng + bản đồ |
+
+Reigns: Three Kingdoms (cùng đề tài) **52% Mixed** — đề tài không cứu swipe.
+
+Mobile + YouTube cắt đôi:
+
+- **Mobile play:** swipe hợp máy (80% ds Reigns gốc ở điện thoại). Một tay, 3–10 phút.
+- **YouTube:** swipe xấu. Hit 2016 là face cam + chết hài, không phải thế cờ. Civ / TW / OpenFront sống vì bản đồ đổi hình.
+
+Muốn cả hai kênh bằng một lối quẹt: mobile nhỏ, YouTube gần như không.
+
+---
+
+## B4. Trend 2026 (Reddit / Steam / creator / wishlist)
+
+Không phải năm của "Civ đầy đủ trên phone". Không phải năm swipe trở lại.
+
+### Đang nóng — hàng xóm cơ chế
+
+**OpenFront** (trình duyệt RTS lãnh thổ, đánh vào đất, minh, phản, nuke):
+
+- Dev: **>200k người/ngày**, 21tr người từng vào, 47tr view YouTube, 5.500 video / 142 creator, **65k Discord**, **240k wishlist** trước khi bán Steam (EA 17/9/2026).
+- Tháng 7/25 → 7/26: số ván 1,07tr → 4,98tr.
+- Reddit: annex, snowball, phản minh — không nói menu.
+
+**9 Kings / Thronefall / The King is Watching:** run 10–15 phút, combo hiện ra. 9 Kings CCU ổn vài trăm–vài nghìn năm sau. Reddit so ba game: thích độ sâu *trong run ngắn*.
+
+**Polytopia:** còn sống mobile; X vẫn nhắc. Than: hết bài toán, không phải "sao không dài như Civ".
+
+**Roguelite / deck 2026:** StS 2, Hades II, Balatro-dòng nuốt attention. r/roguelites xin "4X-lite + run 20–30 phút".
+
+### Bài học, không phải mẫu
+
+**Civ VII:** Steam Mixed **~47% / 62k review**. Than: Age reset cụt, UI giấu số, không cảm giác Civ. Một thời gian Civ VI già đông CCU hơn bản mới. Cộng đồng không xin thêm quẹt; xin đừng cắt công đã bỏ.
+
+**Civ VI mobile (Aspyr):** một phần khen Civ đủ trên máy; đa số than giá DLC, crash, pin, cloud chết. Written iOS ~3.2, negative >50%. Cái chết của *Civ nguyên bản trên phone*, không phải cái chết của *ra lệnh*.
+
+**House of Legacy:** Very Positive ~83%. Khen mất đếm giờ vì hôn nhân / kế vị. Gần fantasy xuyên không — nhưng PC nhiều buổi, không ván 20 phút.
+
+Steam 2026 nói chung: action/horror/sim (RE Requiem, Timberborn 1.0…). Không đối thủ trực tiếp; chỉ cho thấy PC mua *thấy hệ thống chạy*.
+
+---
+
+## B5. Cơ chế "ra quyết định như Civ/TW" còn phù hợp? Ổn mobile?
+
+**Còn — nếu hiểu là một lệnh có trọng lượng trên bản đồ, không phải port Civ.**
+
+Người chơi (r/civ, r/totalwar, OpenFront, Steam 9 Kings) vẫn muốn:
+
+- Chỉ vào một chỗ, nói đánh / đắp / kết minh.
+- Thấy hậu quả mùa sau trên đất.
+- Kể được vì sao thua.
+
+Họ **không** muốn trên mobile: năm tab, hàng đợi 8 mùa, World Congress, tooltip bị ngón tay che.
+
+| Ổn trên phone | Chết trên phone |
+|---|---|
+| Chạm châu / thành = chọn đích | Menu 5 lệnh + 3 lớp submenu |
+| Một quyết định chính / mùa, 15–25 phút | 200 tap / ván |
+| Số ít, lớn, trên bản đồ | Band chữ + 4 tab tình báo |
+| Kết thúc theo cốt | 48 mùa để "đủ Civ" |
+
+OpenFront/Polytopia sống mobile vì thao tác là đất. Aspyr Civ sống lay lắt vì mang cả PC xuống.
+
+YouTube cần châu đổi màu, tướng chết, minh vỡ trong 30 giây nhìn. Phase 1 có hình; thiếu tay trên đất.
+
+Không ổn: nhét lại thuế / hàng đợi / bốn lớp tướng / tin trễ nhiều mùa vào một ván mobile. Đó là wishlist interview 27/9 (“muốn sau khi xem v1”), lệch miệng “vào là chơi”.
+
+---
+
+## B6. RoK đông vì đâu
+
+Không phải vì 4X hay. Lilith bán **mùa giải xã hội + sợ tụt**.
+
+Giữ chân thật (r/RiseofKingdoms, YouTube alliance, kể khi đang chửi):
+
+1. KvK / liên minh — ở vì nhóm.
+2. Lịch sự kiện 24/7 — luôn có việc hôm nay.
+3. Tướng sưu tầm + P2W tăng tốc — F2P "trang trí núi".
+4. YouTube drama kingdom.
+
+Than 2025–2026 lặp:
+
+- P2W, farm-kill, zeroed khi migrate.
+- **Piloting** (ca trực 24/7) phá KvK — địch không bao giờ offline.
+- Content 2026 half-baked.
+- "I quit after 5 years" là genre post.
+
+Một người + agent **không copy RoK**. Học phần bản đồ chung + đánh đất + minh có nghĩa. Đừng học live-ops.
+
+Tam Quốc mobile VN đang đầy clone RoK = chỗ tiền, không phải chỗ anh thắng bằng sống-ops.
+
+---
+
+## B7. Gợi ý (giả thuyết nghiên cứu, không chốt luật)
+
+### Hướng
+
+1. **Bỏ swipe làm xương sống.** Giữ quẹt/Ó-Không chỉ cho sứ giả / phản ứng.
+2. **Quay phase 1 về mặt tay:** chạm đất = đích. Một lệnh chính / mùa. Bản đồ không còn `pointer-events: none`.
+3. **Nước đi phải đổi bàn ngay.** Đánh, đồn, chiêu hàng, kết minh — thấy châu đổi chủ / lũy / minh. Không bốn thanh Tinder, không sổ sách Civ VII.
+4. **Ván có mặt.** Thắng/thua kể được một câu. Không khóa 6/11 châu tùy tiện, không 200 quẹt.
+5. **Không freeze v2 từ spike 2.** Artifact luật không ổn định, cân bằng lệch, chủ dự án đã chán.
+6. **Không làm RoK.** Không làm Civ đầy đủ trên phone.
+7. **Sửa F1 đồn theo châu trong engine** trước khi đẻ prototype thứ ba. Đo đã có từ 27/9.
+8. Spike tiếp (nếu cần) = **HTML `npm start`**, bấm đất, một lệnh, 15–25 phút. Không canvas.
+
+### Đo thành công (gắn DECISION đã chốt, đổi thao tác)
+
+Giữ: lựa chọn đầu < 60 giây; ván quen 15–25 phút; kể được một lựa chọn đổi thế; tự bấm ván nữa > 40%; đổi đế ván sau.
+
+Bỏ làm mốc chính: số lần quẹt. Thêm: người chỉ được ô trên bản đồ trước khi xác nhận.
+
+### Việc không làm
+
+- Không viết `GAMEPLAY-FREEZE.md` v2 từ spike 2.
+- Không thêm thuế / hàng đợi / 4 lớp tướng vào ván ngắn.
+- Không in `%` thắng trên UI người.
+- Không đẻ spike canvas thứ ba.
+
+---
+
+## B8. Nguồn gói B (rút)
+
+Swipe / Reigns:
+- Devolver / VideoGamer 2026: series 4tr người chơi
+- Polygon / PocketGamer 2016: 600k / $1tr tháng đầu; 50/30/20 nền
+- Wikipedia Reigns: 2tr bản tới 2019
+- Steam Reigns: Three Kingdoms Mixed 52%
+- Raijin / Steam charts Reigns CCU thấp
+- Business Insider PL: Witcher launch 179 CCU
+- AppBrain / Play: Lapse 10M+
+- Let's Play Index: Reigns ~50tr view; Civ VI ~1,13 tỷ
+- r/AndroidGaming, r/Games, r/iosgaming threads Reigns bored / commute
+- Alliot GDC / Gamedeveloper / PC Gamer: Tinder + 4 meters
+- RPS, Indie Corner, Hooked Gamers: Three Kingdoms lặp
+
+Trend / map strategy:
+- Steam news OpenFront 2026-08 / 2026-09: 200k DAU, 240k wishlist, 65k Discord, 47tr YT
+- r/Openfront, r/9Kings, r/Polytopia
+- Tracker 9 Kings CCU
+- Steambase Civ VII ~47% / 62k review
+- Digra / PC Gamer / PCZ: Age reset, Test of Time
+- AppHunter Civ VI iOS review sentiment
+- Steambase House of Legacy ~83% VP
+
+RoK:
+- r/RiseofKingdoms quit / zeroed / piloting 2025–2026
+- YouTube alliance: KvK piloting, content drought 2026
+
+Nội bộ:
+- `docs/phases/v2-gameplay/DECISION.md`, `WORKING.md`, `spike2/`
+- `src/engine/engine.js` `defenseOf`
+- `src/world/player-ui.js`
+
+---
+
+## B9. GAP gói B
+
+- Discord OpenFront / RoK không đọc được log; dùng số dev công bố + Reddit/YouTube.
+- Chưa có số phút thật chủ dự án chơi spike 2 (chỉ cảm nhận).
+- Câu "có vui không" vẫn chờ spike bấm đất, không chờ thêm swipe.
+
+---
+---
+
+# GÓI A — 2026-09-28 sáng (ngã rẽ ngắn vs chiến dịch)
+
 > **Câu hỏi (WORKING.md → Next research):** cảm nhận cộng đồng về strategy ngắn và chiến dịch dài (Reddit, X, diễn đàn Việt); lời than ván ngắn "cụt" và chiến dịch "bỏ dở". Bổ sung bằng chứng thị trường + DNA Loạn 12 Sứ Quân / xuyên không mà chủ dự án nêu 28/9.
-> **Vai trò:** inbox. Không phải SOT. Không sửa WORKING.md ở lượt này (AGENTS.md luật 3). Không chốt luật.
 > **HEAD đọc:** `claude/gracious-pasteur-6s8fmk` @ 4042ce23 (2026-09-28).
 
 ---
@@ -16,7 +309,7 @@ Hai ngã rẽ chủ dự án đặt 28/9:
 1. Vào là chơi: join, nghĩ ít, kết quả nhanh, kích thích chơi liên tục như cờ.
 2. Chiến dịch: tính toán, chi tiết, căng thẳng, mất nhiều thời gian.
 
-WORKING.md đã ghi mâu thuẫn Claude vs ChatGPT: Claude nghiêng ngã 1; ChatGPT (chưa có file trong repo) nói bằng chứng *không* chứng minh nhóm thích ngắn đông hơn. Grok không phân xử tranh chấp đó bằng doanh thu. Grok phân xử bằng *lời người chơi nói về cảm giác cụt / bỏ dở*.
+WORKING.md đã ghi mâu thuẫn Claude vs ChatGPT: Claude nghiêng ngã 1; ChatGPT nói bằng chứng *không* chứng minh nhóm thích ngắn đông hơn. Grok không phân xử tranh chấp đó bằng doanh thu. Grok phân xử bằng *lời người chơi nói về cảm giác cụt / bỏ dở*.
 
 ---
 
@@ -51,9 +344,9 @@ Polytopia là đối chứng gần nhất với ngã 1 (Civ cô đọng, ~30 lư
 
 Lời khen lặp trên r/AndroidGaming và r/Polytopia từ 2016: "scratches that Civilization itch without taking 20 hours"; "finished my first match on the toilet"; "no grindiness". [r/AndroidGaming 5fy5yy]
 
-Lời chê "nông": review kiểu "quicker, less complicated Civilization for impatient people"; "over in 45 minutes". Đây là giọng *người đang so với Civ*, không phải giọng người đã chọn ván ngắn rồi thất vọng. [r/EnoughMuskSpam + Substack Karpf]
+Lời chê "nông": review kiểu "quicker, less complicated Civilization for impatient people"; "over in 45 minutes". Đây là giọng *người đang so với Civ*, không phải giọng người đã chọn ván ngắn rồi thất vọng.
 
-Bên trong cộng đồng Polytopia, than "cụt" ít hơn than "đừng bảo tôi đi chơi Civ". Thread 2020 "Please stop saying if you want complexity go play civ": người chơi muốn *thêm chiều sâu trong cùng khuôn 30 lượt* (mastery, tribe matchup, map), không muốn kéo dài thành campaign. Comment: "Polytopia has WAY more to it than meets the eye" / "hard to master". [r/Polytopia kheftj]
+Bên trong cộng đồng Polytopia, than "cụt" ít hơn than "đừng bảo tôi đi chơi Civ". Thread 2020 "Please stop saying if you want complexity go play civ": người chơi muốn *thêm chiều sâu trong cùng khuôn 30 lượt* (mastery, tribe matchup, map), không muốn kéo dài thành campaign. [r/Polytopia kheftj]
 
 2025, người 1650 ELO / 900 ván: game là bài toán "achieve X with given conditions", không phải xây đế chế. Replay đến từ *đối thủ + tribe + map*, không từ meta ngoài ván. [r/Polytopia 1kn9xfv]
 
@@ -108,7 +401,7 @@ Số đo 27/9 (giữ để đối chiếu, nguồn Claude B.4): ván đã dài 3
 
 ---
 
-## 6. Giả thuyết nghiên cứu (không chốt)
+## 6. Giả thuyết nghiên cứu gói A (không chốt)
 
 1. **Hai ngã rẽ là hai sản phẩm.** Không phải hai độ khó của một game. Cộng đồng than khác loại ở mỗi ngã.
 2. **GAP "cụt vs bỏ dở" không đối xứng.** Bỏ dở campaign là đa số và được chấp nhận. Cụt ở ván ngắn là lời của người đo nhầm thước, hoặc của game hết bài toán. Không suy ra "thị trường thích ngắn hơn". Suy ra: *nếu chọn ngã 1, đo replay và độ rõ của nước đi, đừng đo bằng fantasy đế chế*. *Nếu chọn ngã 2, chấp nhận đa số không xong ván và phải làm đầu game đáng chơi*.
@@ -121,7 +414,7 @@ Số đo 27/9 (giữ để đối chiếu, nguồn Claude B.4): ván đã dài 3
 
 ---
 
-## 7. Nguồn (rút)
+## 7. Nguồn gói A (rút)
 
 Cộng đồng:
 - https://www.reddit.com/r/civ/comments/1ipxh2m/
@@ -148,8 +441,7 @@ Nội bộ:
 
 ---
 
-## 8. GAP còn lại (không mở vòng 3)
+## 8. GAP gói A (không mở vòng 3)
 
-- `_research/chatgpt.md` vẫn thiếu — WORKING.md đòi dán nguyên văn.
-- Diễn đàn Việt (Vozer / Tinhte / group Tam Quốc mobile) không lấy được quote sạch ở lượt này; tựa Tam Quốc VN nói nhiều về pay-to-win / auto hơn là độ dài ván. Đừng suy từ slop quảng cáo.
-- Câu "có vui không" vẫn chờ spike Claude, không chờ thêm báo cáo.
+- Diễn đàn Việt (Vozer / Tinhte / group Tam Quốc mobile) không lấy được quote sạch ở lượt đầu; tựa Tam Quốc VN nói nhiều về pay-to-win / auto hơn là độ dài ván.
+- Câu "có vui không" đã có câu trả lời playtest ở gói B.
