@@ -79,7 +79,7 @@ Chuyển từ `docs/design/prototypes/siege/sg-nature.js`, giữ tên hàm để
 
 | Mô-đun | Agent | Trạng thái |
 | --- | --- | --- |
-| quality.js | A | đang làm |
+| quality.js | A | xong (`995d3c0`): pick/detect/monitor/hud, 10 test; `game.html` dò GPU trước khi dựng, `?tier=`, `?hud=1`, tự hạ SSAO/DOF khi khung chậm và nhớ mức cho lần sau |
 | nature.js | B | đang làm |
 | han-models.js + battle.js | C | đang làm |
 | crowd.js | D | đang làm |

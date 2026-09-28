@@ -12,6 +12,7 @@
 <script src="src/engine/attach-219.js"></script>
 <script src="src/engine/perception.js"></script>
 <script src="src/world/kit.js"></script>
+<script src="src/world/quality.js"></script>
 <script src="src/world/city.js"></script>
 <script src="src/world/hancity.js"></script>
 <script src="src/world/terrain.js"></script>
@@ -30,10 +31,22 @@
 //             sees what the engine lets them know: DecisionContext → menus, TurnObservation → shots, log, world news
 //             (&seed=N fixes the game; &speed=N the playback speed)
 //   ?demo=1   spectator: RuntimeEvent truth on fixtures or one server turn (src/world/demo.js)
+//   quality   the tier (src/world/quality.js) is picked from the GPU before the world is built; &tier=high|mid|low forces
+//             it, &hud=1 shows tier, fps, triangles and draw calls (the owner's reports from real machines), &qa=1
+//             defaults to high so QA shots stay the same on the software GPU. A tier dropped at run time (slow frames)
+//             turns SSAO and DOF off now and is remembered for the next load, where the pixel ratio and shadows follow.
 (async () => {
   const params = new URLSearchParams(location.search);
   const DEMO = params.has('demo');
   const W = Number(params.get('w')) || innerWidth, H = Number(params.get('h')) || innerHeight;
+  const quality = (() => {
+    let override = params.get('tier') || (params.has('qa') ? 'high' : undefined);
+    if (!override) { try { override = localStorage.getItem('tq.tier') || undefined; } catch (e) { /* storage blocked: detect */ } }
+    const probe = document.createElement('canvas'), gl = probe.getContext('webgl2') || probe.getContext('webgl'); // a throwaway context just for the GPU string
+    const q = Quality.detect({ getContext: () => gl }, { override });
+    try { const lose = gl && gl.getExtension('WEBGL_lose_context'); if (lose) lose.loseContext(); } catch (e) { /* the context dies with the canvas anyway */ }
+    return q;
+  })();
   const json = (u) => fetch(u).then((r) => { if (!r.ok) throw new Error(u + ' ' + r.status); return r.json(); });
   const [world, cities, characters, gates, intelRules, fixtures] = await Promise.all([
     json('data/world.json'), json('data/cities.json').then((j) => j.cities), json('data/scenario/characters.json'),
@@ -64,8 +77,20 @@
   });
   window.__game = { Engine, ctrl, ui, world, ready: false };
 
-  const rt = await WorldRuntime.create({ world, cities, width: W, height: H, dpr: Number(params.get('dpr')) || Math.min(1.5, devicePixelRatio || 1), base: 'assets/map/' });
+  const rt = await WorldRuntime.create({ world, cities, width: W, height: H, dpr: Number(params.get('dpr')) || Math.min(quality.dpr, devicePixelRatio || 1), quality, base: 'assets/map/' });
   document.getElementById('loading').remove();
+  // frame times from consecutive renders (playback runs a render loop; idle gaps over half a second do not count)
+  const monitor = Quality.monitor(rt.renderer, (tier, why) => {
+    Object.assign(quality, Quality.TIERS[tier], { tier, reason: why }); // rt reads this object: later views keep the caps
+    const LU = rt.lens.uniforms; if (!quality.ssao) LU.aoStrength.value = 0; if (!quality.dof) LU.maxBlur.value = 0;
+    try { localStorage.setItem('tq.tier', tier); } catch (e) { /* no storage: the drop lasts this page only */ }
+  });
+  const qhud = Quality.hud(null, () => ({ tier: quality.tier, reason: quality.reason, fps: monitor.fps, triangles: rt.renderer.info.render.triangles, calls: rt.renderer.info.render.calls, gpu: quality.info.gpu }));
+  if (qhud.el) { // bottom left: the top right holds the news card
+    Object.assign(qhud.el.style, { top: 'auto', right: 'auto', bottom: '8px', left: '8px' });
+    rt.renderer.info.autoReset = false; // counted over the whole frame (shadow pass, scene, lens), reset by the wrapper below
+  }
+  { const render0 = rt.render; let lastT = 0; rt.render = () => { const now = performance.now(); if (lastT && now - lastT < 500) monitor.frame(now - lastT); lastT = now; if (qhud.el) { rt.renderer.info.autoReset = false; rt.renderer.info.reset(); } render0(); qhud.tick(now); }; }
   const hud = WorldHud.create({ colors, glyphs, names: WorldNames });
   const presenter = EventPresenter.create(rt, { world, characters, names: WorldNames, hud });
   const seats = new Set(world.factions.map((f) => f.start.seat));
