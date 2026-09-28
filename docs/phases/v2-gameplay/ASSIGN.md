@@ -9,8 +9,8 @@
 | 2. Freeze v2 | Claude viết, GPT đọc phản biện | Freeze là tổng hợp từ DECISION + spike, cần nhất quán với engine và test. GPT đọc chéo để bắt chỗ "chặt chẽ nhưng không vui", như đã từng phản đối đúng một kết luận của Claude. | chưa bắt đầu |
 | 3. Trận theo lượt, API thuần | Claude | Có sẵn spike `demo1/src/hn-rules.js` làm mẫu, có `npm run play` và `npm run sim` để cân bằng. | chưa bắt đầu |
 | 4. Dự đoán của tướng | Claude | Cùng lý do mục 3; công thức sai số theo Mưu đã có trong spike. | chưa bắt đầu |
-| 5. Các câu chưa chốt, cách scale lên 20 châu | Grok (chat mới) hoặc GPT | Cần bằng chứng cộng đồng và thị trường thời gian thực. Grok mạnh cảm nhận cộng đồng, GPT mạnh audit thị trường (phần B trước đó). Bản yêu cầu trong `WORKING.md` viết để chat mới đọc được. | chưa giao |
-| Thoại, personas, kịch bản | Grok | Grok đã làm từ đầu, giọng nhất quán. | tiếp tục |
+| 5. Các câu chưa chốt, cách scale lên 20 châu | Grok (chat mới) hoặc GPT | Cần bằng chứng cộng đồng và thị trường thời gian thực. Grok mạnh cảm nhận cộng đồng, GPT mạnh audit thị trường (phần B trước đó). Bản yêu cầu trong `WORKING.md` viết để chat mới đọc được. | tạm dừng, chờ chủ dự án |
+| Thoại, personas, kịch bản | Grok | Grok đã làm từ đầu, giọng nhất quán. | tạm dừng, chờ chủ dự án |
 
 ## Cách giao
 
@@ -18,5 +18,7 @@
 - **GPT (đọc phản biện mục 2):** dán `DECISION.md`, freeze v2 nháp, và câu hỏi: "Chỗ nào chặt chẽ nhưng không vui? Chỗ nào người chơi phải nghĩ nhiều hơn một lần quẹt/chạm?" Dán nguyên văn trả lời vào `_research/chatgpt.md` (ghi ngày và câu hỏi ở đầu, luật 9 `AGENTS.md`).
 - **Grok hoặc GPT (mục 5):** mở chat mới, dán mục 5 của `WORKING.md` "Việc cho Grok" cộng `DECISION.md` mục "Chưa chốt". Kết quả vào `_research/grok.md` hoặc `_research/chatgpt.md` (một file mỗi tool, ghi đè). Synthesis vào `WORKING.md` do tool khác làm (luật 3–4).
 - **Grok (thoại, personas, kịch bản):** như cũ, `data/personas/**`, `data/scenario/**`, `docs/product/scenario.md`.
+
+**Chủ dự án, 28/9 khuya:** Claude làm mục 1 → 3 → 4 → 2 sau khi xong phần hình đang chạy (`docs/design/visual-build.md`); phần GPT (phản biện mục 2) và Grok (mục 5, thoại) tạm dừng, chủ dự án sẽ cho làm sau.
 
 Cập nhật cột "Trạng thái" khi bắt đầu / xong (ghi commit).
