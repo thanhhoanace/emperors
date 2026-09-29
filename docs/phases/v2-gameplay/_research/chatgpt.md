@@ -934,6 +934,6 @@ Không cần research rộng thêm. Chỉ cần owner chốt 4 điểm product c
 1. **Battle:** accept-plan + optional override, hay bắt ra lệnh mọi cánh?
 2. **Entity orders:** “mỗi quân/thành tối đa một việc” hay bắt phải xử lý từng entity trước Hết mùa?
 3. **City UI Demo:** hiện toàn bộ 5–6 việc hay chỉ 2–3 việc hợp context rồi mở “thêm”?
-4. **Freeze structure:** chuyển các exact numbers / Demo Hoài Nam sang section Demo, để Core chỉ giữ behavior; scale 20 châu nằm Open như owner đã chọn.
+4. **Freeze structure đã được owner chốt trước review:** Core / Demo Hoài Nam / Open scale 20 châu. Đây không còn là câu hỏi; bước sau chỉ là reorganize draft theo cấu trúc đó.
 
-Nếu chốt theo hướng giảm bắt buộc thao tác, Freeze v2 có thể khóa mà không cần đổi kiến trúc engine hiện tại.
+Ba quyết định còn lại đều là interaction contract. Nếu chốt theo hướng giảm bắt buộc thao tác, Freeze v2 có thể khóa mà không cần đổi kiến trúc engine hiện tại.
