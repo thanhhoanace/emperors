@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,">
+<title>Âm thanh · bảng nghe</title>
+<!-- Audition board for src/world/huainan-audio.js (docs/design/v2-polish.md, job 8): every cue, every mood and season, the ambience,
+     a level meter, a piano roll of the generated music, the game's events faked one by one, and an offline measurement of the lot.
+     Serve the repo root and open /docs/design/prototypes/audio.html (add ?audio=lite to hear the phone path). Nothing plays until the
+     first tap (autoplay policy). window.__audio.measureAll({ quick }) renders every cue and mood offline and returns the levels
+     (tests/e2e/audio-measure.mjs drives it). -->
+<style>
+:root{--bg:#15120f;--panel:#1f1a15;--line:#3a3128;--ink:#e9e0cc;--mute:#a89a7e;--gold:#e2bf6c;--red:#b3262e;--ok:#98d494;--bad:#f08a72}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Be Vietnam Pro","Noto Serif",Georgia,serif}
+main{max-width:1000px;margin:0 auto;padding:18px 16px 60px}
+h1{font-size:24px;letter-spacing:.04em;margin:0 0 4px;color:var(--gold);font-weight:700}
+h2{font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin:26px 0 10px;font-weight:600}
+p.lead{color:var(--mute);margin:0 0 14px;max-width:70ch}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 13px;cursor:pointer;touch-action:manipulation;min-height:38px}
+button:hover{border-color:var(--gold)}button:active{background:#2a2219}
+button.on{background:#3b2a12;border-color:var(--gold);color:var(--gold)}
+button.big{background:var(--red);border-color:#d8434b;color:#fff;font-weight:700;padding:10px 20px}
+.grp{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;margin:0 0 10px}
+.grp h3{margin:0 0 8px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);font-weight:600}
+label{color:var(--mute);font-size:13px;display:inline-flex;align-items:center;gap:8px}
+input[type=range]{accent-color:var(--gold);width:150px}
+input[type=number]{width:90px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit}
+canvas{display:block;width:100%;background:#100d0a;border:1px solid var(--line);border-radius:6px}
+#meter{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){#meter{grid-template-columns:1fr}}
+.bars{font:12px/1.6 ui-monospace,Menlo,monospace;color:var(--mute)}
+.bar{height:10px;background:#100d0a;border:1px solid var(--line);border-radius:3px;overflow:hidden;margin:2px 0 6px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#4f8a4a,#d1b04a 78%,#c4453a)}
+table{border-collapse:collapse;width:100%;font:12px/1.5 ui-monospace,Menlo,monospace}
+th,td{border-bottom:1px solid var(--line);padding:4px 6px;text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}
+th{color:var(--mute);font-weight:600}.warn{color:var(--bad)}.good{color:var(--ok)}
+.tblwrap{overflow-x:auto}
+#status{color:var(--mute);font-size:13px}
+.legend{font-size:12px;color:var(--mute);display:flex;gap:12px;flex-wrap:wrap;margin-top:6px}.legend b{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+small{color:var(--mute)}
+</style></head>
+<body><main>
+<h1>Âm thanh · bảng nghe</h1>
+<p class="lead">Mọi tiếng trong v2 đều sinh bằng mã (Web Audio, không có file âm thanh). Bấm để nghe từng tiếng, từng tâm trạng nhạc, từng mùa; xem mức âm, bản nhạc sinh ra, và đo offline toàn bộ. Không có gì kêu cho đến lần chạm đầu tiên.</p>
+
+<div class="row"><button class="big" id="start">Bật âm thanh</button><button id="mute">Tắt tiếng</button><span id="status"></span></div>
+
+<h2>Nhạc và nền</h2>
+<div class="grp"><h3>Tâm trạng</h3><div class="row" id="moods"></div></div>
+<div class="grp"><h3>Mùa (điệu, nhịp, tiếng nền)</h3><div class="row" id="seasons"></div></div>
+<div class="grp"><div class="row">
+  <label>Độ nóng của nhạc <input type="range" id="heat" min="0" max="100" value="50"><span id="heatv">0,5</span></label>
+  <label>Tiếng ồn trận <input type="range" id="din" min="0" max="100" value="0"><span id="dinv">0</span></label>
+  <label>Hạt giống <input type="number" id="seed" value="219" min="1"></label>
+  <button id="reseed">Đổi nhạc</button>
+</div></div>
+
+<h2>Tiếng động</h2>
+<div id="cues"></div>
+
+<h2>Mức âm (đầu ra)</h2>
+<div id="meter">
+  <div><div class="bars"><div>đỉnh <span id="pk">-∞</span> dBFS · RMS <span id="rm">-∞</span> dBFS</div><div class="bar"><i id="pkb"></i></div><div class="bar"><i id="rmb"></i></div></div><canvas id="spec" width="600" height="160"></canvas></div>
+  <div><canvas id="scope" width="600" height="160"></canvas></div>
+</div>
+
+<h2>Bản nhạc sinh ra <small>(mười sáu ô nhịp đầu của tâm trạng và mùa đang chọn, cùng hạt giống)</small></h2>
+<canvas id="roll" width="1000" height="260"></canvas>
+<div class="legend" id="legend"></div>
+
+<h2>Sự kiện của trò chơi (giả lập)</h2>
+<div class="grp"><div class="row" id="events"></div></div>
+<small>Đi qua đúng đường mà v2.html dùng: <code>HuaiNanPlay.on(…)</code> → <code>HuaiNanAudio.wire</code>. Ở đây <code>HuaiNanPlay</code> là bản giả chỉ có <code>on</code> và <code>emit</code>.</small>
+
+<h2>Đo offline</h2>
+<div class="row"><button id="mq">Đo nhanh (mọi tiếng, 6 giây mỗi tiếng)</button><button id="mf">Đo đủ (cộng nhạc 60 giây mỗi mùa, nền, một buổi chơi)</button><span id="mstat"></span></div>
+<div class="tblwrap"><table id="tbl"></table></div>
+
+</main>
+<script>
+// a stand-in for the page's controller: the module wires itself to whatever HuaiNanPlay is there when it loads
+window.HuaiNanPlay = (() => { const L = {}; return { on(t, f) { (L[t] = L[t] || []).push(f); }, emit(t, d) { (L[t] || []).forEach((f) => f(d)); } }; })();
+let CAL = 'Thu 219';
+window.__v2 = { seed: 219, view: () => ({ me: 'zhu_yuanzhang', calendar: CAL, armies: [{ id: 'a1', fid: 'zhu_yuanzhang', arm: 'land', order: { intent: 'attack', target: { kind: 'town', id: 'tho_xuan' } } }, { id: 'a2', fid: 'zhu_yuanzhang', arm: 'fleet', order: { intent: 'move', target: { kind: 'town', id: 'am_lang' } } }] }) };
+</script>
+<script src="../../../src/world/huainan-audio.js"></script>
+<script>
+const A = window.HuaiNanAudio, P = window.HuaiNanPlay, $ = (s) => document.querySelector(s);
+const el = (tag, txt, cls, on) => { const e = document.createElement(tag); if (txt) e.textContent = txt; if (cls) e.className = cls; if (on) e.onclick = on; return e; };
+const VI = { calm: 'Êm (calm)', tension: 'Căng (tension)', battle: 'Trận (battle)', victory: 'Thắng (victory)', defeat: 'Thua (defeat)', off: 'Tắt nhạc' };
+let mood = 'calm', sid = 'thu', k = 0.5, seed = 219;
+
+const setStatus = () => { const s = A.state(); $('#status').textContent = (s.ready ? 'đang chạy' : 'chưa bật (chạm một lần)') + ' · ' + (s.lite ? 'đường nhẹ (điện thoại)' : 'đường đầy đủ') + ' · nhạc ' + s.mood + ' · mùa ' + s.season; $('#mute').textContent = s.muted ? 'Bật tiếng' : 'Tắt tiếng'; $('#mute').classList.toggle('on', s.muted); };
+$('#start').onclick = () => { A.start(); setTimeout(setStatus, 200); };
+$('#mute').onclick = () => { A.mute(!A.muted()); setStatus(); };
+A.onMute(setStatus);
+
+// mood and season buttons
+const moodBtns = {}, seaBtns = {};
+for (const m of A.MOODS) { moodBtns[m] = el('button', VI[m], '', () => { mood = m; A.mood(m, { k }); mark(); roll(); }); $('#moods').append(moodBtns[m]); }
+for (const id of A.SEASON_IDS) { seaBtns[id] = el('button', A.SEASONS[id].name, '', () => { sid = id; CAL = A.SEASONS[id].name + ' 219'; A.season(CAL); mark(); roll(); }); $('#seasons').append(seaBtns[id]); }
+const mark = () => { for (const m in moodBtns) moodBtns[m].classList.toggle('on', m === mood); for (const id in seaBtns) seaBtns[id].classList.toggle('on', id === sid); setStatus(); };
+$('#heat').oninput = (e) => { k = e.target.value / 100; $('#heatv').textContent = String(k).replace('.', ','); A.mood(mood, { k }); roll(); };
+$('#din').oninput = (e) => { const v = e.target.value / 100; $('#dinv').textContent = String(v).replace('.', ','); A.din(v); };
+$('#seed').onchange = (e) => { seed = Number(e.target.value) || 1; window.__v2.seed = seed; roll(); };
+$('#reseed').onclick = () => { seed = (seed * 7 + 13) % 99991 + 1; $('#seed').value = seed; roll(); };
+
+// cue buttons, grouped
+const GROUPS = [
+  ['Chạm giao diện (mềm, nhỏ)', ['tap', 'select', 'confirm', 'cancel', 'skip', 'card']],
+  ['Hết mùa và di chuyển', ['drum', 'endSeason', 'march', 'oars', 'horse', 'camp', 'flag']],
+  ['Trận', ['horn', 'charge', 'volley', 'clash', 'fire', 'breach', 'rout']],
+  ['Khoảnh khắc', ['cheer', 'gong', 'chime', 'victory', 'defeat']],
+];
+const OPT = { select: [['army', { k: 'army' }], ['town', { k: 'town' }]], confirm: [['order', {}], ['task', { k: 'task' }], ['card', { k: 'card' }], ['begin', { k: 'begin' }]], gong: [['lớn', {}], ['nhỏ', { k: 'small' }], ['trầm', { k: 'low' }]], chime: [['Xuân', { season: 'xuan' }], ['Hạ', { season: 'ha' }], ['Thu', { season: 'thu' }], ['Đông', { season: 'dong' }]] };
+for (const [title, names] of GROUPS) {
+  const g = el('div', '', 'grp'); g.append(el('h3', title)); const r = el('div', '', 'row');
+  for (const n of names) {
+    if (OPT[n]) for (const [label, o] of OPT[n]) r.append(el('button', n + ' · ' + label, '', () => { A.start(); A.cue(n, o); }));
+    else r.append(el('button', n, '', () => { A.start(); A.cue(n, {}); }));
+  }
+  g.append(r); $('#cues').append(g);
+}
+
+// events, as the game would emit them
+const B = {};
+Promise.all(['battle-turn3', 'battle-over'].map((n) => fetch('../v2-fixtures/' + n + '.json').then((r) => r.json()).then((j) => { B[n] = j; }).catch(() => {}))).then(() => {});
+const EV = [
+  ['chọn quân', () => P.emit('act', { name: 'onSelect', args: [{ kind: 'army', id: 'a1' }] })],
+  ['chọn thành', () => P.emit('act', { name: 'onSelect', args: [{ kind: 'town', id: 'tho_xuan' }] })],
+  ['chọn đích', () => P.emit('act', { name: 'onTarget', args: [{}] })],
+  ['xác nhận lệnh', () => P.emit('act', { name: 'onConfirmOrder', args: [{ type: 'order' }] })],
+  ['trả lời thẻ: có', () => P.emit('act', { name: 'onAnswer', args: ['c1', true] })],
+  ['trả lời thẻ: không', () => P.emit('act', { name: 'onAnswer', args: ['c1', false] })],
+  ['Hết mùa', () => P.emit('act', { name: 'onEndSeason', args: [] })],
+  ['trận mở', () => P.emit('battle', { bt: {} })],
+  ['bấm Đánh', () => P.emit('act', { name: 'onBattleTurn', args: [{}] })],
+  ['lượt trận (bắn, đánh giáp lá cà)', () => P.emit('turn', { before: null, after: B['battle-turn3'] || { b: { log: [{ ev: [{ kind: 'volley' }, { kind: 'melee' }] }] } }, over: false })],
+  ['lượt cuối: thắng', () => { P.emit('turn', { before: null, after: B['battle-over'], over: true }); P.emit('result', { lb: B['battle-over'] }); }],
+  ['lượt cuối: thua', () => { const lb = JSON.parse(JSON.stringify(B['battle-over'] || { outcome: { win: 'A' }, me: 'A' })); lb.me = 'D'; P.emit('turn', { before: null, after: lb, over: true }); P.emit('result', { lb }); }],
+  ['xong trận', () => P.emit('act', { name: 'onBattleDone', args: [] })],
+  ['thành ta chiếm', () => P.emit('beat', { town: 'tho_xuan', from: 'cao_cao', to: 'zhu_yuanzhang', siege: true })],
+  ['thành ta mất', () => P.emit('beat', { town: 'am_lang', from: 'zhu_yuanzhang', to: 'cao_cao', siege: false })],
+  ['tóm tắt mùa', () => P.emit('report', { season: 'Thu 219' })],
+  ['sang Đông', () => { CAL = 'Đông 219'; sid = 'dong'; P.emit('season', { view: { calendar: CAL } }); mark(); roll(); }],
+  ['sang Xuân', () => { CAL = 'Xuân 220'; sid = 'xuan'; P.emit('season', { view: { calendar: CAL } }); mark(); roll(); }],
+  ['hết ván: thắng', () => P.emit('over', { win: true, why: '' })],
+  ['hết ván: thua', () => P.emit('over', { win: false, why: '' })],
+  ['khóa (móc đang chạy)', () => P.emit('lock', true)],
+  ['mở khóa', () => P.emit('lock', false)],
+  ['chạm bỏ qua', () => P.emit('skip')],
+];
+for (const [label, f] of EV) $('#events').append(el('button', label, '', () => { A.start(); f(); setTimeout(setStatus, 100); }));
+
+// the piano roll: the sequencer's own output, drawn (pitch up, time right; drums along the bottom)
+const COL = { pluck: '#e2bf6c', qin: '#c4553a', glass: '#9ad0e0', flute: '#98d494', taiko: '#b3262e', ka: '#d98a4a', gong: '#e8d28a', horn: '#d19b5a' };
+$('#legend').innerHTML = Object.entries(COL).map(([v, c]) => `<span><b style="background:${c}"></b>${v}</span>`).join('');
+function roll() {
+  const cv = $('#roll'), c = cv.getContext('2d'), W = cv.width, H = cv.height, BARS = 16, m = mood === 'off' ? 'calm' : mood;
+  c.fillStyle = '#100d0a'; c.fillRect(0, 0, W, H);
+  const sec = A.barSec(m, sid, k); let lo = 127, hi = 0; const bars = [];
+  for (let n = 0; n < BARS; n++) { const bp = A.bar(m, sid, seed, n, k); bars.push(bp); for (const e of bp.ev) if (e.n != null && e.v !== 'gong' && e.v !== 'horn') { lo = Math.min(lo, e.n); hi = Math.max(hi, e.n); } }
+  lo -= 2; hi += 2; const top = 6, bottom = H - 30, rh = (bottom - top) / Math.max(12, hi - lo);
+  c.strokeStyle = '#2a2219'; c.lineWidth = 1; for (let n = 0; n <= BARS; n++) { const x = (n / BARS) * W; c.beginPath(); c.moveTo(x, 0); c.lineTo(x, H); c.stroke(); }
+  bars.forEach((bp, n) => bp.ev.forEach((e) => {
+    const x = ((n * 4 + e.b) / (BARS * 4)) * W, w = Math.max(3, (e.d / (BARS * 4)) * W - 1); c.fillStyle = COL[e.v] || '#888';
+    if (e.n != null && e.v !== 'gong' && e.v !== 'horn') c.fillRect(x, bottom - (e.n - lo) * rh - rh, w, Math.max(3, rh - 1));
+    else c.fillRect(x, e.v === 'ka' ? H - 14 : H - 26, e.v === 'ka' ? 3 : e.v === 'taiko' ? 5 : Math.min(w, 60), e.v === 'ka' ? 8 : 12);
+  }));
+  c.fillStyle = '#a89a7e'; c.font = '12px monospace'; c.fillText(`${m} · ${A.SEASONS[sid].name} · ${Math.round(240 / sec)} bpm · 16 ô nhịp = ${(sec * BARS).toFixed(0)} giây`, 8, 14);
+}
+
+// the meter and the scope
+let an = null, buf = null, fbuf = null;
+function meter() {
+  requestAnimationFrame(meter);
+  const E = A.engine(); if (!E) return;
+  if (!an && E.master) { an = E.ctx.createAnalyser(); an.fftSize = 2048; an.smoothingTimeConstant = 0.75; E.master.connect(an); buf = new Float32Array(an.fftSize); fbuf = new Float32Array(an.frequencyBinCount); }
+  if (!an) return;
+  an.getFloatTimeDomainData(buf); let pk = 0, sq = 0; for (const v of buf) { const a = Math.abs(v); if (a > pk) pk = a; sq += v * v; } const rm = Math.sqrt(sq / buf.length), d = (x) => 20 * Math.log10(Math.max(1e-6, x));
+  $('#pk').textContent = d(pk).toFixed(1); $('#rm').textContent = d(rm).toFixed(1); $('#pkb').style.width = Math.max(0, Math.min(100, (d(pk) + 60) / 60 * 100)) + '%'; $('#rmb').style.width = Math.max(0, Math.min(100, (d(rm) + 60) / 60 * 100)) + '%';
+  const sc = $('#scope').getContext('2d'), W = 600, H = 160; sc.fillStyle = '#100d0a'; sc.fillRect(0, 0, W, H); sc.strokeStyle = '#e2bf6c'; sc.beginPath(); for (let i = 0; i < buf.length; i += 2) { const x = (i / buf.length) * W, y = H / 2 - buf[i] * H * 0.45; i ? sc.lineTo(x, y) : sc.moveTo(x, y); } sc.stroke();
+  an.getFloatFrequencyData(fbuf); const sp = $('#spec').getContext('2d'); sp.fillStyle = '#100d0a'; sp.fillRect(0, 0, W, H); sp.fillStyle = '#98d494';
+  const nyq = E.ctx.sampleRate / 2; for (let x = 0; x < W; x++) { const f = 30 * Math.pow(16000 / 30, x / W), i = Math.min(fbuf.length - 1, Math.round(f / nyq * fbuf.length)), y = Math.max(0, Math.min(1, (fbuf[i] + 100) / 100)); sp.fillRect(x, H - y * H, 1, y * H); }
+}
+meter();
+
+// ---- offline measurement
+const fmt = (v, d = 1) => (isFinite(v) ? v.toFixed(d) : '-∞');
+async function timed(spec) { const t0 = performance.now(); const r = await A.render(spec); r.ms = performance.now() - t0; return r; }
+function row(name, kind, sec, r, extra) { const a = A.analyze(r.ch, r.sr, { chroma: !!(extra && extra.chroma) }); return Object.assign({ name, kind, sec, ms: Math.round(r.ms), lite: !!(extra && extra.lite), peakDb: a.peakDb, rmsDb: a.rmsDb, rmsActiveDb: a.rmsActiveDb, shortMaxDb: a.shortMaxDb, dcMax: a.dcMax, clip: a.clip, silent: a.silent, centroid: a.centroid, bands: a.bands, chroma: a.chroma }, extra && extra.tags ? extra.tags : {}); }
+window.__audio = {
+  async measureAll(o) {
+    o = o || {}; const out = [], lite = !!o.lite, seed = 219, stat = (t) => { $('#mstat').textContent = t; };
+    // every cue alone, from 0.25 s, in a 7 s window (the mood cues 20 s)
+    for (const n of A.CUES) {
+      const long = n === 'victory' || n === 'defeat', sec = long ? 20 : 7; stat('cue ' + n);
+      const variants = n === 'select' ? [{ k: 'army' }, { k: 'town' }] : n === 'confirm' ? [{ k: 'order' }, { k: 'begin' }] : n === 'gong' ? [{}, { k: 'small' }, { k: 'low' }] : [{}];
+      for (const v of variants) { const r = await timed({ seconds: sec, lite, seed, script: (E) => E.cue(n, Object.assign({ t: 0.25 }, v)) }); out.push(row(n + (v.k ? ':' + v.k : ''), 'cue', sec, r, { lite })); }
+    }
+    if (o.quick) return out;
+    // a minute of each mood, music alone (ambience off): calm in each season, then the rest; the same with the ambience on ('mix')
+    const MOODS = [['calm', 'xuan'], ['calm', 'ha'], ['calm', 'thu'], ['calm', 'dong'], ['tension', 'thu'], ['tension', 'xuan'], ['battle', 'thu'], ['battle', 'dong'], ['victory', 'thu'], ['defeat', 'thu']];
+    for (const [m, sd] of MOODS) { stat(m + '/' + sd); const r = await timed({ seconds: 60, lite, seed, script: (E) => { E.setSeason(sd, { t: 0 }); E.setMood(m, { t: 0, k: 0.6 }); E.setAmbience({}, { t: 0 }); } }); out.push(row(m + '/' + sd, 'mood', 60, r, { lite, chroma: true, tags: { season: sd, mood: m } })); }
+    for (const [m, sd] of [['calm', 'xuan'], ['calm', 'ha'], ['calm', 'thu'], ['calm', 'dong'], ['battle', 'thu']]) { stat('mix ' + m + '/' + sd); const r = await timed({ seconds: 60, lite, seed, script: (E) => { E.setSeason(sd, { t: 0 }); E.setMood(m, { t: 0, k: 0.6 }); } }); out.push(row('mix:' + m + '/' + sd, 'mix', 60, r, { lite, tags: { season: sd, mood: m } })); }
+    if (o.voices) for (const [m, sd] of [['calm', 'xuan'], ['calm', 'thu'], ['tension', 'thu'], ['battle', 'thu'], ['victory', 'thu'], ['defeat', 'thu']]) {
+      const used = new Set(['drone']); for (let n = 0; n < 24; n++) for (const e of A.bar(m, sd, seed, n, 0.6).ev) used.add(e.v);
+      for (const v of used) { stat('voice ' + m + '/' + sd + ' ' + v); const r = await timed({ seconds: 45, lite, seed, script: (E) => { E.setSeason(sd, { t: 0 }); E.setMood(m, { t: 0, k: 0.6 }); E.setAmbience({}, { t: 0 }); }, voices: [v] }); out.push(row(m + '/' + sd + ':' + v, 'voice', 45, r, { lite, tags: { season: sd, mood: m, voice: v } })); }
+    }
+    // the ambience of each season alone (no music), and the battle din
+    for (const sd of A.SEASON_IDS) { stat('ambience ' + sd); const r = await timed({ seconds: 40, lite, seed, script: (E) => { E.setSeason(sd, { t: 0 }); E.setMood('off', { t: 0 }); E.tick(40); } }); out.push(row('ambience/' + sd, 'ambience', 40, r, { lite })); }
+    { stat('din'); const r = await timed({ seconds: 30, lite, seed, script: (E) => { E.setSeason('thu', { t: 0 }); E.setMood('off', { t: 0 }); E.setDin(1, { t: 0 }); } }); out.push(row('ambience/din', 'ambience', 30, r, { lite })); }
+    // a play session: calm autumn with its ambience, taps, the season's end, a battle from horn to rout to victory, a town, back to calm
+    { stat('session'); const r = await timed({ seconds: 90, lite, seed, script: (E) => {
+      E.setSeason('thu', { t: 0 }); E.setMood('calm', { t: 0 }); E.tick(14);
+      [['select', 3, { k: 'army' }], ['tap', 5], ['confirm', 6.5], ['select', 8, { k: 'town' }], ['confirm', 9.5, { k: 'task' }]].forEach(([n, t, o]) => E.cue(n, Object.assign({ t }, o)));
+      E.cue('endSeason', { t: 11 }); E.cue('march', { t: 12.6, dur: 3.2 }); E.cue('horse', { t: 14, dur: 1.8 });
+      E.setMood('tension', { t: 18 }); E.setDin(0.3, { t: 18 }); E.cue('horn', { t: 20 }); E.tick(30);
+      E.setMood('battle', { t: 30, k: 0.65 }); E.setDin(0.7, { t: 30 }); E.cue('charge', { t: 30.3 }); E.cue('volley', { t: 32.5, n: 3 }); E.cue('clash', { t: 33.6, n: 10 }); E.cue('fire', { t: 35, dur: 2.6 }); E.cue('breach', { t: 37 }); E.tick(46);
+      E.cue('rout', { t: 44 }); E.cue('clash', { t: 44.2, n: 8 }); E.setMood('victory', { t: 47 }); E.setDin(0, { t: 47 }); E.cue('cheer', { t: 48 }); E.cue('flag', { t: 55 }); E.cue('gong', { t: 55.2, k: 'small' }); E.cue('cheer', { t: 55.5, g: 0.7 });
+      E.tick(62); E.setMood('calm', { t: 62 }); E.cue('chime', { t: 66, season: 'dong' }); E.tick(90);
+    } }); out.push(row('session', 'session', 90, r, { lite })); }
+    stat('done'); return out;
+  },
+  render: async (spec) => { const r = await A.render(spec); return { sr: r.sr, n: r.ch[0].length, analysis: A.analyze(r.ch, r.sr, { chroma: true }) }; },
+};
+function table(rows) {
+  const t = $('#tbl'); t.innerHTML = '';
+  const head = ['tên', 'loại', 'giây', 'ms', 'đỉnh dBFS', 'RMS', 'RMS lúc có tiếng', '400ms lớn nhất', 'DC', 'chạm trần', 'trung tâm Hz'];
+  t.append(el('tr', '')); head.forEach((h) => t.lastChild.append(el('th', h)));
+  for (const r of rows) { const tr = el('tr'); const bad = r.peakDb > -0.5 || r.clip > 0 || r.dcMax > 0.002; [r.name, r.kind + (r.lite ? '·nhẹ' : ''), r.sec, r.ms, fmt(r.peakDb), fmt(r.rmsDb), fmt(r.rmsActiveDb), fmt(r.shortMaxDb), r.dcMax.toExponential(1), r.clip, Math.round(r.centroid)].forEach((v, i) => { const td = el('td', String(v)); if (bad && i === 4) td.className = 'warn'; tr.append(td); }); t.append(tr); }
+}
+$('#mq').onclick = async () => { $('#mq').disabled = $('#mf').disabled = true; try { table(await window.__audio.measureAll({ quick: true, lite: A.isLite() })); } finally { $('#mq').disabled = $('#mf').disabled = false; } };
+$('#mf').onclick = async () => { $('#mq').disabled = $('#mf').disabled = true; try { table(await window.__audio.measureAll({ lite: A.isLite() })); } finally { $('#mq').disabled = $('#mf').disabled = false; } };
+mark(); roll(); setStatus(); setInterval(setStatus, 1500);
+</script></body></html>
