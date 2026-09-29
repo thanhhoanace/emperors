@@ -1,0 +1,92 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Battle cinema harness</title>
+<!-- Dev harness for src/world/huainan-cinema.js (docs/design/v2-polish.md, job 1): one shot of the battle cinema at 1 m,
+     on the same director the page uses, from a fixture battle or one made here with EmperorsBattle.
+     Serve the repo root and open /docs/design/prototypes/cinema.html?site=tho_xuan&shot=open|turn|result&tier=high|mid|low
+       &fixture=battle-turn1|battle-turn3|battle-over (default battle-turn1; its plan, its state)
+       &turn=N      the turn shot of turn N: the fixture's state played on with the general's orders to N (both sides auto)
+       &t=seconds   the moment of the shot drawn (default: 0.6 of it) · &play=1 the shot in real time, looping
+       &beat=charge|volley|melee|fire|breach|rout|advance  look through seeds and turns for a turn whose biggest moment is that
+       &site=<town> &siege=0|1 &walls=0..4 &au=bo:3200,cung:1000,ky:800 &du=bo:1200 &afid=&dfid= &me=A|D  a battle of our own
+       &season=Xuân|Hạ|Thu|Đông · &w=&h=&dpr= · &measure=1 (window.__extra: calls, triangles, stats) · &ui=0 no letterbox -->
+<style>html,body{margin:0;background:#15120f;overflow:hidden}canvas{display:block}</style></head><body>
+<canvas id="c"></canvas>
+<script src="../../../node_modules/three/build/three.min.js"></script>
+<script src="../../../node_modules/three/examples/js/utils/BufferGeometryUtils.js"></script>
+<script src="../../../node_modules/three/examples/js/geometries/RoundedBoxGeometry.js"></script>
+<script src="../../../src/engine/battle.js"></script>
+<script src="../../../src/world/kit.js"></script>
+<script src="../../../src/world/nature.js"></script>
+<script src="../../../src/world/han-models.js"></script>
+<script src="../../../src/world/crowd.js"></script>
+<script src="../../../src/world/battle.js"></script>
+<script src="../../../src/world/huainan-cinema.js"></script>
+<script>
+(async () => {
+  const T = THREE, q = new URLSearchParams(location.search), EB = EmperorsBattle;
+  const TIERS = { high: { tier: 'high', dpr: 1.5, shadow: 4096, ssao: true, dof: true }, mid: { tier: 'mid', dpr: 1, shadow: 2048, ssao: false, dof: true }, low: { tier: 'low', dpr: 1, shadow: 0, ssao: false, dof: false } };
+  const quality = TIERS[q.get('tier')] || TIERS.high, W = +q.get('w') || innerWidth, H = +q.get('h') || innerHeight, dpr = +q.get('dpr') || quality.dpr;
+  const cv = document.getElementById('c'); cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  try {
+    const json = (u) => fetch(u).then((r) => { if (!r.ok) throw new Error(u + ' ' + r.status); return r.json(); });
+    const [data, cities] = await Promise.all([json('../../../data/scenario/huainan.json'), json('../../../data/scenario/huainan-cities.json')]);
+    T.ColorManagement.legacyMode = false;
+    const renderer = new T.WebGLRenderer({ canvas: cv, antialias: false, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(dpr); renderer.setSize(W, H, false);
+    renderer.outputEncoding = T.sRGBEncoding; renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1;
+    renderer.shadowMap.enabled = quality.shadow > 0; renderer.shadowMap.type = quality.tier === 'mid' ? T.PCFShadowMap : T.PCFSoftShadowMap;
+
+    // the battle: a fixture, or one made here (a plan like V2's: towns' lanes, the start's garrisons and armies)
+    const units = (s) => Object.fromEntries((s || '').split(',').filter(Boolean).map((p) => { const [k, v] = p.split(':'); return [k, +v]; }));
+    let plan, b0, me = q.get('me') || 'A';
+    if (q.get('au') || q.get('site') && !q.get('fixture')) {
+      const site = q.get('site') || 'tho_xuan', town = data.towns.find((t) => t.id === site), st = data.start.towns[site] || {}, siege = q.get('siege') !== '0';
+      const gens = data.generals || {};
+      const g = (id) => (gens[id] ? { id, name: gens[id].name, uy: gens[id].uy, tai: gens[id].tai, muu: gens[id].muu, dung: gens[id].dung, kien: gens[id].kien, lord: !!gens[id].lord, traits: gens[id].traits || [] } : null);
+      plan = { site, from: q.get('from') || null, siege, walls: siege ? +(q.get('walls') || st.walls || 1) : 0, lanes: town.lanes.slice(), seed: +(q.get('seed') || 11),
+        attacker: { fid: q.get('afid') || 'zhu_yuanzhang', gen: g(q.get('agen') || 'zhu'), units: units(q.get('au') || 'bo:3200,cung:1000,ky:800') },
+        defender: { fid: q.get('dfid') || st.owner || 'cao_cao', gen: g(q.get('dgen') || st.gov), units: units(q.get('du')) || st.gar, holding: !siege, town: siege ? site : null } };
+      if (!q.get('du')) plan.defender.units = Object.assign({}, st.gar || { bo: 1200 });
+      b0 = EB.create(plan);
+    } else {
+      const fx = await json('../../../docs/design/v2-fixtures/' + (q.get('fixture') || 'battle-turn1') + '.json');
+      plan = fx.plan; b0 = fx.b; me = fx.me || me;
+      if (q.get('site')) { plan = Object.assign({}, plan, { site: q.get('site') }); b0 = Object.assign({}, b0, { site: q.get('site') }); }
+    }
+    const turnOf = (b) => EB.resolve(EB.autoOrders(EB.autoOrders(b, 'A'), 'D'));
+    const want = q.get('beat'), shotName = q.get('shot') || (want ? 'turn' : 'open');
+    let before = b0, after = null, found = null;
+    if (shotName === 'turn' || shotName === 'result') {
+      const nTurn = +(q.get('turn') || 1);
+      if (want) { // seeds × turns until the biggest moment is the one asked for
+        for (let s = 0; s < +(q.get('search') || 60) && !found; s++) {
+          let b = s ? EB.create(Object.assign({}, plan, { seed: (plan.seed || 1) + s * 101 })) : b0;
+          for (let k = 0; k < 5 && !b.over; k++) { const a = turnOf(b); const bt = HuaiNanCinema.beat({ b }, { b: a }, me, EB); if (bt.kind === want) { found = { before: b, after: a, seed: s }; break; } b = a; }
+        }
+        if (!found) throw new Error('no turn with a ' + want + ' beat');
+        before = found.before; after = found.after;
+      } else { for (let k = 1; k < nTurn && !before.over; k++) before = turnOf(before); after = turnOf(before); }
+      if (shotName === 'result') { let b = after; while (!b.over) b = turnOf(b); after = b; }
+    }
+    const season = q.get('season') || 'Thu';
+    const cin = HuaiNanCinema.create({ renderer, W, H, quality, data, cities, Battle: EB, season, overlay: q.get('ui') !== '0' ? undefined : false });
+    const t0 = performance.now();
+    const sb = (b) => ({ plan, b, me, id: 1, outcome: b.over ? EB.outcome(b) : undefined });
+    const ctx = shotName === 'open' ? { bt: sb(b0) } : shotName === 'turn' ? { before: sb(before), after: sb(after) } : { lb: sb(after) };
+    const shot = await cin.prepare(shotName, ctx);
+    const buildMs = Math.round(performance.now() - t0);
+    const tAt = q.get('t') !== null ? +q.get('t') : shot.dur * +(q.get('u') || 0.6);
+    // the page's letterbox and line, as the player sees them
+    const ov = document.querySelector('.hnc');
+    if (ov) { ov.classList.add('on'); const cap = ov.querySelector('.hnc-cap'); cap.textContent = shot.line; cap.classList.add('on'); ov.querySelector('.hnc-tag').textContent = shotName === 'turn' ? 'Lượt ' + ((after.log[after.log.length - 1] || {}).turn || '') + ' / 5' : shotName === 'open' ? 'Trận ' + (data.towns.find((t) => t.id === plan.site) || {}).name : 'Kết cục'; ov.querySelector('.hnc-bar.top').style.transition = ov.querySelector('.hnc-bar.bot').style.transition = 'none';
+      if (shot.res) { const r = ov.querySelector('.hnc-res'); r.textContent = shot.res.good ? 'Thắng' : shot.res.win === 'draw' ? 'Hoà' : 'Thua'; r.className = 'hnc-res on ' + (shot.res.good ? 'good' : 'bad'); r.style.transition = 'none'; }
+      cap.style.transition = 'none'; }
+    // warm the moment: a few frames before it (the crowds' loops, the motion), then the frame asked for
+    for (const f of [0, tAt * 0.5, tAt]) cin.frame(shot, f);
+    window.__cin = cin; window.__shot = shot;
+    const extra = { shot: shotName, beat: shot.beat && { kind: shot.beat.kind, side: shot.beat.side, lane: shot.beat.lane, wing: shot.beat.wing, target: shot.beat.target, turn: shot.beat.turn }, line: shot.line, t: +tAt.toFixed(2), dur: shot.dur, buildMs, found: found && found.seed, tier: quality.tier, season };
+    if (q.get('measure')) { extra.measure = cin.measure(); extra.stats = cin.stats(); extra.memory = Object.assign({}, renderer.info.memory); cin.frame(shot, tAt); }
+    window.__extra = extra; window.__done = true;
+    if (q.get('play')) { let s = performance.now(); const loop = (now) => { let t = (now - s) / 1000; if (t > shot.dur) { s = now; t = 0; } cin.frame(shot, t); requestAnimationFrame(loop); }; requestAnimationFrame(loop); }
+  } catch (e) { console.error(e); window.__error = String(e.stack || e); }
+})();
+</script></body></html>

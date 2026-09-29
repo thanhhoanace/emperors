@@ -1,0 +1,103 @@
+{
+  "_doc": "Layouts of the five Hoài Nam towns for the battle cinema at 1 unit = 1 m (src/world/huainan-cinema.js → Battle.siege / Battle.stage in src/world/battle.js), in the data/cities.json entry format (outline in km, x east, z south; gates per side; passages; que; moat; houses; palaces; features; river sides). County-town scale (a side of 0.3–0.6 km, drawn 1:1 by Battle.plan) and the town model of the map (han-models.js HM.town): a square with one gate a side, the governor's compound north of the centre facing south, the watchtower at the crossroads, the market to the south-east, the granaries to the north-east. `walls` is the lũy the scenario starts with; the wall's height, the khuyết and the moat follow the lũy the battle is fought at (byWalls, indexed by lũy 0–4, as the map: khuyết from 2, a moat from 3). River sides from the baked map (assets/map/water.json: the Huai north-west of Chung Ly and Thọ Xuân, the Yangtze along the east of Lịch Dương) and data/scenario/huainan.json (Hu Dị on the Huai; Âm Lăng inland).",
+  "byWalls": {
+    "wallH": [4.5, 6.5, 8, 10, 11.5],
+    "que": ["none", "none", "official", "official", "official"],
+    "moat": [null, null, null, { "sides": "nesw", "width": 0.03 }, { "sides": "nesw", "width": 0.04 }]
+  },
+  "cities": {
+    "tho_xuan": {
+      "name": "Thọ Xuân",
+      "rank": "commandery",
+      "state": "intact",
+      "era": "Thành quận Hoài Nam của Tào, bờ nam sông Hoài nơi sông Phì đổ vào; núi Bát Công ở phía đông bắc",
+      "walls": 3,
+      "outline": [[-0.31, -0.29], [0.31, -0.29], [0.31, 0.29], [-0.31, 0.29]],
+      "gates": { "n": 1, "s": 1, "e": 1, "w": 1 },
+      "passages": 1,
+      "que": "official",
+      "moat": { "sides": "nesw", "width": 0.03 },
+      "houses": 0.6,
+      "palaces": [{ "name": "Quận phủ Hoài Nam", "at": [0, -0.1], "size": [0.16, 0.12], "platform": 1.5 }],
+      "features": [
+        { "type": "watchtower", "at": [0.02, 0.03] },
+        { "type": "market", "name": "Chợ Thọ Xuân", "at": [0.15, 0.14] },
+        { "type": "granary", "at": [0.1, -0.21] }
+      ],
+      "river": { "sides": "nw" }
+    },
+    "chung_ly": {
+      "name": "Chung Ly",
+      "rank": "county",
+      "state": "intact",
+      "era": "Huyện Chung Ly bên bờ nam sông Hoài, đồn nhỏ canh bến",
+      "walls": 2,
+      "outline": [[-0.2, -0.2], [0.2, -0.2], [0.2, 0.2], [-0.2, 0.2]],
+      "gates": { "n": 1, "s": 1, "e": 1, "w": 1 },
+      "passages": 1,
+      "que": "official",
+      "houses": 0.5,
+      "palaces": [{ "name": "Huyện nha Chung Ly", "at": [0, -0.07], "size": [0.1, 0.08], "platform": 1 }],
+      "features": [
+        { "type": "watchtower", "at": [0.015, 0.02] },
+        { "type": "market", "name": "Chợ", "at": [0.1, 0.1] },
+        { "type": "granary", "at": [0.06, -0.16] }
+      ],
+      "river": { "sides": "nw" }
+    },
+    "am_lang": {
+      "name": "Âm Lăng",
+      "rank": "county",
+      "state": "intact",
+      "era": "Huyện Âm Lăng giữa đồng bằng và rừng thưa, không sông lớn",
+      "walls": 1,
+      "outline": [[-0.17, -0.16], [0.17, -0.16], [0.17, 0.16], [-0.17, 0.16]],
+      "gates": { "n": 1, "s": 1, "e": 1, "w": 1 },
+      "passages": 1,
+      "que": "none",
+      "houses": 0.45,
+      "palaces": [{ "name": "Huyện nha Âm Lăng", "at": [0, -0.06], "size": [0.09, 0.07], "platform": 1 }],
+      "features": [
+        { "type": "watchtower", "at": [0.015, 0.02] },
+        { "type": "market", "name": "Chợ", "at": [0.09, 0.08] }
+      ]
+    },
+    "hu_di": {
+      "name": "Hu Dị",
+      "rank": "county",
+      "state": "intact",
+      "era": "Huyện Hu Dị trên gò đồi bờ nam sông Hoài, hào tộc họ Trần giữ",
+      "walls": 1,
+      "outline": [[-0.19, -0.18], [0.19, -0.18], [0.19, 0.18], [-0.19, 0.18]],
+      "gates": { "n": 1, "s": 1, "e": 1, "w": 1 },
+      "passages": 1,
+      "que": "none",
+      "houses": 0.5,
+      "palaces": [{ "name": "Huyện nha Hu Dị", "at": [0, -0.065], "size": [0.1, 0.08], "platform": 1 }],
+      "features": [
+        { "type": "watchtower", "at": [0.015, 0.02] },
+        { "type": "market", "name": "Chợ", "at": [0.1, 0.09] },
+        { "type": "granary", "at": [0.05, -0.15] }
+      ],
+      "river": { "sides": "n" }
+    },
+    "lich_duong": {
+      "name": "Lịch Dương",
+      "rank": "county",
+      "state": "intact",
+      "era": "Huyện Lịch Dương bờ bắc Trường Giang, bến sang Giang Đông",
+      "walls": 1,
+      "outline": [[-0.18, -0.17], [0.18, -0.17], [0.18, 0.17], [-0.18, 0.17]],
+      "gates": { "n": 1, "s": 1, "e": 1, "w": 1 },
+      "passages": 1,
+      "que": "none",
+      "houses": 0.45,
+      "palaces": [{ "name": "Huyện nha Lịch Dương", "at": [0, -0.06], "size": [0.1, 0.075], "platform": 1 }],
+      "features": [
+        { "type": "watchtower", "at": [0.015, 0.02] },
+        { "type": "market", "name": "Chợ bến", "at": [0.09, 0.09] }
+      ],
+      "river": { "sides": "e" }
+    }
+  }
+}
