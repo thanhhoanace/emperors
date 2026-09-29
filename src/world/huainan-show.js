@@ -104,7 +104,7 @@
 .hs-tint.gold{background:radial-gradient(120% 95% at 50% 38%,rgba(255,216,140,.5),rgba(255,196,112,.22) 55%,rgba(70,36,12,.3));mix-blend-mode:soft-light}
 .hs-watch{position:fixed;inset:0;z-index:35;pointer-events:none}
 .hs-catch{position:absolute;inset:0;pointer-events:auto}
-.hs-stop{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);height:40px;padding:0 15px 0 13px;display:flex;align-items:center;gap:9px;pointer-events:auto;cursor:pointer;border-radius:11px;
+.hs-stop{position:absolute;right:182px;top:8px;transform-origin:100% 0;height:40px;padding:0 15px 0 13px;display:flex;align-items:center;gap:9px;pointer-events:auto;cursor:pointer;border-radius:11px;
   border:1px solid rgba(243,213,143,.55);background:rgba(20,16,12,.9);box-shadow:0 6px 18px rgba(0,0,0,.35);color:#f3ead6;font:700 14px/1 var(--ser)}
 .hs-stop i{width:8px;height:8px;border-radius:50%;background:#e0493a;box-shadow:0 0 0 3px rgba(224,73,58,.25);animation:hsrec 1.8s ease-in-out infinite}
 .hs-stop small{font:600 10.5px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:#b9ab8d;padding-left:9px;border-left:1px solid rgba(226,191,108,.3)}
@@ -115,8 +115,8 @@
 .hs-cap.on{opacity:1;transform:translate(-50%,0)}
 .hs-cap .hs-kick{font:600 10.5px/1.3 var(--sans);letter-spacing:.16em}
 .hs-cap .hs-line{font-size:15px;line-height:1.35;max-width:none}
-.hs-watching .hs-cap{bottom:60px}
-@media (min-width:1100px) and (min-height:600px){.hs-cap{bottom:20px;padding:9px 20px 11px}.hs-watching .hs-cap{bottom:78px}.hs-cap .hs-line{font-size:19px}.hs-cap .hs-kick{font-size:12px}.hs-stop{height:50px;font-size:16px;bottom:14px}}
+.hs-pick{box-shadow:0 0 0 2px #f3d58f,0 0 22px 5px rgba(243,213,143,.5)!important;transition:box-shadow .35s ease}
+@media (min-width:1100px) and (min-height:600px){.hs-cap{bottom:20px;padding:9px 20px 11px}.hs-cap .hs-line{font-size:19px}.hs-cap .hs-kick{font-size:12px}}
 @media (prefers-reduced-motion:reduce){.hs *{transition-duration:.01s!important;animation-duration:.01s!important}}`;
   let styled = false;
   const style = () => {
@@ -460,7 +460,7 @@
   let barEl = null;
   const hud = (on) => {
     if (E.ui.watch) { try { E.ui.watch(on); return; } catch (e) { /* the show's own */ } }
-    if (!on) { if (barEl) { barEl.remove(); window.removeEventListener('keydown', barEl._key); } barEl = null; document.body.classList.remove('hs-watching'); unsay(); return; }
+    if (!on) { if (barEl) { barEl.remove(); window.removeEventListener('keydown', barEl._key); window.removeEventListener('resize', barEl._fit); } barEl = null; document.body.classList.remove('hs-watching'); unsay(); return; }
     if (barEl || E.fast) return;
     style();
     barEl = div('hs hs-watch', '<div class="hs-catch"></div><button type="button" class="hs-stop"><i></i>Đang xem<small>Dừng</small></button>');
@@ -468,6 +468,9 @@
     barEl.querySelector('.hs-stop').addEventListener('click', () => E.H.onWatch(false));
     barEl._key = (e) => { if (e.key === 'Escape') E.H.onWatch(false); else if (e.key === ' ') { e.preventDefault(); skip(); } };
     window.addEventListener('keydown', barEl._key);
+    // at the page's own scale (its layer grows up to 1.4× on a big screen), clear of its bars
+    const fit = () => { if (!barEl) return; const k = clamp(Math.min(innerWidth / 844, innerHeight / 390), 1, 1.4), b = barEl.querySelector('.hs-stop'); b.style.top = 8 * k + 'px'; b.style.right = 182 * k + 'px'; b.style.transform = 'scale(' + k + ')'; };
+    barEl._fit = fit; fit(); window.addEventListener('resize', fit);
     document.body.appendChild(barEl); document.body.classList.add('hs-watching');
   };
 
@@ -542,8 +545,13 @@
       if (!alive()) return;
       const yes = decide(c, adv, v);
       if (!E.fast && E.ui.openCards) E.ui.openCards();
-      say(c.title + ' → ' + (yes ? c.yes.label : c.no.label), { who: c.who, ms: PACE.card * pace() });
-      await pause(PACE.card, run); if (!alive()) return;
+      const pick = !E.fast && E.ui.el && E.ui.el.querySelector('[data-a="card-' + (yes ? 'yes' : 'no') + '"]');
+      if (!pick) say(c.title + ' → ' + (yes ? c.yes.label : c.no.label), { who: c.who, ms: PACE.card * pace() });
+      await pause(PACE.card * 0.55, run); if (!alive()) return;
+      if (pick) pick.classList.add('hs-pick');
+      await pause(PACE.card * 0.45, run);
+      if (pick) pick.classList.remove('hs-pick');
+      if (!alive()) return;
       await H.onAnswer(c.id, yes);
     }
     // the orders and the towns' tasks, one by one on the map
