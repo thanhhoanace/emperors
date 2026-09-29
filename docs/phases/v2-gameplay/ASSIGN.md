@@ -7,7 +7,7 @@
 | --- | --- | --- | --- |
 | 1. Hợp đồng dữ liệu trận, `attack` v2 | Claude | Việc nhỏ, thuần kỹ thuật, và Claude là bên đang cần nó để nối cắt cảnh. Giao người khác chỉ thêm một vòng chờ. | xong 29/9 (`0aef1b0`): `battle` v2 trên mọi `attack`, làm mờ ±20 % cho bên kia, cắt cảnh dùng; sim và play không đổi một dòng |
 | 2. Freeze v2 | Claude viết, GPT đọc phản biện | Freeze là tổng hợp từ DECISION + spike, cần nhất quán với engine và test. GPT đọc chéo để bắt chỗ "chặt chẽ nhưng không vui", như đã từng phản đối đúng một kết luận của Claude. | chưa bắt đầu |
-| 3. Trận theo lượt, API thuần | Claude | Có sẵn spike `demo1/src/hn-rules.js` làm mẫu, có `npm run play` và `npm run sim` để cân bằng. | chưa bắt đầu |
+| 3. Trận theo lượt, API thuần | Claude | Có sẵn spike `demo1/src/hn-rules.js` làm mẫu, có `npm run play` và `npm run sim` để cân bằng. | xong 29/9 (`c8cafc9`): `src/engine/battle.js`, khớp spike từng seed; chưa nối vào lượt v1 (freeze v2 quyết); `npm run sim -- 500 --battles` |
 | 4. Dự đoán của tướng | Claude | Cùng lý do mục 3; công thức sai số theo Mưu đã có trong spike. | chưa bắt đầu |
 | 5. Các câu chưa chốt, cách scale lên 20 châu | Grok (chat mới) hoặc GPT | Cần bằng chứng cộng đồng và thị trường thời gian thực. Grok mạnh cảm nhận cộng đồng, GPT mạnh audit thị trường (phần B trước đó). Bản yêu cầu trong `WORKING.md` viết để chat mới đọc được. | tạm dừng, chờ chủ dự án |
 | Thoại, personas, kịch bản | Grok | Grok đã làm từ đầu, giọng nhất quán. | tạm dừng, chờ chủ dự án |
