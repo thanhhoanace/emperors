@@ -1,6 +1,6 @@
 # Tin · sương · danh tính
 
-> Log thiết kế. Hành vi khóa: `docs/product/GAMEPLAY-FREEZE.md` + `docs/product/perception.md`.
+> Log thiết kế. Hành vi khóa (engine v1): `docs/product/GAMEPLAY-FREEZE-v1.md` + `docs/product/perception.md`.
 
 ## Premise (A-hybrid)
 

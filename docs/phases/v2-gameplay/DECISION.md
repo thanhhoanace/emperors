@@ -40,7 +40,7 @@ GPT phản biện nháp freeze v2 (`_research/chatgpt.md` mục D): engine đún
 - **Thành ở Demo:** chạm thành chỉ hiện 2–3 việc hợp ngữ cảnh, có "thêm" để xem hết.
 - **Mục 5 (scale 20 châu):** GPT audit thị trường và hệ thống, Grok cảm nhận cộng đồng, hai nguồn độc lập, synthesis bằng tool khác; vẫn tạm dừng.
 
-Giữ các tinh chỉnh GPT đề xuất trong change request (`ASSIGN.md`): dự đoán chỉ hiện nhãn + 2 sức + thương vong + 2 lý do; xem trước hệ quả (số mùa, tài nguyên) trước khi xác nhận; thẻ vào hàng chờ; mỗi ngữ cảnh chỉ làm nổi chỉ số tướng liên quan; sau trận một màn tóm tắt; "số, không chữ" thành "trạng thái định lượng, không band mơ hồ". Viết vào: `GAMEPLAY-FREEZE-v2.md` (nháp, chờ khóa).
+Giữ các tinh chỉnh GPT đề xuất trong change request (`ASSIGN.md`): dự đoán chỉ hiện nhãn + 2 sức + thương vong + 2 lý do; xem trước hệ quả (số mùa, tài nguyên) trước khi xác nhận; thẻ vào hàng chờ; mỗi ngữ cảnh chỉ làm nổi chỉ số tướng liên quan; sau trận một màn tóm tắt; "số, không chữ" thành "trạng thái định lượng, không band mơ hồ". Viết vào: `GAMEPLAY-FREEZE.md` (v2, khóa 29/9).
 
 ## Why
 
@@ -84,5 +84,5 @@ Giữ từ 27/9, không mâu thuẫn: chơi là chính, clip ở `?demo=1`; Page
 ## Written into
 
 - `docs/phases/README.md`, `docs/status.md`: trạng thái phase (đã cập nhật cùng commit).
-- `docs/product/GAMEPLAY-FREEZE.md` v2: **chưa**, Grok viết sau spike 2 từ file này; v1 thành log.
+- `docs/product/GAMEPLAY-FREEZE.md` v2: **khóa 29/9** (Claude viết từ file này + demo 1 + engine, GPT phản biện, chủ dự án khóa); v1 thành `GAMEPLAY-FREEZE-v1.md` (log).
 - `docs/product/lanes.md`: không đổi.

@@ -1,7 +1,7 @@
 # Gameplay / Perception contract v1.1
 
 > SOT cho vòng này: province intel, quan sát lượt, đình chiến khách, phản ứng minh ước, áp lực khối.
-> `GAMEPLAY-FREEZE.md` thắng nếu lệch. Không phải A.5, không Officers, không currency mới.
+> `GAMEPLAY-FREEZE-v1.md` thắng nếu lệch (engine v1; luật v2: `GAMEPLAY-FREEZE.md`). Không phải A.5, không Officers, không currency mới.
 > Presentation chỉ được vẽ những gì contract này chiếu. Không tự lọc RuntimeEvent.
 
 ## Luồng

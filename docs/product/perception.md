@@ -1,6 +1,6 @@
 # Perception — Round A
 
-> SOT hành vi: `docs/product/GAMEPLAY-FREEZE.md`.
+> SOT hành vi: engine v1 theo `docs/product/GAMEPLAY-FREEZE-v1.md`; mục Trận theo `GAMEPLAY-FREEZE.md` (v2).
 > Officers / statecraft A.5 / credibility: chưa.
 
 ## Ranh giới

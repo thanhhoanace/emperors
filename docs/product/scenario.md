@@ -81,7 +81,7 @@ Chi tiết mặt và ai chiêu rẻ: `characters.md` mục 1.
 
 ### 3. Cải cách / statecraft — Round A.5 (chưa wire)
 
-Bảng 3 tầng cũ (Tần huyện–quận, Vũ đồn điền/thiên mã/tơ, Chu lúa Chiêm, …) là log thiết kế đã bị `GAMEPLAY-FREEZE.md` thay. Không còn là luật. Không implement trong Round A. Không bonus theo id châu. Chưa chốt cây tiến triển cuối.
+Bảng 3 tầng cũ (Tần huyện–quận, Vũ đồn điền/thiên mã/tơ, Chu lúa Chiêm, …) là log thiết kế đã bị freeze v1 (`GAMEPLAY-FREEZE-v1.md`) thay. Không còn là luật. Không implement trong Round A. Không bonus theo id châu. Chưa chốt cây tiến triển cuối.
 
 ## Thừa kế (tóm)
 
