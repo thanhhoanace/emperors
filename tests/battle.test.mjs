@@ -90,6 +90,22 @@ test('orders: by arm, fire once and only for Mưu ≥ 7; an illegal order throws
   assert.equal(arm(bo), 'bo');
 });
 
+test('the proposed plan: a wing the player does not touch fights on the proposed order (owner, 29/9)', () => {
+  for (let seed = 1; seed <= 10; seed++) {
+    let b = Battle.create(fieldPlan(seed));
+    while (!b.over) {
+      const plan = Battle.autoOrders(Battle.autoOrders(b, 'A'), 'D');
+      assert.deepEqual(Battle.resolve(b), Battle.resolve(plan), 'no orders at all = the whole proposed plan');
+      // the player overrides one wing; every other wing keeps its proposal
+      const mine = Battle.live(b, 'A')[0], legal = Battle.legalOrders(b, mine), pick = legal.find((o) => o !== plan.wings.find((w) => w.id === mine).order) || legal[0];
+      const one = Battle.orders(b, 'A', { [mine]: pick });
+      const expect = Battle.orders(plan, 'A', { [mine]: pick });
+      assert.deepEqual(Battle.resolve(one), Battle.resolve(expect));
+      b = Battle.resolve(one);
+    }
+  }
+});
+
 test('a battle runs 1–5 turns and ends with a result in the BattleDescriptor shape', () => {
   for (let seed = 1; seed <= 40; seed++) {
     for (const plan of [siegePlan(seed), fieldPlan(seed)]) {

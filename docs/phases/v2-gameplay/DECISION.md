@@ -30,6 +30,18 @@ Owner chơi spike 2 thấy chán; Grok gói B và ChatGPT phần B đọc lại;
 - **Gốc Loạn 12 Sứ Quân giữ:** vào là đánh, chân dung sứ quân nổi bật, diệt từng sứ quân, chơi nhanh và ngắt được.
 - **Chân dung:** owner muốn dùng asset TW3K; không dùng được (bản quyền, `design/direction.md` cấm). Thay bằng tranh khắc gỗ Tam Quốc đời Thanh và chân dung hoàng đế thuộc phạm vi công cộng.
 
+## Sửa 29/9 (sau GPT phản biện freeze v2)
+
+GPT phản biện nháp freeze v2 (`_research/chatgpt.md` mục D): engine đúng, nhưng nháp khóa nhiều lựa chọn mà không khóa **số lần chạm** (4 lệnh quân, 7 việc thành, 7 lệnh mỗi cánh; ra lệnh từng cánh là 30–60 lần chạm một trận). Chủ dự án chốt:
+
+- **Freeze chia ba tầng:** Lõi (DNA v2) / Demo Hoài Nam (luật và số của lát 5 thành) / Mở (scale 20 châu, không phải luật).
+- **Trận:** mỗi lượt tướng đề xuất lệnh cho mọi cánh; người chơi chỉ đổi cánh muốn đổi rồi cho chạy lượt.
+- **Lệnh theo đơn vị:** mỗi đạo quân, mỗi thành **tối đa** một lệnh / việc mỗi mùa; bỏ qua hợp lệ; quân không lệnh = Giữ, thành không chọn = không khởi việc mới.
+- **Thành ở Demo:** chạm thành chỉ hiện 2–3 việc hợp ngữ cảnh, có "thêm" để xem hết.
+- **Mục 5 (scale 20 châu):** GPT audit thị trường và hệ thống, Grok cảm nhận cộng đồng, hai nguồn độc lập, synthesis bằng tool khác; vẫn tạm dừng.
+
+Giữ các tinh chỉnh GPT đề xuất trong change request (`ASSIGN.md`): dự đoán chỉ hiện nhãn + 2 sức + thương vong + 2 lý do; xem trước hệ quả (số mùa, tài nguyên) trước khi xác nhận; thẻ vào hàng chờ; mỗi ngữ cảnh chỉ làm nổi chỉ số tướng liên quan; sau trận một màn tóm tắt; "số, không chữ" thành "trạng thái định lượng, không band mơ hồ". Viết vào: `GAMEPLAY-FREEZE-v2.md` (nháp, chờ khóa).
+
 ## Why
 
 - Cả ba tool (`_research/claude.md` A, `chatgpt.md` §5, `grok.md` §6) đều khuyên ván ngắn trước, vì lời hứa dễ thử, đo được, đủ sức một người + agent, và vì bỏ dở chiến dịch là hành vi đa số (Civ VI 37 % từng thắng, CK3 4 %, Old World 10 %). **Không tuyên bố thị trường thích ngắn hơn**: không có bằng chứng; ChatGPT và Grok phản đối cách nói đó.
