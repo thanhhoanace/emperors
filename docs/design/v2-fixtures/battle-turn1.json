@@ -1,0 +1,280 @@
+{
+ "plan": {
+  "site": "tho_xuan",
+  "siege": true,
+  "walls": 3,
+  "lanes": [
+   "open",
+   "ford",
+   "wood"
+  ],
+  "seed": 11,
+  "attacker": {
+   "fid": "zhu_yuanzhang",
+   "gen": {
+    "id": "zhu",
+    "name": "Chu Nguyên Chương",
+    "uy": 9,
+    "tai": 7,
+    "muu": 7,
+    "dung": 6,
+    "kien": 8,
+    "loyal": 100,
+    "lord": true,
+    "traits": [
+     "commoner"
+    ]
+   },
+   "units": {
+    "bo": 3800,
+    "cung": 1000,
+    "ky": 800,
+    "thuy": 1800
+   }
+  },
+  "defender": {
+   "fid": "cao_cao",
+   "gen": {
+    "id": "man_chong",
+    "name": "Mãn Sủng",
+    "uy": 6,
+    "tai": 8,
+    "muu": 8,
+    "dung": 4,
+    "kien": 8,
+    "loyal": 95,
+    "lord": false,
+    "traits": [
+     "walls"
+    ]
+   },
+   "units": {
+    "bo": 2000,
+    "cung": 600
+   },
+   "holding": false
+  }
+ },
+ "b": {
+  "v": 1,
+  "site": "tho_xuan",
+  "from": null,
+  "siege": true,
+  "walls": 3,
+  "lanes": [
+   "open",
+   "ford",
+   "wood"
+  ],
+  "turn": 1,
+  "maxTurn": 5,
+  "over": null,
+  "log": [],
+  "fired": {
+   "A": false,
+   "D": false
+  },
+  "wind": true,
+  "luck": {
+   "A": 1.0591592225246131,
+   "D": 1.1046967318747192
+  },
+  "rs": 3854165905,
+  "A": {
+   "fid": "zhu_yuanzhang",
+   "gen": {
+    "id": "zhu",
+    "name": "Chu Nguyên Chương",
+    "uy": 9,
+    "tai": 7,
+    "muu": 7,
+    "dung": 6,
+    "kien": 8,
+    "loyal": 100,
+    "lord": true,
+    "traits": [
+     "commoner"
+    ]
+   }
+  },
+  "D": {
+   "fid": "cao_cao",
+   "gen": {
+    "id": "man_chong",
+    "name": "Mãn Sủng",
+    "uy": 6,
+    "tai": 8,
+    "muu": 8,
+    "dung": 4,
+    "kien": 8,
+    "loyal": 95,
+    "lord": false,
+    "traits": [
+     "walls"
+    ]
+   },
+   "holding": false
+  },
+  "wings": [
+   {
+    "id": "A0",
+    "side": "A",
+    "arm": "bo",
+    "men": 1900,
+    "start": 1900,
+    "morale": 89,
+    "lane": 1,
+    "row": 1,
+    "order": null,
+    "flank": false,
+    "gone": false,
+    "routed": false,
+    "left": false
+   },
+   {
+    "id": "A1",
+    "side": "A",
+    "arm": "bo",
+    "men": 950,
+    "start": 950,
+    "morale": 89,
+    "lane": 0,
+    "row": 1,
+    "order": null,
+    "flank": false,
+    "gone": false,
+    "routed": false,
+    "left": false
+   },
+   {
+    "id": "A2",
+    "side": "A",
+    "arm": "bo",
+    "men": 950,
+    "start": 950,
+    "morale": 89,
+    "lane": 2,
+    "row": 1,
+    "order": null,
+    "flank": false,
+    "gone": false,
+    "routed": false,
+    "left": false
+   },
+   {
+    "id": "A3",
+    "side": "A",
+    "arm": "ky",
+    "men": 800,
+    "start": 800,
+    "morale": 82,
+    "lane": 2,
+    "row": 1,
+    "order": null,
+    "flank": false,
+    "gone": false,
+    "routed": false,
+    "left": false
+   },
+   {
+    "id": "A4",
+    "side": "A",
+    "arm": "cung",
+    "men": 1000,
+    "start": 1000,
+    "morale": 89,
+    "lane": 1,
+    "row": 0,
+    "order": null,
+    "flank": false,
+    "gone": false,
+    "routed": false,
+    "left": false
+   },
+   {
+    "id": "A5",
+    "side": "A",
+    "arm": "thuy",
+    "men": 1800,
+    "start": 1800,
+    "morale": 82,
+    "lane": 1,
+    "row": 0,
+    "order": null,
+    "flank": false,
+    "gone": false,
+    "routed": false,
+    "left": false
+   },
+   {
+    "id": "D0",
+    "side": "D",
+    "arm": "bo",
+    "men": 800,
+    "start": 800,
+    "morale": 76,
+    "lane": 1,
+    "row": 4,
+    "order": null,
+    "flank": false,
+    "gone": false,
+    "routed": false,
+    "left": false
+   },
+   {
+    "id": "D1",
+    "side": "D",
+    "arm": "bo",
+    "men": 600,
+    "start": 600,
+    "morale": 76,
+    "lane": 0,
+    "row": 4,
+    "order": null,
+    "flank": false,
+    "gone": false,
+    "routed": false,
+    "left": false
+   },
+   {
+    "id": "D2",
+    "side": "D",
+    "arm": "bo",
+    "men": 600,
+    "start": 600,
+    "morale": 76,
+    "lane": 2,
+    "row": 4,
+    "order": null,
+    "flank": false,
+    "gone": false,
+    "routed": false,
+    "left": false
+   },
+   {
+    "id": "D3",
+    "side": "D",
+    "arm": "cung",
+    "men": 600,
+    "start": 600,
+    "morale": 76,
+    "lane": 1,
+    "row": 5,
+    "order": null,
+    "flank": false,
+    "gone": false,
+    "routed": false,
+    "left": false
+   }
+  ]
+ },
+ "me": "A",
+ "proposed": {
+  "A0": "hoa",
+  "A1": "tien",
+  "A2": "tien",
+  "A3": "suon",
+  "A4": "tien",
+  "A5": "tien"
+ }
+}

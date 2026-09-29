@@ -1,0 +1,333 @@
+{
+ "season": 2,
+ "calendar": "Đông 219",
+ "me": "zhu_yuanzhang",
+ "over": null,
+ "res": {
+  "luong": 1048,
+  "tien": 788,
+  "uy": 45
+ },
+ "income": {
+  "luong": 720,
+  "tien": 288,
+  "up": 872
+ },
+ "warn": {
+  "luong": false,
+  "uy": false
+ },
+ "towns": [
+  {
+   "id": "chung_ly",
+   "name": "Chung Ly",
+   "owner": "zhu_yuanzhang",
+   "walls": 2,
+   "river": true,
+   "gar": {
+    "bo": 800,
+    "cung": 0,
+    "ky": 0,
+    "thuy": 0
+   },
+   "garApprox": false,
+   "task": {
+    "key": "luy",
+    "name": "Đắp lũy",
+    "left": 1
+   },
+   "gov": null
+  },
+  {
+   "id": "am_lang",
+   "name": "Âm Lăng",
+   "owner": "cao_cao",
+   "walls": 0,
+   "river": false,
+   "gar": {
+    "bo": 1300,
+    "cung": 0,
+    "ky": 0,
+    "thuy": 0
+   },
+   "garApprox": true,
+   "task": null,
+   "gov": null
+  },
+  {
+   "id": "tho_xuan",
+   "name": "Thọ Xuân",
+   "owner": "cao_cao",
+   "walls": 3,
+   "river": true,
+   "gar": {
+    "bo": 2400,
+    "cung": 700,
+    "ky": 0,
+    "thuy": 0
+   },
+   "garApprox": true,
+   "task": null,
+   "gov": {
+    "id": "man_chong",
+    "name": "Mãn Sủng",
+    "fid": "cao_cao",
+    "seal": "寵"
+   }
+  },
+  {
+   "id": "hu_di",
+   "name": "Hu Dị",
+   "owner": "local",
+   "walls": 1,
+   "river": true,
+   "gar": {
+    "bo": 1400,
+    "cung": 0,
+    "ky": 0,
+    "thuy": 0
+   },
+   "garApprox": true,
+   "task": null,
+   "gov": {
+    "id": "tran",
+    "name": "Trần Kiểu",
+    "fid": "local",
+    "seal": "矯"
+   }
+  },
+  {
+   "id": "lich_duong",
+   "name": "Lịch Dương",
+   "owner": "sun_quan",
+   "walls": 0,
+   "river": true,
+   "gar": {
+    "bo": 800,
+    "cung": 0,
+    "ky": 0,
+    "thuy": 0
+   },
+   "garApprox": true,
+   "task": null,
+   "gov": null
+  }
+ ],
+ "armies": [
+  {
+   "id": "a1",
+   "fid": "zhu_yuanzhang",
+   "arm": "land",
+   "at": "chung_ly",
+   "besieging": null,
+   "gen": {
+    "id": "zhu",
+    "name": "Chu Nguyên Chương",
+    "fid": "zhu_yuanzhang",
+    "seal": "朱",
+    "cls": "Thống soái",
+    "uy": 9,
+    "tai": 7,
+    "muu": 7,
+    "dung": 6,
+    "kien": 8,
+    "loyal": 100,
+    "trait": "Xuất thân bần nông",
+    "traitText": "Bộ và cung +7 sĩ khí."
+   },
+   "units": {
+    "bo": 3200,
+    "cung": 1000,
+    "ky": 800,
+    "thuy": 0
+   },
+   "arms": [
+    "bo",
+    "cung",
+    "ky"
+   ],
+   "seen": "own",
+   "order": null
+  },
+  {
+   "id": "a2",
+   "fid": "zhu_yuanzhang",
+   "arm": "fleet",
+   "at": "chung_ly",
+   "besieging": null,
+   "gen": {
+    "id": "zhu_huan",
+    "name": "Chu Hoàn",
+    "fid": "zhu_yuanzhang",
+    "seal": "桓",
+    "cls": "Tiên phong",
+    "uy": 5,
+    "tai": 4,
+    "muu": 3,
+    "dung": 8,
+    "kien": 6,
+    "loyal": 60,
+    "trait": "Thủy chiến",
+    "traitText": "Thuyền +20%."
+   },
+   "units": {
+    "bo": 170,
+    "cung": 0,
+    "ky": 0,
+    "thuy": 1564
+   },
+   "arms": [
+    "thuy",
+    "bo"
+   ],
+   "seen": "own",
+   "order": null
+  },
+  {
+   "id": "e1",
+   "fid": "cao_cao",
+   "arm": "land",
+   "at": "am_lang",
+   "besieging": null,
+   "gen": {
+    "id": "zhang_liao",
+    "name": "Trương Liêu",
+    "fid": "cao_cao",
+    "seal": "遼"
+   },
+   "units": {
+    "bo": 1400,
+    "cung": 400,
+    "ky": 2000,
+    "thuy": 0
+   },
+   "arms": [
+    "bo",
+    "cung",
+    "ky"
+   ],
+   "seen": "near",
+   "order": null
+  },
+  {
+   "id": "e2",
+   "fid": "sun_quan",
+   "arm": "fleet",
+   "at": "lich_duong",
+   "besieging": null,
+   "gen": {
+    "id": "zhou_tai",
+    "name": "Chu Thái",
+    "fid": "sun_quan",
+    "seal": "泰"
+   },
+   "units": null,
+   "arms": [
+    "thuy",
+    "bo"
+   ],
+   "seen": "far",
+   "order": null
+  }
+ ],
+ "cards": [
+  {
+   "id": "history_lu",
+   "kind": "history",
+   "who": "Ký ức người xuyên không",
+   "title": "Lã Mông áo trắng qua sông",
+   "text": "Đông 219. Ngô sắp đánh úp Kinh Châu. Thuyền Chu Thái sẽ bị gọi về tây, Lịch Dương bỏ ngỏ.",
+   "yes": {
+    "label": "Đòi Lịch Dương hàng",
+    "fx": "Uy ≥ 45: Lịch Dương hàng ta · Ngô thù ta"
+   },
+   "no": {
+    "label": "Đứng ngoài",
+    "fx": "Không gì đổi"
+   },
+   "urgent": false
+  }
+ ],
+ "gens": {
+  "zhu": {
+   "id": "zhu",
+   "name": "Chu Nguyên Chương",
+   "fid": "zhu_yuanzhang",
+   "seal": "朱",
+   "cls": "Thống soái",
+   "uy": 9,
+   "tai": 7,
+   "muu": 7,
+   "dung": 6,
+   "kien": 8,
+   "loyal": 100,
+   "trait": "Xuất thân bần nông",
+   "traitText": "Bộ và cung +7 sĩ khí."
+  },
+  "zhu_huan": {
+   "id": "zhu_huan",
+   "name": "Chu Hoàn",
+   "fid": "zhu_yuanzhang",
+   "seal": "桓",
+   "cls": "Tiên phong",
+   "uy": 5,
+   "tai": 4,
+   "muu": 3,
+   "dung": 8,
+   "kien": 6,
+   "loyal": 60,
+   "trait": "Thủy chiến",
+   "traitText": "Thuyền +20%."
+  },
+  "zhang_liao": {
+   "id": "zhang_liao",
+   "name": "Trương Liêu",
+   "fid": "cao_cao",
+   "seal": "遼"
+  },
+  "man_chong": {
+   "id": "man_chong",
+   "name": "Mãn Sủng",
+   "fid": "cao_cao",
+   "seal": "寵"
+  },
+  "zhou_tai": {
+   "id": "zhou_tai",
+   "name": "Chu Thái",
+   "fid": "sun_quan",
+   "seal": "泰"
+  },
+  "tran": {
+   "id": "tran",
+   "name": "Trần Kiểu",
+   "fid": "local",
+   "seal": "矯"
+  }
+ },
+ "report": {
+  "season": "Thu 219",
+  "lines": [
+   "Chu Hoàn tới Âm Lăng.",
+   "Ngô thắng Hào tộc ở Lịch Dương. Thương vong: Ngô 266, Hào tộc 543.",
+   "Chu Hoàn rút về Chung Ly.",
+   "!Tào thắng Minh ở Âm Lăng. Thương vong: Tào 1.044, Minh 1.025.",
+   "Chung Ly: đắp lũy, còn 1 mùa.",
+   "Thu 720 lương, 288 tiền. Nuôi quân 872 lương."
+  ],
+  "fought": [
+   {
+    "site": "am_lang",
+    "win": "A",
+    "me": "D",
+    "la": 1044,
+    "ld": 1025
+   }
+  ],
+  "income": {
+   "luong": 720,
+   "tien": 288,
+   "up": 872
+  },
+  "towns": 1
+ }
+}

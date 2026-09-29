@@ -1,0 +1,65 @@
+{
+ "label": "Thắng lớn",
+ "sa": 5100,
+ "sd": 4300,
+ "est": {
+  "la": 2100,
+  "ld": 1800
+ },
+ "reasons": [
+  {
+   "side": "D",
+   "why": "tường thành, lũy 4 (Mãn Sủng)",
+   "pct": 80
+  },
+  {
+   "side": "A",
+   "why": "kỵ đánh tường thành",
+   "pct": -65
+  }
+ ],
+ "more": {
+  "reasons": [
+   {
+    "side": "D",
+    "why": "tường thành, lũy 4 (Mãn Sủng)",
+    "pct": 80
+   },
+   {
+    "side": "A",
+    "why": "kỵ đánh tường thành",
+    "pct": -65
+   },
+   {
+    "side": "A",
+    "why": "kỵ trong rừng",
+    "pct": -30
+   },
+   {
+    "side": "A",
+    "why": "leo tường",
+    "pct": -25
+   },
+   {
+    "side": "A",
+    "why": "lội bến sông",
+    "pct": -20
+   },
+   {
+    "side": "A",
+    "why": "thuyền ở bến sông",
+    "pct": 15
+   }
+  ],
+  "lanes": [
+   "Đồng trống",
+   "Bến sông",
+   "Rừng thưa"
+  ],
+  "analyst": {
+   "id": "zhu",
+   "name": "Chu Nguyên Chương",
+   "muu": 7
+  }
+ }
+}

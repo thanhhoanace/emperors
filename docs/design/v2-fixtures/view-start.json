@@ -1,0 +1,351 @@
+{
+ "season": 1,
+ "calendar": "Thu 219",
+ "me": "zhu_yuanzhang",
+ "over": null,
+ "res": {
+  "luong": 1200,
+  "tien": 900,
+  "uy": 50
+ },
+ "income": null,
+ "warn": {
+  "luong": false,
+  "uy": false
+ },
+ "towns": [
+  {
+   "id": "chung_ly",
+   "name": "Chung Ly",
+   "owner": "zhu_yuanzhang",
+   "walls": 2,
+   "river": true,
+   "gar": {
+    "bo": 800,
+    "cung": 0,
+    "ky": 0,
+    "thuy": 0
+   },
+   "garApprox": false,
+   "task": null,
+   "gov": null
+  },
+  {
+   "id": "am_lang",
+   "name": "Âm Lăng",
+   "owner": "zhu_yuanzhang",
+   "walls": 1,
+   "river": false,
+   "gar": {
+    "bo": 500,
+    "cung": 0,
+    "ky": 0,
+    "thuy": 0
+   },
+   "garApprox": false,
+   "task": null,
+   "gov": null
+  },
+  {
+   "id": "tho_xuan",
+   "name": "Thọ Xuân",
+   "owner": "cao_cao",
+   "walls": 3,
+   "river": true,
+   "gar": {
+    "bo": 2200,
+    "cung": 700,
+    "ky": 0,
+    "thuy": 0
+   },
+   "garApprox": true,
+   "task": null,
+   "gov": {
+    "id": "man_chong",
+    "name": "Mãn Sủng",
+    "fid": "cao_cao",
+    "seal": "寵"
+   }
+  },
+  {
+   "id": "hu_di",
+   "name": "Hu Dị",
+   "owner": "local",
+   "walls": 1,
+   "river": true,
+   "gar": {
+    "bo": 1300,
+    "cung": 0,
+    "ky": 0,
+    "thuy": 0
+   },
+   "garApprox": true,
+   "task": null,
+   "gov": {
+    "id": "tran",
+    "name": "Trần Kiểu",
+    "fid": "local",
+    "seal": "矯"
+   }
+  },
+  {
+   "id": "lich_duong",
+   "name": "Lịch Dương",
+   "owner": "local",
+   "walls": 1,
+   "river": true,
+   "gar": {
+    "bo": 800,
+    "cung": 0,
+    "ky": 0,
+    "thuy": 0
+   },
+   "garApprox": true,
+   "task": null,
+   "gov": null
+  }
+ ],
+ "armies": [
+  {
+   "id": "a1",
+   "fid": "zhu_yuanzhang",
+   "arm": "land",
+   "at": "chung_ly",
+   "besieging": null,
+   "gen": {
+    "id": "zhu",
+    "name": "Chu Nguyên Chương",
+    "fid": "zhu_yuanzhang",
+    "seal": "朱",
+    "cls": "Thống soái",
+    "uy": 9,
+    "tai": 7,
+    "muu": 7,
+    "dung": 6,
+    "kien": 8,
+    "loyal": 100,
+    "trait": "Xuất thân bần nông",
+    "traitText": "Bộ và cung +7 sĩ khí."
+   },
+   "units": {
+    "bo": 3200,
+    "cung": 1000,
+    "ky": 800,
+    "thuy": 0
+   },
+   "arms": [
+    "bo",
+    "cung",
+    "ky"
+   ],
+   "seen": "own",
+   "order": null
+  },
+  {
+   "id": "a2",
+   "fid": "zhu_yuanzhang",
+   "arm": "fleet",
+   "at": "chung_ly",
+   "besieging": null,
+   "gen": {
+    "id": "zhu_huan",
+    "name": "Chu Hoàn",
+    "fid": "zhu_yuanzhang",
+    "seal": "桓",
+    "cls": "Tiên phong",
+    "uy": 5,
+    "tai": 4,
+    "muu": 3,
+    "dung": 8,
+    "kien": 6,
+    "loyal": 72,
+    "trait": "Thủy chiến",
+    "traitText": "Thuyền +20%."
+   },
+   "units": {
+    "bo": 600,
+    "cung": 0,
+    "ky": 0,
+    "thuy": 1800
+   },
+   "arms": [
+    "thuy",
+    "bo"
+   ],
+   "seen": "own",
+   "order": null
+  },
+  {
+   "id": "e1",
+   "fid": "cao_cao",
+   "arm": "land",
+   "at": "tho_xuan",
+   "besieging": null,
+   "gen": {
+    "id": "zhang_liao",
+    "name": "Trương Liêu",
+    "fid": "cao_cao",
+    "seal": "遼"
+   },
+   "units": {
+    "bo": 2400,
+    "cung": 500,
+    "ky": 3200,
+    "thuy": 0
+   },
+   "arms": [
+    "bo",
+    "cung",
+    "ky"
+   ],
+   "seen": "near",
+   "order": null
+  },
+  {
+   "id": "e2",
+   "fid": "sun_quan",
+   "arm": "fleet",
+   "at": "lich_duong",
+   "besieging": null,
+   "gen": {
+    "id": "zhou_tai",
+    "name": "Chu Thái",
+    "fid": "sun_quan",
+    "seal": "泰"
+   },
+   "units": null,
+   "arms": [
+    "thuy",
+    "bo"
+   ],
+   "seen": "far",
+   "order": null
+  }
+ ],
+ "cards": [
+  {
+   "id": "history_fan",
+   "kind": "history",
+   "who": "Ký ức người xuyên không",
+   "title": "Quan Vũ sắp dìm bảy quân ở Phàn Thành",
+   "text": "Tháng 8 năm 219. Ta nhớ: Tào Tháo sẽ gọi quân Hoài Nam về cứu Tương Dương. Trương Liêu có thể rời Thọ Xuân ngay mùa này, hoặc không.",
+   "yes": {
+    "label": "Tung tin Hoài Nam yếu",
+    "fx": "Tào rút Trương Liêu: 85% · Uy −5"
+   },
+   "no": {
+    "label": "Im lặng chờ",
+    "fx": "Tào rút Trương Liêu: 50%"
+   },
+   "urgent": false
+  },
+  {
+   "id": "envoy_wu",
+   "kind": "envoy",
+   "who": "Sứ Ngô",
+   "gen": "zhou_tai",
+   "title": "Tôn Quyền xin kết minh đánh Tào",
+   "text": "Ngô không động tới đất ta. Đổi lại Ngô lấy Lịch Dương. Thuyền Ngô giúp ta khi ta đánh ven sông.",
+   "yes": {
+    "label": "Kết minh",
+    "fx": "Ngô lấy Lịch Dương · +1.200 thủy Ngô khi ta đánh ven sông"
+   },
+   "no": {
+    "label": "Từ chối",
+    "fx": "Ngô tự do · Lịch Dương còn bỏ ngỏ"
+   },
+   "urgent": false
+  },
+  {
+   "id": "local_hudi",
+   "kind": "envoy",
+   "who": "Hào tộc Hu Dị",
+   "gen": "tran",
+   "title": "Trần Kiểu xin quy thuận",
+   "text": "Ông mở cổng Hu Dị nếu ta tha thuế hai mùa và giữ ông làm huyện lệnh.",
+   "yes": {
+    "label": "Nhận",
+    "fx": "Hu Dị về ta · Lương −300 · miễn thuế 2 mùa"
+   },
+   "no": {
+    "label": "Đòi hàng vô điều kiện",
+    "fx": "Uy +3 · muốn Hu Dị thì phải đánh"
+   },
+   "urgent": false
+  },
+  {
+   "id": "gen_zhuhuan",
+   "kind": "general",
+   "who": "Tướng dưới trướng",
+   "gen": "zhu_huan",
+   "title": "Chu Hoàn xin làm tiên phong",
+   "text": "Tướng thủy trẻ, gan (Dũng 8) nhưng ít mưu (Mưu 3), đang cầm đạo thủy 1.800 thuyền binh và 600 bộ. Ông xin đánh trước để lập công.",
+   "yes": {
+    "label": "Cho làm tiên phong",
+    "fx": "Trung 72 → 82: quân ông +3 sĩ khí. Nhưng mùa này đạo thủy phải Đánh hoặc Vây, không thì Trung −15."
+   },
+   "no": {
+    "label": "Bắt chờ lệnh",
+    "fx": "Trung 72 → 60: quân ông −3 sĩ khí khi ra trận."
+   },
+   "urgent": false
+  }
+ ],
+ "gens": {
+  "zhu": {
+   "id": "zhu",
+   "name": "Chu Nguyên Chương",
+   "fid": "zhu_yuanzhang",
+   "seal": "朱",
+   "cls": "Thống soái",
+   "uy": 9,
+   "tai": 7,
+   "muu": 7,
+   "dung": 6,
+   "kien": 8,
+   "loyal": 100,
+   "trait": "Xuất thân bần nông",
+   "traitText": "Bộ và cung +7 sĩ khí."
+  },
+  "zhu_huan": {
+   "id": "zhu_huan",
+   "name": "Chu Hoàn",
+   "fid": "zhu_yuanzhang",
+   "seal": "桓",
+   "cls": "Tiên phong",
+   "uy": 5,
+   "tai": 4,
+   "muu": 3,
+   "dung": 8,
+   "kien": 6,
+   "loyal": 72,
+   "trait": "Thủy chiến",
+   "traitText": "Thuyền +20%."
+  },
+  "zhang_liao": {
+   "id": "zhang_liao",
+   "name": "Trương Liêu",
+   "fid": "cao_cao",
+   "seal": "遼"
+  },
+  "man_chong": {
+   "id": "man_chong",
+   "name": "Mãn Sủng",
+   "fid": "cao_cao",
+   "seal": "寵"
+  },
+  "zhou_tai": {
+   "id": "zhou_tai",
+   "name": "Chu Thái",
+   "fid": "sun_quan",
+   "seal": "泰"
+  },
+  "tran": {
+   "id": "tran",
+   "name": "Trần Kiểu",
+   "fid": "local",
+   "seal": "矯"
+  }
+ },
+ "report": null
+}

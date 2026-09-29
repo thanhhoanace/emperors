@@ -1,0 +1,610 @@
+{
+ "plan": {
+  "site": "tho_xuan",
+  "siege": true,
+  "walls": 3,
+  "lanes": [
+   "open",
+   "ford",
+   "wood"
+  ],
+  "seed": 11,
+  "attacker": {
+   "fid": "zhu_yuanzhang",
+   "gen": {
+    "id": "zhu",
+    "name": "Chu Nguyên Chương",
+    "uy": 9,
+    "tai": 7,
+    "muu": 7,
+    "dung": 6,
+    "kien": 8,
+    "loyal": 100,
+    "lord": true,
+    "traits": [
+     "commoner"
+    ]
+   },
+   "units": {
+    "bo": 3800,
+    "cung": 1000,
+    "ky": 800,
+    "thuy": 1800
+   }
+  },
+  "defender": {
+   "fid": "cao_cao",
+   "gen": {
+    "id": "man_chong",
+    "name": "Mãn Sủng",
+    "uy": 6,
+    "tai": 8,
+    "muu": 8,
+    "dung": 4,
+    "kien": 8,
+    "loyal": 95,
+    "lord": false,
+    "traits": [
+     "walls"
+    ]
+   },
+   "units": {
+    "bo": 2000,
+    "cung": 600
+   },
+   "holding": false
+  }
+ },
+ "b": {
+  "v": 1,
+  "site": "tho_xuan",
+  "from": null,
+  "siege": true,
+  "walls": 3,
+  "lanes": [
+   "open",
+   "ford",
+   "wood"
+  ],
+  "turn": 4,
+  "maxTurn": 5,
+  "over": {
+   "win": "A",
+   "sa": 4071,
+   "sd": 0
+  },
+  "log": [
+   {
+    "turn": 1,
+    "ev": [
+     {
+      "kind": "fire",
+      "side": "A",
+      "wing": "A0",
+      "target": "D2",
+      "arm": "bo",
+      "lane": 2,
+      "loss": 183,
+      "big": true
+     },
+     {
+      "kind": "fire",
+      "side": "D",
+      "wing": "D0",
+      "target": "A5",
+      "arm": "thuy",
+      "lane": 1,
+      "loss": 576,
+      "big": true
+     }
+    ]
+   },
+   {
+    "turn": 2,
+    "ev": [
+     {
+      "kind": "melee",
+      "lane": 0,
+      "a": "A1",
+      "d": "D1",
+      "armA": "bo",
+      "armD": "bo",
+      "lossA": 96,
+      "lossD": 72,
+      "charge": false,
+      "flankA": false,
+      "flankD": false
+     },
+     {
+      "kind": "melee",
+      "lane": 2,
+      "a": "A2",
+      "d": "D2",
+      "armA": "bo",
+      "armD": "bo",
+      "lossA": 79,
+      "lossD": 88,
+      "charge": false,
+      "flankA": false,
+      "flankD": false
+     },
+     {
+      "kind": "melee",
+      "lane": 1,
+      "a": "A3",
+      "d": "D0",
+      "armA": "ky",
+      "armD": "bo",
+      "lossA": 258,
+      "lossD": 32,
+      "charge": true,
+      "flankA": true,
+      "flankD": false
+     }
+    ]
+   },
+   {
+    "turn": 3,
+    "ev": [
+     {
+      "kind": "volley",
+      "side": "A",
+      "loss": 68
+     },
+     {
+      "kind": "volley",
+      "side": "D",
+      "loss": 101
+     },
+     {
+      "kind": "melee",
+      "lane": 1,
+      "a": "A0",
+      "d": "D0",
+      "armA": "bo",
+      "armD": "bo",
+      "lossA": 133,
+      "lossD": 79,
+      "charge": false,
+      "flankA": false,
+      "flankD": false
+     },
+     {
+      "kind": "melee",
+      "lane": 0,
+      "a": "A1",
+      "d": "D1",
+      "armA": "bo",
+      "armD": "bo",
+      "lossA": 79,
+      "lossD": 66,
+      "charge": false,
+      "flankA": false,
+      "flankD": false
+     },
+     {
+      "kind": "melee",
+      "lane": 1,
+      "a": "A3",
+      "d": "D0",
+      "armA": "ky",
+      "armD": "bo",
+      "lossA": 174,
+      "lossD": 18,
+      "charge": false,
+      "flankA": false,
+      "flankD": false
+     },
+     {
+      "kind": "melee",
+      "lane": 1,
+      "a": "A5",
+      "d": "D0",
+      "armA": "thuy",
+      "armD": "bo",
+      "lossA": 103,
+      "lossD": 107,
+      "charge": false,
+      "flankA": false,
+      "flankD": false
+     },
+     {
+      "kind": "rout",
+      "side": "A",
+      "wing": "A3",
+      "arm": "ky",
+      "lane": 1,
+      "big": true
+     },
+     {
+      "kind": "rout",
+      "side": "D",
+      "wing": "D0",
+      "arm": "bo",
+      "lane": 1,
+      "big": true
+     }
+    ]
+   },
+   {
+    "turn": 4,
+    "ev": [
+     {
+      "kind": "volley",
+      "side": "A",
+      "loss": 68
+     },
+     {
+      "kind": "volley",
+      "side": "D",
+      "loss": 96
+     },
+     {
+      "kind": "melee",
+      "lane": 1,
+      "a": "A0",
+      "d": "D3",
+      "armA": "bo",
+      "armD": "cung",
+      "lossA": 74,
+      "lossD": 144,
+      "charge": false,
+      "flankA": false,
+      "flankD": false
+     },
+     {
+      "kind": "melee",
+      "lane": 0,
+      "a": "A1",
+      "d": "D1",
+      "armA": "bo",
+      "armD": "bo",
+      "lossA": 75,
+      "lossD": 52,
+      "charge": false,
+      "flankA": false,
+      "flankD": false
+     },
+     {
+      "kind": "melee",
+      "lane": 2,
+      "a": "A2",
+      "d": "D2",
+      "armA": "bo",
+      "armD": "bo",
+      "lossA": 55,
+      "lossD": 45,
+      "charge": false,
+      "flankA": false,
+      "flankD": false
+     },
+     {
+      "kind": "melee",
+      "lane": 1,
+      "a": "A5",
+      "d": "D3",
+      "armA": "thuy",
+      "armD": "cung",
+      "lossA": 45,
+      "lossD": 119,
+      "charge": false,
+      "flankA": false,
+      "flankD": false
+     },
+     {
+      "kind": "rout",
+      "side": "D",
+      "wing": "D1",
+      "arm": "bo",
+      "lane": 0,
+      "big": true
+     },
+     {
+      "kind": "rout",
+      "side": "D",
+      "wing": "D2",
+      "arm": "bo",
+      "lane": 2,
+      "big": true
+     },
+     {
+      "kind": "rout",
+      "side": "D",
+      "wing": "D3",
+      "arm": "cung",
+      "lane": 1,
+      "big": true
+     }
+    ]
+   }
+  ],
+  "fired": {
+   "A": true,
+   "D": true
+  },
+  "wind": true,
+  "luck": {
+   "A": 1.0591592225246131,
+   "D": 1.1046967318747192
+  },
+  "rs": 4230236787,
+  "A": {
+   "fid": "zhu_yuanzhang",
+   "gen": {
+    "id": "zhu",
+    "name": "Chu Nguyên Chương",
+    "uy": 9,
+    "tai": 7,
+    "muu": 7,
+    "dung": 6,
+    "kien": 8,
+    "loyal": 100,
+    "lord": true,
+    "traits": [
+     "commoner"
+    ]
+   }
+  },
+  "D": {
+   "fid": "cao_cao",
+   "gen": {
+    "id": "man_chong",
+    "name": "Mãn Sủng",
+    "uy": 6,
+    "tai": 8,
+    "muu": 8,
+    "dung": 4,
+    "kien": 8,
+    "loyal": 95,
+    "lord": false,
+    "traits": [
+     "walls"
+    ]
+   },
+   "holding": false
+  },
+  "wings": [
+   {
+    "id": "A0",
+    "side": "A",
+    "arm": "bo",
+    "men": 1496,
+    "start": 1900,
+    "morale": 59.2084430268727,
+    "lane": 1,
+    "row": 4,
+    "order": null,
+    "flank": false,
+    "gone": false,
+    "routed": false,
+    "left": false,
+    "hold": false,
+    "charge": false,
+    "hit": 170,
+    "moved": true,
+    "shot": null,
+    "burnt": false,
+    "fought": true,
+    "breach": false
+   },
+   {
+    "id": "A1",
+    "side": "A",
+    "arm": "bo",
+    "men": 700,
+    "start": 950,
+    "morale": 45.45009801075931,
+    "lane": 0,
+    "row": 3,
+    "order": null,
+    "flank": false,
+    "gone": false,
+    "routed": false,
+    "left": false,
+    "hold": false,
+    "charge": false,
+    "hit": 75,
+    "moved": false,
+    "shot": null,
+    "burnt": false,
+    "fought": true,
+    "breach": false
+   },
+   {
+    "id": "A2",
+    "side": "A",
+    "arm": "bo",
+    "men": 816,
+    "start": 950,
+    "morale": 67.05444437730377,
+    "lane": 2,
+    "row": 4,
+    "order": null,
+    "flank": false,
+    "gone": false,
+    "routed": false,
+    "left": false,
+    "hold": false,
+    "charge": false,
+    "hit": 55,
+    "moved": true,
+    "shot": null,
+    "burnt": false,
+    "fought": true,
+    "breach": false
+   },
+   {
+    "id": "A3",
+    "side": "A",
+    "arm": "ky",
+    "men": 368,
+    "start": 800,
+    "morale": 0,
+    "lane": 1,
+    "row": 3,
+    "order": null,
+    "flank": false,
+    "gone": true,
+    "routed": true,
+    "left": false,
+    "hold": false,
+    "charge": false,
+    "hit": 174,
+    "moved": false,
+    "shot": null,
+    "burnt": false,
+    "fought": true,
+    "breach": false
+   },
+   {
+    "id": "A4",
+    "side": "A",
+    "arm": "cung",
+    "men": 1000,
+    "start": 1000,
+    "morale": 89,
+    "lane": 1,
+    "row": 2,
+    "order": null,
+    "flank": false,
+    "gone": false,
+    "routed": false,
+    "left": false,
+    "hold": false,
+    "charge": false,
+    "hit": 0,
+    "moved": false,
+    "shot": "D1",
+    "burnt": false,
+    "fought": false,
+    "breach": false
+   },
+   {
+    "id": "A5",
+    "side": "A",
+    "arm": "thuy",
+    "men": 1076,
+    "start": 1800,
+    "morale": 38.356041524549155,
+    "lane": 1,
+    "row": 4,
+    "order": null,
+    "flank": false,
+    "gone": false,
+    "routed": false,
+    "left": false,
+    "hold": false,
+    "charge": false,
+    "hit": 45,
+    "moved": true,
+    "shot": null,
+    "burnt": false,
+    "fought": true,
+    "breach": false
+   },
+   {
+    "id": "D0",
+    "side": "D",
+    "arm": "bo",
+    "men": 496,
+    "start": 800,
+    "morale": 0.8098120615864808,
+    "lane": 1,
+    "row": 4,
+    "order": null,
+    "flank": false,
+    "gone": true,
+    "routed": true,
+    "left": false,
+    "hold": true,
+    "charge": false,
+    "hit": 272,
+    "moved": false,
+    "shot": null,
+    "burnt": false,
+    "fought": true,
+    "breach": false
+   },
+   {
+    "id": "D1",
+    "side": "D",
+    "arm": "bo",
+    "men": 342,
+    "start": 600,
+    "morale": 3.9985002307337325,
+    "lane": 0,
+    "row": 4,
+    "order": null,
+    "flank": false,
+    "gone": true,
+    "routed": true,
+    "left": false,
+    "hold": true,
+    "charge": false,
+    "hit": 120,
+    "moved": false,
+    "shot": null,
+    "burnt": false,
+    "fought": true,
+    "breach": false
+   },
+   {
+    "id": "D2",
+    "side": "D",
+    "arm": "bo",
+    "men": 284,
+    "start": 600,
+    "morale": 4.828606415779234,
+    "lane": 2,
+    "row": 5,
+    "order": null,
+    "flank": false,
+    "gone": true,
+    "routed": true,
+    "left": false,
+    "hold": true,
+    "charge": false,
+    "hit": 45,
+    "moved": false,
+    "shot": null,
+    "burnt": false,
+    "fought": true,
+    "breach": false
+   },
+   {
+    "id": "D3",
+    "side": "D",
+    "arm": "cung",
+    "men": 337,
+    "start": 600,
+    "morale": 0.8552631578947398,
+    "lane": 1,
+    "row": 5,
+    "order": null,
+    "flank": false,
+    "gone": true,
+    "routed": true,
+    "left": false,
+    "hold": false,
+    "charge": false,
+    "hit": 263,
+    "moved": false,
+    "shot": "A0",
+    "burnt": false,
+    "fought": true,
+    "breach": false
+   }
+  ]
+ },
+ "me": "A",
+ "proposed": {},
+ "outcome": {
+  "win": "A",
+  "turns": 4,
+  "losses": {
+   "A": 2128,
+   "D": 1871
+  },
+  "routed": "D"
+ }
+}

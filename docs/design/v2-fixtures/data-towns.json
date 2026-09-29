@@ -1,0 +1,100 @@
+{
+ "towns": [
+  {
+   "id": "chung_ly",
+   "name": "Chung Ly",
+   "seat": "huai",
+   "lonlat": null,
+   "river": "hoai",
+   "terrain": "Đồng bằng ven sông Hoài"
+  },
+  {
+   "id": "tho_xuan",
+   "name": "Thọ Xuân",
+   "seat": null,
+   "lonlat": [
+    116.78,
+    32.58
+   ],
+   "river": "hoai",
+   "terrain": "Đồng bằng, sông Phì chảy qua"
+  },
+  {
+   "id": "am_lang",
+   "name": "Âm Lăng",
+   "seat": null,
+   "lonlat": [
+    117.72,
+    32.52
+   ],
+   "river": null,
+   "terrain": "Đồng bằng, rừng thưa"
+  },
+  {
+   "id": "hu_di",
+   "name": "Hu Dị",
+   "seat": null,
+   "lonlat": [
+    118.52,
+    33
+   ],
+   "river": "hoai",
+   "terrain": "Gò đồi ven hồ"
+  },
+  {
+   "id": "lich_duong",
+   "name": "Lịch Dương",
+   "seat": null,
+   "lonlat": [
+    118.36,
+    31.74
+   ],
+   "river": "giang",
+   "terrain": "Bờ bắc Trường Giang"
+  }
+ ],
+ "seats": [
+  {
+   "id": "xu",
+   "name": "Bành Thành"
+  },
+  {
+   "id": "yang",
+   "name": "Kiến Nghiệp"
+  },
+  {
+   "id": "yan",
+   "name": "Xương Ấp"
+  },
+  {
+   "id": "yu",
+   "name": "Hứa Xương"
+  }
+ ],
+ "factions": {
+  "zhu_yuanzhang": {
+   "name": "Chu Nguyên Chương",
+   "short": "Minh",
+   "glyph": "明",
+   "color": "#b3262e"
+  },
+  "cao_cao": {
+   "name": "Tào Tháo",
+   "short": "Tào",
+   "glyph": "魏",
+   "color": "#4d6a3a"
+  },
+  "sun_quan": {
+   "name": "Tôn Quyền",
+   "short": "Ngô",
+   "glyph": "吳",
+   "color": "#d9772a"
+  },
+  "local": {
+   "name": "Hào tộc",
+   "short": "Hào tộc",
+   "glyph": "豪",
+   "color": "#8a7a55"
+  }
+ }
+}
