@@ -32,6 +32,8 @@ function calm(seed = 3) {
   return g;
 }
 const FORBIDDEN = /"(estWin|trueWin|odds|band|bias|rs|seed|win_p|truth)"\s*:/;
+// the spike's Thọ Xuân (2.600 men) where a test is about what follows a battle, not the demo's balance (29/9: 4.000)
+const SPIKE_THO_XUAN = { bo: 2000, cung: 600 };
 
 // ---------------------------------------------------------------- data and view shapes
 test('data: towns, seats and factions in the fixture shape the scene reads, with lanes per town', () => {
@@ -61,10 +63,14 @@ test('view: the fixture shape (view-start), the season-1 board', () => {
   for (const k of Object.keys(fx)) assert.ok(k in v, 'view.' + k);
   assert.deepEqual(Object.keys(v.towns[0]).sort(), Object.keys(fx.towns[0]).sort());
   for (const a of v.armies) assert.deepEqual(Object.keys(a).sort(), Object.keys(fx.armies[0]).sort(), a.id);
+  // the spike's cards, word for word, but for two lines rewritten on 29/9 (freeze B): Liêu comes back in summer 220,
+  // and the alliance with Ngô ends in spring 220 (it left Lịch Dương out of reach for good)
+  const rewritten = { history_fan: (c) => { c.text = DATA.cards.find((x) => x.id === 'history_fan').text; }, envoy_wu: (c) => { c.yes.fx = DATA.cards.find((x) => x.id === 'envoy_wu').yes.fx; } };
   for (const c of v.cards) {
-    const f = fx.cards.find((x) => x.id === c.id);
+    const f = JSON.parse(JSON.stringify(fx.cards.find((x) => x.id === c.id) || null));
     assert.ok(f, c.id);
-    assert.deepEqual(c, f); // the spike's cards, word for word
+    if (rewritten[c.id]) rewritten[c.id](f);
+    assert.deepEqual(c, f);
   }
   assert.deepEqual(v.cards.map((c) => c.id), fx.cards.map((c) => c.id));
   assert.deepEqual(v.gens, fx.gens);
@@ -351,6 +357,11 @@ test('preview: the resources after the season are what the season end really giv
   const s = V2.preview(g, { type: 'order', army: 'a1', target: T('hu_di'), intent: 'siege' });
   assert.equal(s.fall, 1);
   assert.equal(s.res.uy[1], g.res.uy + 3, 'Hu Dị opens: Uy +3');
+  // the owner, 29/9: a town that opens the same season says so plainly, before the siege's rule
+  assert.match(s.lines[1], /mở cổng ngay cuối mùa này/);
+  assert.ok(!s.lines.some((l) => /Ước mở cổng sau/.test(l)));
+  const slow = V2.preview(g, { type: 'order', army: 'a2', target: T('tho_xuan'), intent: 'siege' });
+  assert.ok(!slow.lines.some((l) => /ngay cuối mùa này/.test(l)));
   const bad = V2.preview(g, { type: 'task', town: 'am_lang', key: 'mo_thuy' });
   assert.equal(bad.ok, false);
   assert.equal(bad.why, 'Chỉ thành ven sông.');
@@ -425,9 +436,11 @@ test('a battle is fought to the end on the proposals alone, ours or theirs', () 
   // the fixture shapes the scene and the UI were built on
   const f1 = fixture('battle-turn1'), fo = fixture('battle-over');
   for (const k of Object.keys(f1)) assert.ok(k in B, 'battle.' + k);
-  for (const k of Object.keys(f1.plan)) assert.ok(k in B.plan, 'plan.' + k);
+  for (const k of Object.keys(f1.plan)) if (k !== 'seed') assert.ok(k in B.plan, 'plan.' + k);
+  assert.ok(!('seed' in B.plan), 'the battle\'s dice stay inside the engine');
   for (const side of ['attacker', 'defender']) for (const k of Object.keys(f1.plan[side])) assert.ok(k in B.plan[side], side + '.' + k);
-  assert.deepEqual(Object.keys(B.b).sort(), Object.keys(f1.b).sort());
+  // the board both sides see: the day's fortune and dice stay inside the engine
+  assert.deepEqual(Object.keys(B.b).sort(), Object.keys(f1.b).filter((k) => k !== 'rs' && k !== 'luck').sort());
   assert.deepEqual(Object.keys(B.plan.attacker.gen).sort(), Object.keys(f1.plan.attacker.gen).sort());
   assert.equal(B.me, 'A');
   assert.equal(B.plan.site, 'tho_xuan');
@@ -495,8 +508,10 @@ test('AI against AI resolves on its own: allied Ngô takes Lịch Dương from t
     g = V2.answer(g, 'envoy_wu', true);
     g = V2.endSeason(g);
     assert.equal(g.pending, null, 'not our battle');
-    const line = g.report.lines.find((l) => /Ngô .*Lịch Dương/.test(l));
-    assert.ok(line, 'seed ' + seed);
+    // Lịch Dương is far from us: the recap says only that it changed hands, never the others' losses
+    const line = g.report.lines.find((l) => /Lịch Dương/.test(l) && /Ngô/.test(l));
+    if (g.towns.lich_duong.owner === 'sun_quan') assert.equal(line, 'Lịch Dương về tay Ngô.', 'seed ' + seed);
+    assert.ok(!g.report.lines.some((l) => /Thương vong/.test(l)), 'seed ' + seed);
     if (g.towns.lich_duong.owner === 'sun_quan') seen++;
     assert.equal(g.fought.length, 0);
   }
@@ -507,6 +522,7 @@ test('after a battle: the town changes hands, the governor is taken, the losers 
   let g = newGame(11);
   delete g.armies.e1; // Liêu gone to Phàn Thành
   g.cards = [];
+  g.towns.tho_xuan.gar = { ...SPIKE_THO_XUAN };
   g = V2.order(V2.order(g, 'a1', T('tho_xuan'), 'attack'), 'a2', T('tho_xuan'), 'attack');
   g = fight(V2.endSeason(g));
   assert.equal(g.towns.tho_xuan.owner, g.me);
@@ -553,6 +569,7 @@ test('an army left in a town its side lost falls back; with no town of its own i
     h.cards = []; h.rumor = 0;
     delete h.armies.e2;
     h.armies.a2.at = 'tho_xuan'; h.armies.a2.besieging = 'tho_xuan';
+    h.towns.tho_xuan.gar = { ...SPIKE_THO_XUAN };
     h = fight(V2.endSeason(V2.order(h, 'a1', T('tho_xuan'), 'attack')));
     if (h.towns.tho_xuan.owner !== h.me) continue;
     assert.equal(h.armies.e1, undefined, 'seed ' + seed);
@@ -579,7 +596,8 @@ test('sieges: the garrison starves and the walls fall each season; below 30 % th
   g = V2.endSeason(g);
   assert.equal(g.armies.a2.besieging, 'tho_xuan');
   assert.equal(g.towns.tho_xuan.walls, 2);
-  assert.deepEqual(g.towns.tho_xuan.gar, { bo: 1600 + 150, cung: 480 });
+  const tx = DATA.start.towns.tho_xuan.gar, grow = DATA.ai.cao_cao.growth;
+  assert.deepEqual(g.towns.tho_xuan.gar, { bo: Math.round(tx.bo * 0.8) + grow, cung: Math.round(tx.cung * 0.8) });
   assert.ok(g.report.lines.some((l) => /Thọ Xuân bị vây/.test(l)));
   // no new order: the siege goes on (no order = hold where it stands)
   g = V2.endSeason(g);
@@ -701,6 +719,8 @@ test('spike: the battle plans carry the spike\'s numbers (armies, garrisons, wal
   const cases = [[['a1'], T('tho_xuan')], [['a1', 'a2'], T('tho_xuan')], [['a2'], T('hu_di')], [['a1'], T('hu_di')], [['a1'], A('e1')], [['e1'], T('am_lang')], [['e1'], T('chung_ly')], [['e2'], T('lich_duong')]];
   for (const [ids, tgt] of cases) {
     const g = newGame(1), s = Spike.newGame(1);
+    // the spike's rules on the demo's numbers (freeze B, 29/9: Thọ Xuân's garrison)
+    for (const [tid, x] of Object.entries(DATA.start.towns)) s.towns[tid].gar = JSON.parse(JSON.stringify(x.gar));
     const p = V2.internal.plan(g, ids, tgt), q = Spike.battlePlan(s, ids.length === 1 ? ids[0] : ids, tgt);
     const where = ids.join('+') + ' → ' + tgt.id;
     assert.equal(p.site, q.site, where);
@@ -767,4 +787,245 @@ test('spike: whole seasons played several ways stay sound', () => {
       assert.ok(g.report.lines.length > 0, where);
     }
   }
+});
+
+// ---------------------------------------------------------------- polish 29/9: the general's plan, pacing, hopeless battles
+const apply = (g, plan) => {
+  for (const x of plan) g = x.type === 'order' ? V2.order(g, x.army, x.target, x.intent) : V2.setTask(g, x.town, x.key);
+  return g;
+};
+
+test('advise: a whole legal plan, one line for each army, a reason for each; the cards answered in order', () => {
+  for (let seed = 1; seed <= 6; seed++) {
+    let g = newGame(seed);
+    for (let s = 0; s < 6 && !g.over; s++) {
+      const cards = V2.adviseCards(g);
+      assert.deepEqual(cards.map((c) => c.card).sort(), g.cards.map((c) => c.id).sort());
+      for (const c of cards) { assert.equal(typeof c.yes, 'boolean'); assert.ok(c.why, c.card); g = V2.answer(g, c.card, c.yes); }
+      const plan = V2.advise(g);
+      const ours = Object.values(g.armies).filter((a) => a.fid === g.me).map((a) => a.id).sort();
+      assert.deepEqual(plan.filter((x) => x.type === 'order').map((x) => x.army).sort(), ours, 'seed ' + seed);
+      for (const x of plan) {
+        assert.ok(typeof x.why === 'string' && x.why.length > 8 && x.why.length < 160, x.why);
+        if (x.type === 'order') assert.ok(x.target === null ? x.intent === 'hold' : ['move', 'attack', 'siege'].includes(x.intent), JSON.stringify(x));
+        else assert.equal(g.towns[x.town].owner, g.me);
+      }
+      assert.doesNotMatch(JSON.stringify(plan), FORBIDDEN);
+      assert.equal(JSON.stringify(V2.advise(g)), JSON.stringify(plan), 'the same board, the same plan');
+      g = V2.endSeason(apply(g, plan)); // legal: nothing throws
+      while (g.pending) g = V2.battleTurn(g, {});
+    }
+  }
+  assert.deepEqual(V2.advise(Object.assign(newGame(1), { over: { win: true, why: '' } })), []);
+});
+
+test('advise reads only what the player sees: the AI\'s settings, its dice and the rumor do not move it', () => {
+  for (const seed of [2, 5, 9]) {
+    let g = newGame(seed);
+    for (const c of V2.adviseCards(g)) g = V2.answer(g, c.card, c.yes);
+    const plan = JSON.stringify(V2.advise(g));
+    const h = JSON.parse(JSON.stringify(Object.assign({}, g, { data: null })));
+    h.data = JSON.parse(JSON.stringify(DATA));
+    h.data.ai.cao_cao.strike = 0.1; h.data.ai.cao_cao.growth = 900; h.data.ai.sun_quan.chance = 1;
+    h.rumor = 1 - g.rumor; h.rs = (g.rs ^ 0xabcdef) >>> 0;
+    assert.equal(JSON.stringify(V2.advise(h)), plan, 'seed ' + seed);
+  }
+  // it does not open a town to an enemy in reach: Liêu (6.000) could take Chung Ly were the main army to march off
+  const g = newGame(1);
+  g.cards = [];
+  const a1 = V2.advise(g).find((x) => x.army === 'a1');
+  assert.deepEqual([a1.intent, a1.target], ['hold', null]);
+  assert.equal(a1.why, 'Giữ Chung Ly: đi thì Trương Liêu đánh tới được.');
+  // a weak town in reach opens this season: the general besieges it and says so
+  const w = newGame(1);
+  w.cards = []; delete w.armies.e1;
+  const x = V2.advise(w).find((o) => o.intent === 'siege' && o.target.id === 'hu_di');
+  assert.ok(x, 'siege Hu Dị');
+  assert.match(x.why, /mở cổng ngay cuối mùa này/);
+});
+
+test('a hopeless battle says so, and the player may yield it before the first turn, at its cost', () => {
+  // Âm Lăng holds 500; Trương Liêu comes with 6.000
+  let g = newGame(11);
+  g.cards = []; g.rumor = 0;
+  g = V2.endSeason(g);
+  const B = V2.battle(g);
+  assert.deepEqual([B.me, B.plan.site, B.hopeless], ['D', 'am_lang', true]);
+  assert.match(B.withdraw.lines[0], /^Bỏ Âm Lăng không đánh: 500 quân rút về Chung Ly\.$/);
+  assert.match(B.withdraw.lines[1], /^Uy −10/);
+  const uy = g.res.uy, gar = g.towns.chung_ly.gar.bo;
+  const w = V2.withdraw(g);
+  assert.equal(w.pending, null);
+  assert.equal(w.towns.am_lang.owner, 'cao_cao');
+  assert.equal(w.towns.am_lang.walls, 1, 'given up, the walls stand');
+  assert.equal(w.towns.chung_ly.gar.bo, gar + 500, 'the garrison is kept');
+  assert.equal(w.res.uy, uy - 10);
+  assert.deepEqual(w.report.taken, [{ town: 'am_lang', from: g.me, to: 'cao_cao', siege: false, yielded: true }]);
+  assert.deepEqual(w.report.battles, [{ site: 'am_lang', a: 'cao_cao', d: g.me, win: 'A', me: 'D', yielded: true }]);
+  assert.equal(w.report.fought.length, 0, 'no battle was fought');
+  // after the first turn it is too late
+  const t1 = V2.battleTurn(g, {});
+  if (t1.pending) { assert.equal(V2.battle(t1).withdraw, null); assert.throws(() => V2.withdraw(t1), /before the first turn/); }
+  assert.throws(() => V2.withdraw(newGame(1)), /no battle/);
+  // a battle we can win is not hopeless; an attack called off keeps the armies where they stood, Uy −5
+  let a = newGame(11);
+  delete a.armies.e1; a.cards = [];
+  a.towns.tho_xuan.gar = { ...SPIKE_THO_XUAN };
+  a = V2.endSeason(V2.order(V2.order(a, 'a1', T('tho_xuan'), 'attack'), 'a2', T('tho_xuan'), 'attack'));
+  assert.equal(V2.battle(a).hopeless, false);
+  assert.match(V2.battle(a).withdraw.lines[0], /^Rút lệnh đánh Thọ Xuân/);
+  const off = V2.withdraw(a);
+  assert.deepEqual([off.armies.a1.at, off.armies.a2.at, off.towns.tho_xuan.owner], ['chung_ly', 'chung_ly', 'cao_cao']);
+  assert.equal(off.res.uy, a.res.uy - 5);
+  // an empty town of ours falls without asking the player to fight for it
+  let e = newGame(11);
+  e.cards = []; e.rumor = 0; e.towns.am_lang.gar = {};
+  e = V2.endSeason(e);
+  assert.equal(e.pending, null);
+  assert.equal(e.towns.am_lang.owner, 'cao_cao');
+});
+
+test('what the player is shown of a battle: the board, not the day\'s fortune, the dice or the enemy general\'s stats', () => {
+  let d = newGame(11);
+  d.cards = []; d.rumor = 0;
+  d = V2.endSeason(d);
+  const B = V2.battle(d);
+  for (const k of ['rs', 'luck']) assert.ok(!(k in B.b), k);
+  assert.ok(!('seed' in B.plan));
+  assert.deepEqual(Object.keys(B.plan.attacker.gen).sort(), ['id', 'lord', 'name', 'traits']);
+  assert.deepEqual(Object.keys(B.b.A.gen).sort(), ['id', 'lord', 'name', 'traits']);
+  assert.equal(B.b.D.gen.kien, Battle.OFFICER.kien, 'our side in full');
+  assert.equal(typeof B.b.wind, 'boolean', 'the wind is for all to see');
+  while (d.pending) d = V2.battleTurn(d, {});
+  const L = V2.lastBattle(d);
+  assert.ok(!('luck' in L.b) && !('seed' in L.plan));
+  assert.deepEqual(Object.keys(L.b.A.gen).sort(), ['id', 'lord', 'name', 'traits']);
+});
+
+test('the alliance with Ngô ends in spring 220; its fleet then sails west, and Lịch Dương can be taken', () => {
+  let found = 0;
+  for (let seed = 1; seed <= 12; seed++) {
+    let g = newGame(seed);
+    delete g.armies.e1;
+    g = V2.answer(g, 'envoy_wu', true);
+    g = fight(V2.endSeason(g));
+    if (g.towns.lich_duong.owner !== 'sun_quan') continue;
+    // Lã Mông's card is about a hào tộc town: not dealt while Ngô holds it
+    assert.ok(!g.cards.some((c) => c.src === 'history_lu'), 'seed ' + seed);
+    g.cards = [];
+    g = fight(V2.endSeason(g));
+    assert.ok(g.allies.sun_quan && g.armies.e2, 'allied through winter');
+    g.cards = [];
+    g = fight(V2.endSeason(g));
+    assert.equal(g.allies.sun_quan, undefined);
+    assert.ok(g.report.lines.some((l) => /xưng thần với Tào/.test(l)));
+    assert.equal(g.armies.e2, undefined, 'the fleet sailed west');
+    g.armies.a1.at = 'am_lang';
+    assert.equal(V2.targets(g, 'a1').find((t) => t.id === 'lich_duong').intent, 'ask');
+    found++;
+  }
+  assert.ok(found >= 3, found);
+  // with Lịch Dương still the hào tộc's, Lã Mông's card comes
+  const n = fight(V2.endSeason(Object.assign(newGame(3), { cards: [] })));
+  if (n.towns.lich_duong.owner === 'local') assert.ok(n.cards.some((c) => c.src === 'history_lu'));
+});
+
+test('Trương Liêu comes back in summer 220: into a town Tào holds, or straight at the one he left', () => {
+  const back = DATA.ai.cao_cao.recall.back;
+  const quiet = (g) => { g.cards = []; return fight(V2.endSeason(g)); };
+  let g = newGame(1);
+  g.rumor = 1;
+  for (let s = 1; s < back.season; s++) g = quiet(g);
+  assert.ok(!g.armies.e1, 'away at Phàn Thành');
+  g = quiet(g);
+  assert.equal(g.armies.e1.at, 'tho_xuan');
+  assert.deepEqual(g.armies.e1.units, back.units);
+  assert.ok(g.report.lines.some((l) => /Trương Liêu trở lại Thọ Xuân/.test(l)));
+  assert.ok(V2.view(g).moves.some((m) => m.id === 'e1' && m.arrive && m.from === null && m.to === 'tho_xuan'));
+  // Thọ Xuân fell meanwhile: he marches on it the season he comes
+  let h = newGame(1);
+  h.rumor = 1;
+  h = quiet(h);
+  h.towns.tho_xuan.owner = h.me; h.towns.tho_xuan.gar = { bo: 9000 };
+  for (let s = 2; s < back.season; s++) h = quiet(h);
+  h.cards = [];
+  h = V2.endSeason(h);
+  const B = V2.battle(h);
+  assert.deepEqual([B.me, B.plan.site, B.plan.from, B.plan.attacker.gen.id], ['D', 'tho_xuan', null, 'zhang_liao']);
+  // beaten, with no town of Tào's left here, he goes home
+  h = fight(h);
+  if (h.towns.tho_xuan.owner === h.me) {
+    assert.equal(h.armies.e1, undefined);
+    assert.ok(h.report.lines.includes('Trương Liêu rời Hoài Nam.'));
+  }
+});
+
+test('recruits join the army of ours standing in the town (foot to the land army, boats to the fleet), else the garrison', () => {
+  let g = calm();
+  const a1 = g.armies.a1.units.bo, cl = g.towns.chung_ly.gar.bo;
+  g = V2.setTask(V2.setTask(g, 'chung_ly', 'mo_bo'), 'am_lang', 'mo_bo');
+  const p = V2.preview(g, { type: 'order', army: 'a1', target: null });
+  g = V2.endSeason(g);
+  assert.equal(p.res.luong[1], g.res.luong, 'the preview knows the new men eat as soldiers');
+  assert.equal(g.armies.a1.units.bo, a1 + 1000);
+  assert.equal(g.towns.chung_ly.gar.bo, cl);
+  assert.equal(g.towns.am_lang.gar.bo, 1500);
+  assert.deepEqual(g.report.done, [{ town: 'chung_ly', key: 'mo_bo' }, { town: 'am_lang', key: 'mo_bo' }]);
+  g = V2.endSeason(V2.setTask(g, 'chung_ly', 'mo_thuy'));
+  assert.equal(g.armies.a2.units.thuy, 1800 + 600);
+});
+
+test('the recap and the playback: work done, sieges, battles seen; marches only where the player could see them', () => {
+  let h = calm();
+  h = V2.order(V2.order(h, 'a1', T('hu_di'), 'siege'), 'a2', T('tho_xuan'), 'siege');
+  h = V2.endSeason(h);
+  assert.deepEqual(h.report.sieges, [
+    { town: 'hu_di', by: h.me, armies: ['a1'], fresh: true, walls: 0, open: true },
+    { town: 'tho_xuan', by: h.me, armies: ['a2'], fresh: true, walls: 2, open: false },
+  ]);
+  assert.deepEqual(V2.view(h).moves.map((m) => [m.id, m.from, m.to, !!m.siege]), [['a1', 'chung_ly', 'hu_di', true], ['a2', 'chung_ly', 'tho_xuan', true]]);
+  // the siege line reads the garrison as the player sees it (±20 %), not the truth
+  assert.match(h.report.lines.find((l) => /Thọ Xuân bị vây/.test(l)), /đồn còn ~[\d.]+00, lũy còn 2/);
+  h = V2.endSeason(h);
+  assert.equal(h.report.sieges[0].fresh, false, 'a siege under way');
+  // Ngô's fleet sails from Lịch Dương, far from us: in the truth's moves, not the player's
+  for (const seed of [1, 2, 3]) {
+    let n = newGame(seed);
+    n.cards = []; delete n.armies.e1;
+    n = fight(V2.endSeason(n));
+    n.cards = [];
+    n = fight(V2.endSeason(n));
+    assert.ok(n.moves.some((m) => m.id === 'e2' && m.leave), 'seed ' + seed);
+    assert.ok(!V2.view(n).moves.some((m) => m.id === 'e2'), 'seed ' + seed);
+  }
+  // our battle in the recap's battles, with its outcome
+  let b = newGame(11);
+  delete b.armies.e1; b.cards = [];
+  b = fight(V2.endSeason(V2.order(V2.order(b, 'a1', T('tho_xuan'), 'attack'), 'a2', T('tho_xuan'), 'attack')));
+  assert.deepEqual(b.report.battles, [{ site: 'tho_xuan', a: b.me, d: 'cao_cao', win: b.report.fought[0].win, me: 'A' }]);
+});
+
+test('bottoming out: the warning comes a season ahead, with a way out that is legal now (D9)', () => {
+  const g = calm();
+  g.armies.a1.units.ky = 8000; // horse eat twice: the grain runs out this season
+  const al = V2.view(g).alerts.find((x) => x.key === 'luong');
+  assert.equal(al.level, 'soon');
+  assert.match(al.text, /^Cuối mùa này kho lương âm/);
+  const m = al.fix[0].match(/^Cho ([\d.]+) kỵ của Chu Nguyên Chương vào đồn Chung Ly: nuôi quân −[\d.]+ lương mỗi mùa\.$/);
+  assert.ok(m, al.fix[0]);
+  // the way out works: those horse into the garrison and the season ends above the floor
+  const fixed = V2.transfer(g, 'chung_ly', 'a1', 'ky', -Number(m[1].replace(/\./g, '')));
+  assert.ok(V2.internal.project(fixed).luong >= 0);
+  // the recap says it too, with its way out
+  const e = V2.endSeason(g);
+  assert.ok(e.warn.luong);
+  assert.ok(e.report.lines.some((l) => /^Cách cứu: /.test(l)));
+  // warned, and no way to find the grain in time: said plainly
+  const f = calm();
+  f.res.luong = -5000; f.warn.luong = true;
+  const fl = V2.view(f).alerts.find((x) => x.key === 'luong');
+  assert.equal(fl.level, 'floor');
+  assert.match(fl.text, /Không còn cách nào đủ lương kịp cuối mùa này/);
+  // nothing to warn of on a sound purse
+  assert.deepEqual(V2.view(calm()).alerts, []);
 });
