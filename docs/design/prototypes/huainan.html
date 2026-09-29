@@ -74,11 +74,21 @@
       sc.battle.show(B.b, B.me);
       sc.settle();
       extra.lanes = sc.lanesAt(B.plan.site, B.b.from);
-      if (q.get('probe')) { const cards = sc.battle.cards(); extra.wingTaps = cards.map((c) => [c.id, sc.battle.pickWing(c.x, c.y + 8)]); extra.wingMiss = sc.battle.pickWing(3, 3); }
+      if (q.get('probe')) { const cards = sc.battle.cards(); extra.wingTaps = cards.map((c) => [c.id, sc.battle.pickWing(c.body.x, c.body.y), c.pill && sc.battle.pickWing(c.pill.x, c.pill.y)]); /* on the block, on its pill */ extra.wingMiss = sc.battle.pickWing(3, 3); }
+      if (q.get('end')) { // the battle is over: the map comes back with its armies (?end=1)
+        const n0 = rt.scene.children.length; sc.battle.end(); sc.sync(view); sc.overview(); sc.settle();
+        extra.afterEnd = { on: sc.battle.on, sceneChildren: [n0, rt.scene.children.length], armiesVisible: Object.values(sc.armies).every((m) => m.g.visible) };
+      }
     } else if (q.get('probe')) {
       extra.taps = [];
       for (const [k, ids] of [['town', Object.keys(sc.place)], ['army', Object.keys(sc.armies)]]) for (const i of ids) { const s = sc.screenOf(k, i); if (s && s.visible) { const r = sc.pick(s.x, s.y + (k === 'army' ? 12 : 0)); extra.taps.push([k + ':' + i, r.kind + ':' + (r.id || '')]); } }
       extra.ground = sc.pick(W * 0.5, H * 0.9);
+      // camera gestures: a wheel turn zooms, a drag pans, a short press-release taps
+      const c0 = JSON.parse(JSON.stringify(sc.cam)); sc.gesture.wheel(-300); const c1 = JSON.parse(JSON.stringify(sc.cam));
+      sc.gesture.down(1, 400, 200, 0); sc.gesture.move(1, 460, 230); const c2 = JSON.parse(JSON.stringify(sc.cam)); sc.gesture.up(1, 460, 230);
+      const tapAt = sc.screenOf('town', 'hu_di'); sc.gesture.down(2, tapAt.x, tapAt.y, 0); const tapped = sc.gesture.up(2, tapAt.x, tapAt.y);
+      extra.gestures = { dist: [c0.dist, c1.dist], pan: [c1.t, c2.t], tapped };
+      sc.overview(); sc.settle();
     }
     extra.fleets = Object.fromEntries(Object.entries(sc.armies).filter(([, m]) => m.a.arm === 'fleet').map(([k, m]) => [k, { at: m.a.at, to: m.to.map((v) => +v.toFixed(2)), riverSD: +rt.terr.riverSD(m.to[0], m.to[2]).toFixed(2) }]));
     extra.waterNear = Object.fromEntries(Object.entries(sc.place).filter(([, p]) => p.kind === 'town').map(([k, p]) => { let mn = 1e9; for (let r = 0.5; r < 14; r += 0.5) for (let a = 0; a < 6.28; a += 0.2) mn = Math.min(mn, rt.terr.riverSD(p.x + Math.cos(a) * r, p.z + Math.sin(a) * r)); return [k, +mn.toFixed(2)]; }));

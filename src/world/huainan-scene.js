@@ -8,7 +8,8 @@
 //   sc.sync(view) · sc.pick(x, y) · sc.select(sel) · sc.targets(armyId, targets) · sc.focus(id) · sc.overview()
 //   sc.battle.begin({ site, from, me, siege }) · .show(b, me) · .pickWing(x, y) · .end()
 //   sc.loop(onFrame) · sc.stop() · sc.measure()      + sc.bind(el, { onTap }) for the camera gestures, sc.lanesAt(site, from)
-// The pure helpers (counts, labels, wing cells) are exported for Node (tests/huainan-scene.test.mjs); the scene needs THREE.
+// Loads after three r146 (+ BufferGeometryUtils, RoundedBoxGeometry), kit.js, terrain.js, terrain-real.js, world-runtime.js and
+// han-models.js. The pure helpers (counts, labels, wing cells) are exported for Node (tests/huainan-scene.test.mjs).
 (function (root) {
   const S = {};
   const ARMS = ['bo', 'cung', 'ky', 'thuy'];
@@ -633,7 +634,9 @@
       const st = standard(fid, 1.5, 0.55); st.position.set(0.3, 0, -0.5); g.add(st);
       const ring = new T.Mesh(ringGeo, ringMat(GOLD, 0.6)); ring.scale.setScalar(0.8); ring.position.set(-0.3, 0.1, 0); ring.renderOrder = 6; ring.visible = false; g.add(ring); // the player's wings wear a small gold ring
       g.scale.setScalar(1.25);
-      return { g, mesh: m, ashore, cap, ring, st };
+      // the ground the block covers, along its facing (a0..a1, behind the front rank to just ahead) and across (± l), in world units
+      const rowsN = Math.ceil(cap / cols), foot = { a0: -((rowsN - 1) * dx + 0.4) * 1.25, a1: 0.5, l: ((Math.min(cols, cap) - 1) * dz / 2 + 0.35) * 1.25 };
+      return { g, mesh: m, ashore, cap, ring, st, foot, fwd: [1, 0] };
     };
     const SIEGE = 1.6, WALL_H = [0.2, 0.3, 0.42, 0.52, 0.62]; // the wall's height by lũy, in the kit's units (han-models.js LV)
     const battleEnd = () => {
@@ -703,7 +706,7 @@
         if (Wg.ashore) { Wg.mesh.visible = wet; Wg.ashore.visible = !wet; Wg.ashore.count = w.gone ? 0 : Math.max(1, Math.ceil((Math.max(0, w.men) / w.start) * Wg.ashore.instanceMatrix.count)); }
         Wg.g.rotation.y = Math.atan2(-fwd[1], fwd[0]);
         const shown = S.wingShown(w, Wg.cap);
-        Wg.gone = !!w.gone; Wg.men = w.men;
+        Wg.gone = !!w.gone; Wg.men = w.men; Wg.fwd = fwd;
         Wg.tw = { from: Wg.g.position.toArray(), to, t0: now, ms, lunge: w.fought ? 0.4 : 0, fwd, shake: w.hit > 0 ? Math.min(0.1, w.hit / 3000) : 0, c0: Wg.mesh.count, c1: shown, fade: w.gone };
         Wg.label.set(w.gone ? '' : fmt(Math.max(0, w.men)), { px: 11, bar: CSS[fid], mine, dim: !!w.routed });
         if (w.burnt) for (let k = 0; k < 8; k++) { const f = new T.Mesh(flameGeo, flameMat); f.position.set(K.rr(-1, 0.3), 0.05, K.rr(-0.6, 0.6)); Wg.g.add(f); BT.fx.push({ kind: 'flame', m: f, parent: Wg.g, t0: now, ms: 3200, ph: Math.random() * 6 }); }
@@ -740,11 +743,22 @@
       return any;
     };
     // the wing under a screen point: the nearest block by its size on screen, or none
+    // the wing under a screen point: its pill first, then the ground its block covers (the one whose middle is nearest), then the nearest block by its size on screen
     const pickWing = (x, y) => {
       if (!BT.on) return null;
+      const live = Object.entries(BT.wings).filter(([, Wg]) => Wg.g.visible && !Wg.gone);
+      for (const [id, Wg] of live) { const r = Wg.label.rect; if (r && x >= r.x0 - 4 && x <= r.x1 + 4 && y >= r.y0 - 4 && y <= r.y1 + 4) return id; }
       let best = null;
-      for (const [id, Wg] of Object.entries(BT.wings)) {
-        if (!Wg.g.visible || Wg.gone) continue;
+      const co = camera.position, rd = dir.set((x / W) * 2 - 1, -(y / H) * 2 + 1, 0.5).unproject(camera).sub(co).normalize(); // the tap's ray, cut by the plane of each block (a wing on a wall stands higher)
+      for (const [id, Wg] of live) {
+        const p = Wg.g.position, f = Wg.fwd, k = Wg.foot, t = (p.y + 0.4 - co.y) / rd.y; if (!(t > 0)) continue;
+        const rx = co.x + rd.x * t - p.x, rz = co.z + rd.z * t - p.z, a = rx * f[0] + rz * f[1], l = -rx * f[1] + rz * f[0];
+        if (a < k.a0 || a > k.a1 || Math.abs(l) > k.l) continue;
+        const d = Math.hypot((a - (k.a0 + k.a1) / 2) / (k.a1 - k.a0), l / k.l);
+        if (!best || d < best.d) best = { id, d };
+      }
+      if (best) return best.id;
+      for (const [id, Wg] of live) {
         const p = Wg.g.position, c = rt.project([p.x, p.y + 0.6, p.z]); if (!c.visible) continue;
         const e = rt.project([p.x + BT.v[0] * 1.15, p.y + 0.6, p.z + BT.v[1] * 1.15]), r = Math.max(34, Math.hypot(e.x - c.x, e.y - c.y) * 1.05 + 10), d = Math.hypot(c.x - x, c.y - y) / r;
         if (d < 1 && (!best || d < best.d)) best = { id, d };
@@ -753,7 +767,11 @@
     };
     const battleSelect = (id) => { BT.sel = id && BT.wings[id] ? id : null; for (const [k, Wg] of Object.entries(BT.wings)) Wg.ring.material.color.setHex(k === BT.sel ? 0xffffff : GOLD); dirty = true; };
     // screen positions of the wing blocks and of the lanes (for a page that draws its own chips)
-    const battleCards = () => (BT.on ? Object.entries(BT.wings).filter(([, Wg]) => Wg.g.visible && !Wg.gone).map(([id, Wg]) => { const p = Wg.g.position, q = rt.project([p.x, p.y + 1.35, p.z]); return { id, x: q.x, y: q.y, visible: q.visible }; }) : []);
+    const battleCards = () => (BT.on ? Object.entries(BT.wings).filter(([, Wg]) => Wg.g.visible && !Wg.gone).map(([id, Wg]) => {
+      const p = Wg.g.position, q = rt.project([p.x, p.y + 1.35, p.z]), m = (Wg.foot.a0 + Wg.foot.a1) / 2, b = rt.project([p.x + Wg.fwd[0] * m, p.y + 0.4, p.z + Wg.fwd[1] * m]);
+      const r = Wg.label.rect;
+      return { id, x: q.x, y: q.y, visible: q.visible, body: { x: b.x, y: b.y }, pill: r ? { x: (r.x0 + r.x1) / 2, y: (r.y0 + r.y1) / 2 } : null }; // above the block, on it, and its pill as drawn
+    }) : []);
     const laneCards = () => (BT.on ? [0, 1, 2].map((l) => { const p = gridPos(l, BT.me === 'A' ? 0.5 : 5.3), q = rt.project([p[0], p[1], p[2]]); return { lane: l, x: q.x, y: q.y, visible: q.visible }; }) : []);
 
     // ------------------------------------------------------------ labels on screen, frame loop (renders only when something changed)
@@ -762,7 +780,7 @@
       const k = (2 * Math.tan(T.MathUtils.degToRad(camera.fov / 2))) / H, vis = [];
       for (const L of labels) {
         const on = L.on && L.key && ((L.layer === 'battle') === BT.on);
-        L.sprite.visible = !!on; if (!on) continue;
+        L.sprite.visible = !!on; if (!on) { L.rect = null; continue; }
         const p = L.anchor(); L.sprite.position.set(p[0], p[1], p[2]); L.sprite.scale.set(L.w * k, L.h * k, 1);
         const q = rt.project(p); L.sx = q.x; L.sy = q.y; vis.push(L);
       }
@@ -776,7 +794,7 @@
           shift = top0 + L.h - hit.y0 + 2;
         }
         shift = Math.min(shift, 70);
-        placed.push({ x0: L.sx - L.w / 2, x1: L.sx + L.w / 2, y0: top0 - shift, y1: top0 - shift + L.h });
+        placed.push(L.rect = { x0: L.sx - L.w / 2, x1: L.sx + L.w / 2, y0: top0 - shift, y1: top0 - shift + L.h });
         L.sprite.center.y = (L.below ? 1 : 0) - shift / L.h;
       }
     };
