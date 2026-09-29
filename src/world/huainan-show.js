@@ -301,6 +301,14 @@
   };
   const chReport = (r) => {
     if (!r) return;
+    // the recap's story lines (a general called away, a fleet gone up the river, hunger): not its battles (below), a town's
+    // work or the season's accounts; the first sentence is enough
+    const names = E.data.towns.map((t) => t.name + ':');
+    for (const l0 of r.lines || []) {
+      const bad = l0.charAt(0) === '!', l = bad ? l0.slice(1) : l0;
+      if (/Thương vong|Nuôi quân|^Thu [\d.]+ lương/.test(l) || names.some((n) => l.indexOf(n) === 0)) continue;
+      chAdd(r.season, l.split('. ')[0].replace(/\.$/, ''), { tone: bad ? 'bad' : '', w: 1.5, ord: 0.5, key: 'ln|' + r.season + '|' + l });
+    }
     for (const f of r.fought || []) {
       const draw = f.win === 'draw', won = f.win === f.me, lo = f.me === 'A' ? f.la : f.ld, lf = f.me === 'A' ? f.ld : f.la;
       chAdd(r.season, (draw ? 'Hòa' : won ? 'Thắng' : 'Thua') + ' ở ' + townName(f.site) + ' · ta mất ' + fmt(lo) + ', địch ' + fmt(lf), { tone: draw ? '' : won ? 'good' : 'bad', w: 2, ord: 1, key: 'ft|' + r.season + '|' + f.site + '|' + lo + '|' + lf });
