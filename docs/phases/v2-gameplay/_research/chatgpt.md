@@ -937,3 +937,15 @@ Không cần research rộng thêm. Chỉ cần owner chốt 4 điểm product c
 4. **Freeze structure đã được owner chốt trước review:** Core / Demo Hoài Nam / Open scale 20 châu. Đây không còn là câu hỏi; bước sau chỉ là reorganize draft theo cấu trúc đó.
 
 Ba quyết định còn lại đều là interaction contract. Nếu chốt theo hướng giảm bắt buộc thao tác, Freeze v2 có thể khóa mà không cần đổi kiến trúc engine hiện tại.
+
+
+### D16. Owner chốt interaction contract (29/09/2026)
+
+Owner trả lời sau GPT challenge:
+
+- **Battle = A:** tướng/system đề xuất lệnh cho toàn bộ cánh; người chơi chỉ override cánh muốn đổi rồi cho chạy lượt.
+- **Entity orders = A:** mỗi đạo quân / thành chỉ có **tối đa** một lệnh / việc mỗi mùa; bỏ qua hợp lệ. Quân không lệnh = Giữ; thành không chọn = không khởi việc mới.
+- **City UI Demo = B:** chạm thành chỉ hiện **2–3 việc phù hợp context**; có “thêm” để xem toàn bộ.
+- **Freeze structure đã chốt trước:** Core Rules / Demo Hoài Nam / Open scale 20 châu.
+
+Không còn câu hỏi interaction nào chặn việc sửa Freeze v2. GPT không tự sửa freeze vì ASSIGN giao Claude viết; bước tiếp theo là Claude cập nhật draft theo change request trong `ASSIGN.md`, chạy test hiện có, rồi đưa owner khóa SOT.
