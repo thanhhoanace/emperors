@@ -105,7 +105,25 @@ handlers = { onEndSeason, onSelect, onConfirmOrder, onClearOrder, onTask, onAnsw
 
 | Bước | Ai | Trạng thái |
 | --- | --- | --- |
-| Hợp đồng, fixture | Claude | 29/9 |
-| E, S, U song song | agent | bắt đầu 29/9 |
-| Ghép `v2.html`, controller, e2e một mùa, ảnh | Claude | sau E, S, U |
-| Chủ dự án chơi trên máy thật; đo 7 tiêu chí nhận của freeze | chủ dự án | sau ghép |
+| Hợp đồng, fixture | Claude | xong 29/9 (`1966d2f`) |
+| E. Luật v2 | agent E (Opus) | xong (`23b69ba`): `EmperorsV2`, `data/scenario/huainan.json`, 27 test, `npm run v2sim -- 200` |
+| S. Cảnh 3D | agent S (Sonnet) | xong (`abafcc6`, `32d28c6`, `ae6742d`): hình demo 1 trên runtime thật, 11 test hàm thuần; toàn cảnh 1,87 / 1,83 / 0,97 triệu tam giác (cao / vừa / thấp) |
+| U. Giao diện | agent U (Sonnet) | xong (`5fabbb1`): DOM, harness 20 trạng thái |
+| Ghép `v2.html`, `huainan-play.js`, e2e | Claude | xong 29/9: `tests/e2e/v2-loop.mjs` 17/17 (thấp), 16/16 (cao) |
+| Chủ dự án chơi trên máy thật; đo 7 tiêu chí nhận của freeze | chủ dự án | chờ |
+
+Chạy: `npm start`, mở `http://localhost:3000/v2.html` (`&seed=N`, `&tier=high|mid|low`, `&hud=1`). QA: `BASE_URL=http://127.0.0.1:3000/ xvfb-run -a node tests/e2e/v2-loop.mjs low 3`.
+
+## Khác hợp đồng (đã ghép theo bản thật)
+
+- Luật: thêm `V2.lastBattle(g)` (trận vừa hết, cho màn kết quả), `view.pending`, `view.flash`, `view.moves`; `targets[].km`; `preview.ok/why/fall`; lệnh trái luật thì ném lỗi (bộ điều phối bỏ qua và vẽ lại). Khóa dự đoán có seed ván.
+- Cảnh: runtime tạo với `hamlets: false`; `sc.bind(canvas, { onTap })` lo cử chỉ camera; `pick` trả thêm `seat` (thành ngoài lát demo, coi như chạm đất); nhãn tên và số quân là sprite trong cảnh (chip DOM của UI tắt); đất gần chỉ dựng quanh Hoài Nam (dựng cảnh 6,3 → 2,4 giây, dựa vào thứ tự con của runtime: sửa `world-runtime.js` thì xem lại).
+- Giao diện: tự xử lý chạm bản đồ (`ui.tap`) và tự hỏi "đánh ngay / vây"; dự đoán có hợp binh (`partners`).
+- Ghép: khung toàn cảnh chừa chỗ cho thanh trên và nút Hết mùa; hai lỗi thời gian khung hình của cảnh (tiến độ hành quân và bay máy âm khi thời điểm khung hình sớm hơn lúc ra lệnh) đã sửa.
+
+## Nợ và câu hỏi cho chủ dự án
+
+- Cân bằng: máy "đánh chỗ tướng đoán tốt nhất" thắng 89 % trong ~4 mùa; chỉ bấm Hết mùa thì nửa số ván hết lương ở ~mùa 7. Chỉnh số tầng B sau khi chủ dự án chơi.
+- Nội dung: nhận liên minh Ngô rồi từ chối thẻ Lã Mông thì Lịch Dương thành đồng minh vĩnh viễn, không đủ 5 thành để thắng (có từ spike).
+- Làn trận lấy từ bảng của spike (`towns[].lanes`), có thể khác đất thật dưới trận (`sc.lanesAt`).
+- Chưa thử trên điện thoại thật (cử chỉ, font, fps); mức thấp còn ~3 % dư ngân sách ở góc nặng nhất.

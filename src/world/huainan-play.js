@@ -22,7 +22,7 @@
     const V2 = window.EmperorsV2, quality = pickQuality(params);
     const json = (u) => fetch(u).then((r) => { if (!r.ok) throw new Error(u + ' ' + r.status); return r.json(); });
     const [world, cities, data] = await Promise.all([json('data/world.json'), json('data/cities.json').then((j) => j.cities), json('data/scenario/huainan.json')]);
-    const rt = await WorldRuntime.create({ world, cities, width: W, height: H, dpr: Number(params.get('dpr')) || Math.min(quality.dpr, devicePixelRatio || 1), quality, base: 'assets/map/' });
+    const rt = await WorldRuntime.create({ world, cities, width: W, height: H, dpr: Number(params.get('dpr')) || Math.min(quality.dpr, devicePixelRatio || 1), quality, base: 'assets/map/', hamlets: false }); // the scene draws its own villages at town scale
     const loading = document.getElementById('loading'); if (loading) loading.remove();
     const sc = await HuaiNanScene.create(rt, { data, width: W, height: H, quality });
     const seed = params.has('seed') ? Number(params.get('seed')) : (Date.now() % 100000) + 1;
@@ -103,20 +103,19 @@
     const portraits = 'docs/phases/v2-gameplay/demo1/portraits/';
     const ui = HuaiNanUI.create(document.body, Hs, { factions: data.factions, towns: data.towns, portraits, battle: window.EmperorsBattle });
 
-    // taps on the map go to the UI (it picks a target or selects); in a battle, a wing; a drag moves the camera
+    // the scene's gestures move the camera; a tap goes to the UI (it picks a target or selects), in a battle to a wing.
+    // A tap's screen point is kept for the wing pick (the scene's pick answers for the map)
     const cv = rt.renderer.domElement;
-    let down = null;
-    cv.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY]; });
-    cv.addEventListener('pointerup', (e) => {
-      if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 8) { down = null; return; }
-      down = null;
-      const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
-      if (fighting) { const w = sc.battle.pickWing(x, y); if (w) ui.battle.selectWing(w); return; }
-      const hit = sc.pick(x, y);
-      ui.tap(hit && hit.kind !== 'ground' ? { kind: hit.kind, id: hit.id } : { kind: 'ground' });
+    let at = [0, 0];
+    cv.addEventListener('pointerup', (e) => { const r = cv.getBoundingClientRect(); at = [((e.clientX - r.left) * W) / r.width, ((e.clientY - r.top) * H) / r.height]; });
+    sc.bind(cv, {
+      onTap: (hit) => {
+        if (fighting) { const w = sc.battle.pickWing(at[0], at[1]); if (w) ui.battle.selectWing(w); return; }
+        ui.tap(hit && (hit.kind === 'army' || hit.kind === 'town') ? { kind: hit.kind, id: hit.id } : { kind: 'ground' }); // a seat outside the slice is ground
+      },
     });
-    // the UI's chips follow the towns and armies on screen, when the scene gives their places
-    const onFrame = sc.anchors ? () => ui.labels(fighting ? [] : sc.anchors()) : null;
+    // names and counts over the towns and armies are the scene's own labels (sprites); the UI's DOM chips stay off
+    const onFrame = null;
 
     refresh(); ui.goal();
     sc.loop(onFrame);

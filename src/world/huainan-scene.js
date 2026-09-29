@@ -425,7 +425,8 @@
       const tanV = Math.tan(T.MathUtils.degToRad(FOV / 2)), tanH = tanV * (W / H), ca = Math.cos(az), sa = Math.sin(az);
       let eu = 0, ev = 0;
       for (const p of TOWNS) { const dx = p.x - mid[0], dz = p.z - mid[1]; eu = Math.max(eu, Math.abs(dx * ca - dz * sa) + p.size * 0.7); ev = Math.max(ev, Math.abs(-dx * sa - dz * ca) + p.size * 0.7); }
-      return clamp(1.12 * Math.max(eu / tanH, (ev * Math.sin(el)) / tanV), 40, DMAX);
+      // the page's bars take about a sixth of the height at the top and at the bottom: the towns fit between them
+      return clamp(Math.max((1.12 * eu) / tanH, (1.4 * ev * Math.sin(el)) / tanV), 40, DMAX);
     };
 
     // ------------------------------------------------------------ gestures (the page forwards pointer and wheel events, or sc.bind does)
@@ -589,7 +590,9 @@
       const p = armies[id] ? posOf('army', id) : place[id] ? posOf('town', id) : null; if (!p) return;
       flyTo({ t: [p[0], p[2]], dist: Math.min(cam.dist, 40) });
     };
-    const overview = () => { const az = 0.3, el = 0.88; flyTo({ t: mid.slice(), dist: fitDist(az, el), az, el }, 800); };
+    // the whole region, looked at a little beyond its middle so the northern towns' labels clear the page's top bar
+    const overviewT = (dist, az) => [mid[0] - Math.sin(az) * dist * 0.06, mid[1] - Math.cos(az) * dist * 0.06];
+    const overview = () => { const az = 0.3, el = 0.88, dist = fitDist(az, el); flyTo({ t: overviewT(dist, az), dist, az, el }, 800); };
 
     // ------------------------------------------------------------ marching (a path of [x, z] points over ms)
     const march = (id, pts, s, ms = 1500) => { const m = armies[id]; if (!m) return; m.moving = { pts, t0: performance.now(), ms, face: s.face }; };
@@ -602,7 +605,7 @@
       let any = false;
       for (const m of Object.values(armies)) {
         if (!m.moving) continue; any = true;
-        const { pts, t0, ms } = m.moving, u = Math.min(1, (now - t0) / ms), f = u * (pts.length - 1), i = Math.min(pts.length - 2, Math.floor(f)), r = f - i;
+        const { pts, t0, ms } = m.moving, u = clamp((now - t0) / ms, 0, 1), /* a frame's time can precede the march's start */ f = u * (pts.length - 1), i = Math.min(pts.length - 2, Math.floor(f)), r = f - i;
         const x = pts[i][0] + (pts[i + 1][0] - pts[i][0]) * r, z = pts[i][1] + (pts[i + 1][1] - pts[i][1]) * r;
         m.g.position.set(x, m.a.arm === 'fleet' ? waterY(x, z) + 0.02 : terr.h(x, z), z);
         m.g.rotation.y = u < 1 ? Math.atan2(-(pts[i + 1][1] - pts[i][1]), pts[i + 1][0] - pts[i][0]) : -m.moving.face;
@@ -807,7 +810,7 @@
     const frame = (now) => {
       if (!running) return;
       if (anim) {
-        const u = Math.min(1, (now - anim.t0) / anim.ms), e = ease(u), A = anim.from, B = anim.to;
+        const u = clamp((now - anim.t0) / anim.ms, 0, 1), e = ease(u), A = anim.from, B = anim.to;
         cam.t = [A.t[0] + (B.t[0] - A.t[0]) * e, A.t[1] + (B.t[1] - A.t[1]) * e]; cam.dist = Math.exp(Math.log(A.dist) + (Math.log(B.dist) - Math.log(A.dist)) * e); cam.az = A.az + (B.az - A.az) * e; cam.el = A.el + (B.el - A.el) * e;
         setView(makeView()); scaleMarkers(); dirty = true; if (u >= 1) anim = null;
       }
@@ -824,7 +827,7 @@
     // the weight of one frame: draw calls and triangles (shadow pass, scene, lens and labels), buffers, timings
     const measure = () => { const r = rt.renderer; r.info.autoReset = false; r.info.reset(); const f0 = performance.now(); draw(); r.getContext().finish(); const st = K.stats(r, scene, { frameMs: performance.now() - f0 }); r.info.autoReset = true; return st; };
 
-    cam.dist = fitDist(cam.az, cam.el);
+    cam.dist = fitDist(cam.az, cam.el); cam.t = overviewT(cam.dist, cam.az);
     terr.G = clipG; try { rt.prepare(Object.assign(makeView(), { key: 'hn-region' })); } finally { terr.G = G0; } // the near ground is built here, once
     apply();
     return {

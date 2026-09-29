@@ -85,3 +85,5 @@ Cập nhật cột "Trạng thái" khi bắt đầu / xong (ghi commit).
 ## BUILD v2 (chủ dự án giao 29/9, sau khi khóa freeze v2)
 
 Chủ dự án: "a ok freeze-v2 … spawn các subagent thực hiện v2 cho a". Claude dựng Demo Hoài Nam chơi được (`v2.html`) theo [`docs/design/v2-build.md`](../../design/v2-build.md): agent E (luật v2, `src/engine/v2/`, Opus), S (cảnh 3D, Sonnet), U (giao diện, Sonnet), Claude ghép và kiểm. Ngoại lệ lane như mục 1–4: Claude sửa `src/engine/**` và `data/scenario/huainan.json` cho việc này; Grok không sửa song song các file đó.
+
+**29/9:** xong bản chơi được (`v2.html`); trạng thái từng phần và nợ ở `v2-build.md`.
