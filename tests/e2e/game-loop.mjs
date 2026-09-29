@@ -117,16 +117,21 @@ try {
       if (!E.__orig) E.__orig = { preparePlayerTurn: E.preparePlayerTurn, resolvePrepared: E.resolvePrepared };
       E.preparePlayerTurn = function (g, fid, d) { window.__spy.prepare++; const r = E.__orig.preparePlayerTurn.apply(this, arguments); window.__spy.fill.push({ fid, d: d && { action: d.action, sub: d.sub, target: d.target, betray: d.betray }, out: r.decisions.map((x) => ({ fid: x.fid, action: x.action })) }); return r; };
       E.resolvePrepared = function () { window.__spy.resolve++; return E.__orig.resolvePrepared.apply(this, arguments); };
+      // the lock seen by the page itself when the playback starts and when it ends: at speed 64 a turn can be over before
+      // a round trip from here could look at it
+      const G = window.__game, P = G.presenter; window.__lock = [];
+      const lock = () => ({ playing: G.loop.playing, orders: document.querySelector('.pui .orders').classList.contains('hide'), bar: !document.querySelector('.pui .bar').classList.contains('hide') });
+      if (!P.__playAll) P.__playAll = P.playAll;
+      P.playAll = function () { window.__lock.push(lock()); return P.__playAll.apply(this, arguments).then((r) => { window.__lock.push(lock()); return r; }); };
     });
-    if (k === 2) await page.evaluate(() => { window.__game.presenter.speed = 1; }); // slow enough to skip mid-turn
+    if (k === 2) await page.evaluate(() => { window.__game.presenter.speed = 0.05; }); // slow enough to skip mid-turn, even on a software GPU
     await click('.pui .orders [data-role=submit]');
     await page.waitForFunction(() => window.__game.loop.playing || window.__game.ctrl.history.length > 0, { timeout: 60000 });
-    const locked = await page.evaluate(() => ({ orders: document.querySelector('.pui .orders').classList.contains('hide'), bar: !document.querySelector('.pui .bar').classList.contains('hide') }));
-    check(locked.orders, `turn ${k + 1}: orders locked during playback`);
     if (k === 0) { await sleep(2500); await shot('playing'); }
+    let skipped = false;
     if (k === 2) { // the viewer skips the rest of this turn once its first shot is on screen
       await finishTurn(() => { const h = window.__game.ctrl.history; return !window.__game.loop.playing || (h.length && h[h.length - 1].played.length >= 1); }, 600000);
-      if (await page.evaluate(() => window.__game.loop.playing)) { await sleep(500); await shot('skip'); await click('.pui .bar [data-role=skip]'); }
+      if (await page.evaluate(() => window.__game.loop.playing)) { await sleep(500); await shot('skip'); await click('.pui .bar [data-role=skip]'); skipped = true; }
       await page.evaluate(() => { window.__game.presenter.speed = 64; });
     }
     await finishTurn();
@@ -134,8 +139,9 @@ try {
       const G = window.__game, c = G.ctrl, e = c.history[c.history.length - 1];
       const stateOwners = {}; for (const [pid, p] of Object.entries(c.game.state.provinces)) if (p.owner !== 'neutral') stateOwners[pid] = p.owner;
       const seen = e.played.concat(e.skipped), S = e.presentation.shots;
-      // every line of the event log is the turn header or a presentation item: nothing from the raw events
-      const said = new Set(e.presentation.items.map((it) => it.title + ': ' + it.text));
+      // every line of the event log is a turn header or a presentation item: nothing from the raw events. The log keeps the
+      // last lines across turns (cleared on a new game), so the items of this game's earlier turns count too.
+      const said = new Set(c.history.flatMap((h) => h.presentation.items).map((it) => it.title + ': ' + it.text));
       const log = [...document.querySelectorAll('.hud .log div')].map((d) => d.textContent);
       const news = [...document.querySelectorAll('.pui .news li')].map((d) => d.textContent);
       return {
@@ -144,6 +150,8 @@ try {
         shots: S.length, once: seen.length === S.length && e.played.every((it, i) => it === S[i]) && e.skipped.every((it, i) => it === S[e.played.length + i]),
         played: e.played.length, skipped: e.skipped.length,
         logSafe: log.every((t) => said.has(t) || /^Lượt \d+ · /.test(t)) && !log.some((t) => e.events.some((ev) => ev.text && t.includes(ev.text))),
+        badLog: log.filter((t) => !said.has(t) && !/^Lượt \d+ · /.test(t)),
+        lock: window.__lock,
         newsSafe: JSON.stringify(news) === JSON.stringify(e.presentation.news ? e.presentation.news.items.map((x) => x.text) : []),
         unmutated: JSON.stringify(e.events) === e.frozen,
         owners: JSON.stringify(G.rt.owners()) === JSON.stringify(stateOwners),
@@ -161,14 +169,15 @@ try {
     check(r.spy.resolve === 1, `${T}: Engine.resolvePrepared once`, r.spy.resolve);
     check(r.v1 && r.n > 0, `${T}: RuntimeEvent v1 kept for replay`, r.kinds);
     check(r.shots <= 2 && r.once, `${T}: observable shots played once, in order (own result + at most one reaction)`, { played: r.played, skipped: r.skipped, shots: r.shots });
-    check(r.logSafe && r.newsSafe, `${T}: log and world news come from the observation only`);
+    check(r.lock.length === 2 && r.lock.every((l) => l.playing && l.orders && l.bar), `${T}: orders locked during playback`, r.lock);
+    check(r.logSafe && r.newsSafe, `${T}: log and world news come from the observation only`, r.logSafe ? undefined : r.badLog);
     check(r.unmutated, `${T}: events not mutated by the presentation`);
     check(r.owners, `${T}: world owners = engine state`);
     check(r.view === 'campaign', `${T}: back to the campaign camera`, r.view);
     check(r.turn === prevTurn + 1 && r.entryTurn === prevTurn && !r.busy, `${T}: engine turn advanced`, { before: prevTurn, after: r.turn });
     check(r.statusTurn.includes(`LƯỢT ${r.turn}/`), `${T}: HUD shows the new turn`, r.statusTurn);
     check(r.unlocked, `${T}: orders open for the next turn`);
-    if (k === 2) check(r.played + r.skipped === r.shots, `${T}: skip ends the observable playback`, { played: r.played, skipped: r.skipped });
+    if (k === 2) check(skipped && r.played + r.skipped === r.shots, `${T}: skip ends the observable playback`, { clicked: skipped, played: r.played, skipped: r.skipped });
     prevTurn = r.turn;
     await memory('after turn ' + (k + 1));
     await shot(`turn${k + 1}`);
