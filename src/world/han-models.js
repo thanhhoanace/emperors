@@ -48,7 +48,11 @@
     const ky = grid(nk, 0.36, 2, 0.5, 0.4, 0.74, 60);
     const general = [0.8, 0.12, 0], bearer = [0.5, -0.4, 0];
     const all = [...bo, ...thuy, ...cung, ...ky, general, bearer];
-    const r = Math.max(1.15, ...all.map(([x, z]) => Math.hypot(x - CX, z) + 0.26));
+    // the whole block centred on the base (the general's horse reaches ~0.45 ahead of him, a figure ~0.15 round its feet)
+    const bx0 = Math.min(...all.map((p) => p[0])) - 0.15, bx1 = Math.max(general[0] + 0.45, ...all.map((p) => p[0] + 0.15));
+    const bz0 = Math.min(...all.map((p) => p[1])) - 0.15, bz1 = Math.max(...all.map((p) => p[1])) + 0.15, dx = CX - (bx0 + bx1) / 2, dz = -(bz0 + bz1) / 2;
+    for (const p of all) { p[0] += dx; p[1] += dz; }
+    const r = Math.max(1.05, ...all.map(([x, z]) => Math.hypot(x - CX, z) + 0.2), Math.hypot(general[0] + 0.45 - CX, general[1]) + 0.05);
     return { bo, thuy, cung, ky, general, bearer, r, cx: CX };
   };
   // the breaches of a damaged town: [{ side 0–3 (0 is +z, then a quarter turn each), at: −1..1 along it, w: its width in
@@ -57,29 +61,30 @@
     const n = Math.round(HMS.damageStep(damage) * 4), rnd = lcg(seed * 131 + 17), sides = [0, 1, 2, 3].filter((s) => !(open && s === 0)), out = [];
     for (let i = 0; i < n && sides.length; i++) {
       const side = sides.splice(Math.floor(rnd() * sides.length), 1)[0], sg = rnd() < 0.5 ? -1 : 1;
-      out.push({ side, at: sg * (0.42 + rnd() * 0.3), w: 0.1 + rnd() * 0.06 });
+      out.push({ side, at: sg * (0.4 + rnd() * 0.26), w: 0.15 + rnd() * 0.07 });
     }
     return out;
   };
   // A siege camp's plan round a town (its units): a ring of stakes on a bank at radius r facing the town, 1–4 camps
   // outside it (the first at `face`, where the army came from), their tents, fires, a banner at each camp's gate, the
   // engines inside the ring facing the walls, ladders and carts by the camps. Angles in radians, 0 = +x, turning to +z.
-  HMS.campPlan = ({ men = 6000, r = 3.3, seed = 1, face = 0 } = {}) => {
+  // A camp is w along the ring × dd deep, its tents in rows of four ([column −1.5..1.5, row centred, a random]).
+  HMS.campPlan = ({ men = 6000, r = 4.1, seed = 1, face = 0 } = {}) => {
     const rnd = lcg(seed * 71 + 5), n = clamp(Math.round(men / 3500), 1, 4), camps = [];
-    const per = clamp(Math.round(men / n / 550), 4, 10);
+    const per = clamp(Math.round(men / n / 700), 4, 8);
     for (let c = 0; c < n; c++) {
-      const a = face + (c ? (c % 2 ? 1 : -1) * Math.ceil(c / 2) * (n > 2 ? 1.75 : 2.6) + (rnd() - 0.5) * 0.3 : 0), d = r + 0.95, main = c === 0;
-      const tents = [];
-      for (let i = 0; i < per + (main ? 2 : 0); i++) tents.push([(i % 4) - 1.5, Math.floor(i / 4) - (Math.ceil((per + (main ? 2 : 0)) / 4) - 1) / 2, rnd()]);
-      camps.push({ a, d, main, w: main ? 1.5 : 1.2, dd: main ? 1.1 : 0.9, tents, fires: main ? 2 : 1 });
+      const main = c === 0, w = main ? 2.5 : 2.0, dd = main ? 1.75 : 1.35, a = face + (c ? (c % 2 ? 1 : -1) * Math.ceil(c / 2) * (n > 2 ? 1.6 : 2.5) + (rnd() - 0.5) * 0.25 : 0);
+      const nt = per + (main ? 2 : 0), tents = [];
+      for (let i = 0; i < nt; i++) tents.push([(i % 4) - 1.5, Math.floor(i / 4) - (Math.ceil(nt / 4) - 1) / 2, rnd()]);
+      camps.push({ a, d: r + 0.3 + dd / 2, main, w, dd, tents, fires: main ? 2 : 1 });
     }
     const engines = [];
     const ne = clamp(Math.round(men / 4000), 1, 3);
-    for (let i = 0; i < ne; i++) engines.push({ kind: 'trebuchet', a: face + (i - (ne - 1) / 2) * 0.55 + (rnd() - 0.5) * 0.1, d: r - 0.3 });
-    engines.push({ kind: 'ram', a: face + (rnd() < 0.5 ? 0.3 : -0.3), d: r - 0.55 });
-    if (men >= 5000) engines.push({ kind: 'tower', a: face + Math.PI * (0.35 + rnd() * 0.3) * (rnd() < 0.5 ? -1 : 1), d: r - 0.35 });
+    for (let i = 0; i < ne; i++) engines.push({ kind: 'trebuchet', a: face + (i - (ne - 1) / 2) * 0.42 + (rnd() - 0.5) * 0.08, d: r - 0.5 });
+    engines.push({ kind: 'ram', a: face + (rnd() < 0.5 ? 0.25 : -0.25) * (ne > 1 ? 1.9 : 1), d: r - 0.75 });
+    if (men >= 5000) engines.push({ kind: 'tower', a: face + Math.PI * (0.3 + rnd() * 0.25) * (rnd() < 0.5 ? -1 : 1), d: r - 0.55 });
     const gates = camps.map((c) => c.a);
-    return { r, camps, engines, gates, stand: [Math.cos(face) * (r + 2.6), Math.sin(face) * (r + 2.6)] };
+    return { r, camps, engines, gates, stand: [Math.cos(face) * (r + 3.2), Math.sin(face) * (r + 3.2)] };
   };
 
   HMS.create = function (o) {
@@ -285,7 +290,7 @@
         const c = pts[pts.length - 1]; pts.push(new T.Vector3(c.x + sx * th * 0.8, c.y - th * 0.3, c.z + sz * th * 0.8 * (hip ? 1 : 0)));
         return pts;
       };
-      for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const pts = hipPts(sx, sz); if (pts.length > 2) rk.push(paint(new T.TubeGeometry(new T.CatmullRomCurve3(pts), o.lite ? 2 : 6, rt * 0.75, o.lite ? 3 : 4), ridge)); }
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const pts = hipPts(sx, sz); if (pts.length > 2) rk.push(paint(new T.TubeGeometry(new T.CatmullRomCurve3(pts), o.lite ? 2 : w < 0.6 ? 3 : 6, rt * 0.75, o.lite || w < 0.6 ? 3 : 4), ridge)); } // (a small roof's ridges: a pixel wide)
       parts.push(rk.geo());
       const g = BGU.mergeBufferGeometries(parts);
       g.userData = { topW: hip ? 2 * (a - tMax * b) : w, topD: 2 * b * (1 - tMax), topY: prof(tMax, h) };
@@ -325,9 +330,9 @@
       const k = kit(), wall = o.wall ?? C.plaster, ov = 0.035, rh = o.rh ?? d * 0.5, box = o.lite ? rb : rbox;
       k.add(box(w + 0.02, 0.025, d + 0.02, 0.3), C.base, [0, 0.0125, 0]);
       if (o.ruin) {
-        const hw = h * 0.62, t = 0.016, sc = shade(wall, -0.45);
+        const hw = h * 0.62, t = 0.016, sc = shade(wall, -0.62);
         for (const [x, z, lx, lz] of [[0, -d / 2 + t / 2, w, t], [0, d / 2 - t / 2, w * 0.55, t], [-w / 2 + t / 2, 0, t, d], [w / 2 - t / 2, 0, t, d]]) k.add(new T.BoxGeometry(lx, hw * (0.6 + hash(x, z, w) * 0.4), lz), sc, [x - (lz === t && z > 0 ? w * 0.2 : 0), 0.025 + hw * 0.35, z]);
-        k.add(new T.BoxGeometry(w * 0.9, 0.01, d * 0.9), C.char, [0, 0.03, 0]);
+        k.add(new T.BoxGeometry(w * 1.1, 0.01, d * 1.1), C.char, [0, 0.03, 0]);
         k.add(new T.BoxGeometry(w * 1.02, 0.014, 0.018), C.char, [0, 0.025 + hw * 0.8, 0.02], [0.3, 0, 0.12]);
         k.add(new T.BoxGeometry(0.018, 0.014, d), C.char, [w * 0.2, 0.025 + hw * 0.6, 0], [0.25, 0, 0]);
         return k.geo();
@@ -414,7 +419,7 @@
     // a breach: the wall's earth slumped outward in a mound, a few beams in it
     const rubble = (k, x, zc, lv, w, seed) => {
       const { H, wb, col } = LV(lv);
-      for (let i = 0; i < 3; i++) k.push(xf(paint(blob(w * (0.42 - i * 0.08), seed + i, lite ? 0 : 1), shade(col, -0.06 - i * 0.05)), [x + (i - 1) * w * 0.3, 0.0, zc + wb * (0.1 + i * 0.25)], [0, i, 0], [1.1, (H / w) * (0.55 - i * 0.12), 1.2]));
+      for (let i = 0; i < 3; i++) k.push(xf(paint(blob(w * (0.42 - i * 0.08), seed + i, lite ? 0 : 1), shade(col, 0.14 - i * 0.1)), [x + (i - 1) * w * 0.3, 0.0, zc + wb * (0.1 + i * 0.25)], [0, i, 0], [1.1, (H / w) * (0.95 - i * 0.22), 1.2]));
       k.add(new T.BoxGeometry(w * 0.9, 0.014, 0.016), C.timber, [x, H * 0.25, zc + wb * 0.3], [0.4, 0.6, 0.3]);
       k.add(new T.BoxGeometry(0.016, 0.014, w * 0.8), C.timber, [x + w * 0.15, H * 0.2, zc + wb * 0.5], [0.3, 0, 0.5]);
     };
@@ -486,7 +491,7 @@
       const m = new T.Mesh(c.geo, mat); m.castShadow = true; m.receiveShadow = true; g.add(m);
       if (c.water) { const w = new T.Mesh(c.water, waterMat); w.receiveShadow = true; g.add(w); }
       let fx = null;
-      if (burnt && c.fires.length) { fx = new T.Group(); fx.add(HM.fire(c.fires, 1), HM.smoke(c.smoke, 1)); g.add(fx); }
+      if (burnt && c.fires.length) { fx = new T.Group(); fx.add(HM.fire(c.fires, 1.6), HM.smoke(c.smoke, 1.2)); g.add(fx); }
       g.userData = { L, H: LV(lv).H, flagAt: c.flagAt, shared: true, level: lv, damage: dq, burnt, gates: c.gates, fires: c.fires, smoke: c.smoke, apron: c.apron, fx };
       return g;
     };
@@ -495,7 +500,7 @@
       const k = kit(), { H, wb } = LV(lv), moat = lv >= 3, pad = moat ? 0.95 : 0.6, gw = 0.6 + lv * 0.05, box = lite ? rb : rbox;
       let s = seed; const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
       const r2 = lcg(seed * 31 + 7), rd = lcg(seed * 97 + 13 + dq * 1000 + (burnt ? 500 : 0)); // fields; damage (their own streams: the town's layout stays)
-      const fires = [], smoke = [], ruinP = burnt ? 0.4 + dq * 0.3 : dq * 0.45, charP = burnt ? 0.75 : 0;
+      const fires = [], smoke = [], ruinP = burnt ? 0.5 + dq * 0.3 : dq * 0.45, charP = burnt ? 0.8 : 0;
       const roofOf = (base) => (burnt && rd() < charP ? (rd() < 0.5 ? C.char : shade(base, -0.45)) : base);
       const thatchP = [1, 0.5, 0.15, 0.06, 0][lv];
       // the apron: the town's own ground, a belt of fields beyond the walls (or the moat), its edge sloping away like a
@@ -591,7 +596,8 @@
       // blocks: courtyard houses, the market, the granaries, trees
       const taken = [[-yx - 0.06, yx + 0.06, yz0 - 0.1, yz1 + 0.06], [-0.18, 0.18, -inner, inner], [-inner, inner, -0.18, 0.18]];
       const free = (x0, x1, z0, z1) => !taken.some(([a, b, c, d]) => x1 > a && x0 < b && z1 > c && z0 < d);
-      const nCell = Math.max(1, Math.round((inner - 0.2) / 0.7)), cell = (inner - 0.2) / nCell, starts = [], trees = [];
+      // the town fills with its level: a few big farm compounds behind a palisade or a low wall, a dense grid of courtyards in a walled city
+      const nCell = Math.max(1, Math.round((inner - 0.2) / (lv <= 1 ? 0.9 : 0.6))), cell = (inner - 0.2) / nCell, starts = [], trees = [];
       for (let i = 0; i < nCell; i++) starts.push(0.2 + i * cell, -0.2 - (i + 1) * cell);
       let market = false, granaries = false;
       for (const gx of starts) for (const gz of starts) {
@@ -1003,10 +1009,11 @@
     const shadowMat = new T.MeshBasicMaterial({ color: 0x000000, map: decal, transparent: true, opacity: 0.45, depthWrite: false });
     const plinthGeo = (fid, r) => cached('plinth:' + fid + ':' + r.toFixed(2), () => {
       const k = kit(), fc = COLOR[fid], n = lite ? 28 : 48, top = 0.05;
-      k.add(lathe([[r * 1.0, -0.45], [r * 1.02, -0.02], [r * 1.02, top - 0.012], [r * 0.99, top], [0, top + 0.002]], n), mix(fc, 0x120a06, 0.42), [0, 0, 0]);
-      k.add(cyl(r * 1.018, r * 1.018, 0.03, n, true), 0x140b06, [0, 0.012, 0]);
-      k.add(new T.TorusGeometry(r * 1.005, 0.014, 4, n), C.gilt, [0, top - 0.004, 0], [Math.PI / 2, 0, 0]);
-      k.add(new T.TorusGeometry(r * 0.86, 0.006, 3, n), C.gilt, [0, top + 0.002, 0], [Math.PI / 2, 0, 0]);
+      k.add(lathe([[r * 1.0, -0.45], [r * 1.02, -0.02], [r * 1.02, top - 0.012]], n), 0x1a0f08, [0, 0, 0]); // the skirt, black lacquer
+      k.add(lathe([[r * 1.02, top - 0.012], [r * 0.99, top], [r * 0.84, top]], n), mix(fc, 0x000000, 0.12), [0, 0, 0]); // a band of the faction's colour
+      k.add(lathe([[r * 0.84, top], [0, top + 0.002]], n), mix(fc, 0x140c07, 0.62), [0, 0, 0]); // the field, the same colour deep in lacquer
+      k.add(new T.TorusGeometry(r * 1.012, 0.016, 4, n), C.gilt, [0, top - 0.006, 0], [Math.PI / 2, 0, 0]);
+      k.add(new T.TorusGeometry(r * 0.84, 0.007, 3, n), C.gilt, [0, top + 0.001, 0], [Math.PI / 2, 0, 0]);
       return k.geo();
     });
     const place = (geo, pts, o = {}) => {
@@ -1078,96 +1085,102 @@
     // ---------------------------------------------------------------- the siege camp: tents, a staked bank round the town, fires, engines, ladders
     // Han siegecraft of the late 2nd century: traction trebuchets (霹靂車, Cao Cao's at Guandu, 200), a battering ram under a
     // hide-covered shed on wheels (轒轀), a wooden siege tower (井闌), scaling ladders; camps of ridge tents inside palisades.
-    const tent = (k, x, z, yaw, w, d, h, hex, stripe) => {
+    // (every piece is built at a man's size in the town's units and grown by Z: a camp must read at the map's distance)
+    const Z = 1.8, G0 = 0.02; // the camp's ground: its pads' top
+    const put = (k, t, x, z, yaw, s = Z) => k.push(xf(t.geo(), [x, G0, z], [0, yaw, 0], [s, s, s]));
+    const tent = (k, x, z, yaw, w, d, h, hex, stripe) => { // a ridge tent (幕): two slopes of canvas, the ends closed, a dark door flap
       const t = kit(), v = [-w / 2, 0, -d / 2, w / 2, 0, -d / 2, w / 2, h, 0, -w / 2, 0, -d / 2, w / 2, h, 0, -w / 2, h, 0, w / 2, 0, d / 2, -w / 2, 0, d / 2, -w / 2, h, 0, w / 2, 0, d / 2, -w / 2, h, 0, w / 2, h, 0,
         w / 2, 0, -d / 2, w / 2, 0, d / 2, w / 2, h, 0, -w / 2, 0, d / 2, -w / 2, 0, -d / 2, -w / 2, h, 0];
       t.push(paint(tris(v), hex));
-      t.add(new T.BoxGeometry(0.004, h * 0.6, d * 0.25), shade(hex, -0.55), [w / 2 + 0.002, h * 0.3, 0]);
-      if (stripe) t.add(new T.BoxGeometry(w + 0.01, 0.012, 0.02), stripe, [0, h, 0]);
-      k.push(xf(t.geo(), [x, 0.035, z], [0, yaw, 0]));
+      t.add(new T.BoxGeometry(0.004, h * 0.6, d * 0.25), shade(hex, -0.6), [w / 2 + 0.002, h * 0.3, 0]);
+      t.add(new T.BoxGeometry(w + 0.012, 0.01, 0.014), stripe ?? shade(hex, -0.35), [0, h, 0]);
+      put(k, t, x, z, yaw);
     };
-    const stake = (k, x, z, h, hex) => { k.add(cyl(0.011, 0.013, h, 4, true), hex, [x, 0.035 + h / 2, z]); k.add(cone(0.013, 0.03, 4), shade(hex, 0.12), [x, 0.035 + h + 0.015, z]); };
-    const trebuchet = (k, x, z, yaw) => { // a frame of two leaning trestles, the axle, the arm cocked (long end down behind), ropes on the short end
-      const t = kit(), wd = 0x5a3c22, dk = 0x3a2616;
-      t.add(new T.BoxGeometry(0.34, 0.03, 0.26), dk, [0, 0.05, 0]);
-      for (const sz of [-1, 1]) { t.limb([-0.12, 0.05, sz * 0.1], [0, 0.34, sz * 0.1], 0.014, wd, true); t.limb([0.12, 0.05, sz * 0.1], [0, 0.34, sz * 0.1], 0.014, wd, true); }
-      t.limb([0, 0.34, -0.12], [0, 0.34, 0.12], 0.012, dk, true);
-      t.limb([-0.4, 0.1, 0], [0.2, 0.46, 0], 0.013, wd, true); // the arm: long end behind and low, short end in front and up
-      for (let i = 0; i < 4; i++) t.limb([0.2, 0.46, (i - 1.5) * 0.012], [0.22 + (i - 1.5) * 0.02, 0.05, (i - 1.5) * 0.05], 0.0025, C.straw, true);
-      t.limb([-0.4, 0.1, 0], [-0.43, 0.04, 0.03], 0.003, C.straw, true); t.add(sph(0.022, 6, 4), 0x6a6258, [-0.44, 0.03, 0.04]);
-      k.push(xf(t.geo(), [x, 0.035, z], [0, yaw, 0]));
+    const stake = (k, x, z, h, hex) => { k.add(cyl(0.018, 0.02, h, 4, true), hex, [x, G0 + h / 2, z]); k.add(cone(0.02, 0.05, 4), shade(hex, 0.12), [x, G0 + h + 0.025, z]); };
+    const trebuchet = (k, x, z, yaw) => { // a frame of two leaning trestles, the axle, the arm cocked (long end down behind), pulling ropes on the short end
+      const t = kit(), wd = 0x6a4628, dk = 0x3a2616;
+      t.add(new T.BoxGeometry(0.34, 0.03, 0.26), dk, [0, 0.015, 0]);
+      for (const sz of [-1, 1]) { t.limb([-0.12, 0.02, sz * 0.1], [0, 0.32, sz * 0.1], 0.014, wd, true); t.limb([0.12, 0.02, sz * 0.1], [0, 0.32, sz * 0.1], 0.014, wd, true); }
+      t.limb([0, 0.32, -0.12], [0, 0.32, 0.12], 0.012, dk, true);
+      t.limb([-0.42, 0.07, 0], [0.2, 0.44, 0], 0.013, wd, true); // the arm: long end behind and low, short end in front and up
+      for (let i = 0; i < 4; i++) t.limb([0.2, 0.44, (i - 1.5) * 0.012], [0.24 + (i - 1.5) * 0.02, 0.01, (i - 1.5) * 0.06], 0.0025, C.straw, true);
+      t.limb([-0.42, 0.07, 0], [-0.45, 0.01, 0.03], 0.003, C.straw, true); t.add(sph(0.022, 6, 4), 0x6a6258, [-0.46, 0.015, 0.04]);
+      put(k, t, x, z, yaw);
     };
-    const ramShed = (k, x, z, yaw) => {
+    const ramShed = (k, x, z, yaw) => { // 轒轀: a gabled shed of hides on four wheels, the iron-capped ram inside
       const t = kit();
       for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) t.add(cyl(0.035, 0.035, 0.02, 8), 0x2a1a10, [sx * 0.12, 0.035, sz * 0.1], [Math.PI / 2, 0, 0]);
       t.add(new T.BoxGeometry(0.34, 0.08, 0.18), 0x4a3020, [0, 0.09, 0]);
       t.push(xf(roof(0.4, 0.26, 0.12, { kind: 'gable', tiles: 0, color: C.hide, under: 0x2a1a10, lite }), [0, 0.13, 0]));
       t.limb([0.1, 0.1, 0], [0.3, 0.1, 0], 0.022, 0x3a2616, true); t.add(sph(0.026, 6, 4), C.iron, [0.3, 0.1, 0]);
-      k.push(xf(t.geo(), [x, 0.035, z], [0, yaw, 0]));
+      put(k, t, x, z, yaw);
     };
-    const siegeTowerGeo = (k, x, z, yaw) => { // a wooden tower on a wheeled frame, open sides, a parapet of boards on top
-      const t = kit(), wd = 0x5a3c22, h = 0.62;
-      for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { t.limb([sx * 0.1, 0.03, sz * 0.1], [sx * 0.07, h, sz * 0.07], 0.012, wd, true); t.add(cyl(0.03, 0.03, 0.02, 7), 0x2a1a10, [sx * 0.12, 0.035, sz * 0.11], [Math.PI / 2, 0, 0]); }
+    const siegeTowerGeo = (k, x, z, yaw) => { // 井闌: a wooden tower on a wheeled frame, braced, a screened platform on top
+      const t = kit(), wd = 0x6a4628, h = 0.62;
+      for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { t.limb([sx * 0.1, 0.03, sz * 0.1], [sx * 0.07, h, sz * 0.07], 0.012, wd, true); t.add(cyl(0.03, 0.03, 0.02, 7), 0x2a1a10, [sx * 0.12, 0.03, sz * 0.11], [Math.PI / 2, 0, 0]); }
+      for (const sz of [-1, 1]) t.limb([-0.09, 0.05, sz * 0.09], [0.08, 0.4, sz * 0.08], 0.007, 0x3a2616, true);
       for (const y of [0.2, 0.4]) t.add(new T.BoxGeometry(0.19, 0.012, 0.19), 0x3a2616, [0, y, 0]);
       t.add(new T.BoxGeometry(0.2, 0.06, 0.2), shade(wd, 0.1), [0, h + 0.02, 0]);
       t.add(new T.BoxGeometry(0.16, 0.012, 0.16), C.hide, [0, h + 0.07, 0]);
-      k.push(xf(t.geo(), [x, 0.035, z], [0, yaw, 0]));
+      put(k, t, x, z, yaw);
     };
-    const ladder = (k, x, z, yaw, len = 0.5) => { const t = kit(), w = 0x6a4a30; for (const s of [-1, 1]) t.add(new T.BoxGeometry(len, 0.012, 0.012), w, [0, 0.01, s * 0.035]); for (let i = 0; i < 6; i++) t.add(new T.BoxGeometry(0.008, 0.008, 0.07), w, [-len / 2 + (i + 0.5) * (len / 6), 0.012, 0]); k.push(xf(t.geo(), [x, 0.035, z], [0, yaw, 0])); };
-    const cart = (k, x, z, yaw) => { const t = kit(); t.add(new T.BoxGeometry(0.16, 0.05, 0.1), 0x5a3c22, [0, 0.06, 0]); for (const s of [-1, 1]) t.add(cyl(0.04, 0.04, 0.012, 8), 0x2a1a10, [0, 0.04, s * 0.06], [Math.PI / 2, 0, 0]); t.limb([0.08, 0.06, 0.03], [0.24, 0.03, 0.03], 0.006, 0x3a2616, true); t.limb([0.08, 0.06, -0.03], [0.24, 0.03, -0.03], 0.006, 0x3a2616, true); for (let i = 0; i < 3; i++) t.add(sph(0.032, 6, 4), C.cream, [-0.04 + i * 0.04, 0.1, (i % 2) * 0.02], [0, 0, 0], [1, 0.7, 1]); k.push(xf(t.geo(), [x, 0.035, z], [0, yaw, 0])); };
-    const campfire = (k, x, z) => { for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; k.add(sph(0.014, 5, 3), 0x5a554c, [x + Math.cos(a) * 0.035, 0.04, z + Math.sin(a) * 0.035]); } k.add(new T.BoxGeometry(0.06, 0.01, 0.01), C.char, [x, 0.045, z], [0, 0.6, 0]); k.add(new T.BoxGeometry(0.06, 0.01, 0.01), C.char, [x, 0.047, z], [0, -0.7, 0]); };
+    const ladder = (k, x, z, yaw, len = 0.5) => { const t = kit(), w = 0x7a5836; for (const s of [-1, 1]) t.add(new T.BoxGeometry(len, 0.014, 0.014), w, [0, 0.01, s * 0.04]); for (let i = 0; i < 6; i++) t.add(new T.BoxGeometry(0.01, 0.01, 0.08), w, [-len / 2 + (i + 0.5) * (len / 6), 0.014, 0]); put(k, t, x, z, yaw); };
+    const cart = (k, x, z, yaw) => { const t = kit(); t.add(new T.BoxGeometry(0.16, 0.05, 0.1), 0x5a3c22, [0, 0.06, 0]); for (const s of [-1, 1]) t.add(cyl(0.04, 0.04, 0.012, 8), 0x2a1a10, [0, 0.04, s * 0.06], [Math.PI / 2, 0, 0]); t.limb([0.08, 0.06, 0.03], [0.24, 0.03, 0.03], 0.006, 0x3a2616, true); t.limb([0.08, 0.06, -0.03], [0.24, 0.03, -0.03], 0.006, 0x3a2616, true); for (let i = 0; i < 3; i++) t.add(sph(0.032, 6, 4), C.cream, [-0.04 + i * 0.04, 0.1, (i % 2) * 0.02], [0, 0, 0], [1, 0.7, 1]); put(k, t, x, z, yaw); };
+    const campfire = (k, x, z) => { const t = kit(); for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; t.add(sph(0.014, 5, 3), 0x5a554c, [Math.cos(a) * 0.035, 0.008, Math.sin(a) * 0.035]); } t.add(new T.BoxGeometry(0.06, 0.01, 0.01), C.char, [0, 0.01, 0], [0, 0.6, 0]); t.add(new T.BoxGeometry(0.06, 0.01, 0.01), C.char, [0, 0.012, 0], [0, -0.7, 0]); t.add(cyl(0.05, 0.05, 0.003, 8), C.soot, [0, 0.002, 0]); put(k, t, x, z, 0); };
     const campCache = {};
+    // r: the ring's radius (default: past a moated town's apron, HM.town(…).userData.apron + 0.15); face: where the army came
+    // from (the first camp's side, and the engines'); in the town's units, centred on it
     HM.siegeCamp = function (o = {}) {
-      const fid = o.fid, men = Math.max(0, Number(o.men) || 6000), r = o.r ?? 3.3, seed = o.seed || 1, face = o.face || 0;
+      const fid = o.fid, men = Math.max(0, Number(o.men) || 6000), r = o.r ?? 4.1, seed = o.seed || 1, face = o.face || 0;
       const plan = HMS.campPlan({ men, r, seed, face }), key = [fid, Math.round(men / 500), r.toFixed(2), seed, face.toFixed(2)].join(':');
       if (!campCache[key]) {
-        const k = kit(), rnd = lcg(seed * 53 + 11), fc = COLOR[fid] ?? 0x8a7a55, fires = [], smoke = [], flags = [], wood = 0x5a3c22;
-        // the bank and its stakes round the town, open where each camp's gate is (angles, the ring's inside faces the town)
-        const R0 = r, step = lite ? 0.12 : 0.085, nS = Math.round((2 * Math.PI * R0) / step);
-        const gap = (a) => plan.gates.some((g) => Math.abs(Math.atan2(Math.sin(a - g), Math.cos(a - g))) < 0.2 / R0);
+        const k = kit(), rnd = lcg(seed * 53 + 11), fc = COLOR[fid] ?? 0x8a7a55, fires = [], smoke = [], flags = [], wood = 0x4a3020;
+        // the ground each camp trampled: a low pad whose edge slopes into the land (the town's apron covers it where they meet)
+        for (const c of plan.camps) { const rr = Math.max(c.w, c.dd) * 0.6; k.add(lathe([[rr + 0.9, -0.85], [rr, G0], [0, G0]], lite ? 14 : 24), 0x6e5e3a, [Math.cos(c.a) * c.d, 0, Math.sin(c.a) * c.d], [0, -c.a, 0], [(c.dd / Math.max(c.w, c.dd)) * 1.1, 1, (c.w / Math.max(c.w, c.dd)) * 1.02]); }
+        // the bank and its stakes round the town, open where each camp's gate is; the bank on the camps' side of the stakes
+        const R0 = r, step = lite ? 0.16 : 0.11, nS = Math.round((2 * Math.PI * R0) / step);
+        const gap = (a) => plan.gates.some((g) => Math.abs(Math.atan2(Math.sin(a - g), Math.cos(a - g))) < 0.26 / R0);
         for (let i = 0; i < nS; i++) {
           const a = (i / nS) * Math.PI * 2; if (gap(a)) continue;
           const x = Math.cos(a) * R0, z = Math.sin(a) * R0;
-          if (i % 3 === 0) k.add(new T.BoxGeometry(0.2, 0.05, 0.14), 0x6d5a38, [x, 0.035, z], [0, -a, 0]);
-          stake(k, x + Math.cos(a) * 0.03, z + Math.sin(a) * 0.03, 0.09 + hash(i, 1, 2) * 0.03, shade(wood, (hash(i, 2, 3) - 0.5) * 0.3));
+          if (i % 2 === 0) k.add(new T.BoxGeometry(0.1, 0.06, step * 2.05), 0x6a5634, [x + Math.cos(a) * 0.07, G0 + 0.01, z + Math.sin(a) * 0.07], [0, -a, 0]);
+          stake(k, x, z, 0.15 + hash(i, 1, 2) * 0.05, shade(wood, (hash(i, 2, 3) - 0.5) * 0.35));
         }
         for (const c of plan.camps) {
-          // a camp: a square of stakes, its gate toward the town, tents in rows, fires, the general's tent in the first
+          // a camp: a square of stakes, its gate toward the town, tents in rows, fires by the gate, the general's tent at the back
           const ca = Math.cos(c.a), sa = Math.sin(c.a), cx = ca * c.d, cz = sa * c.d, rot = -c.a; // local x: away from the town
           const L2W = (lx, lz) => [cx + lx * ca - lz * sa, cz + lx * sa + lz * ca];
-          const hw = c.dd / 2, hd = c.w / 2, ns = Math.round((2 * (c.w + c.dd)) / (step * 1.1));
+          const hw = c.dd / 2, hd = c.w / 2, ns = Math.round((2 * (c.w + c.dd)) / step);
           for (let i = 0; i < ns; i++) {
             const t = (i / ns) * 2 * (c.w + c.dd); let lx, lz;
             if (t < c.dd) { lx = -hw + t; lz = -hd; } else if (t < c.dd + c.w) { lx = hw; lz = -hd + (t - c.dd); } else if (t < 2 * c.dd + c.w) { lx = hw - (t - c.dd - c.w); lz = hd; } else { lx = -hw; lz = hd - (t - 2 * c.dd - c.w); }
-            if (lx < -hw + 0.01 && Math.abs(lz) < 0.13) continue; // the gate, toward the town
-            const [x, z] = L2W(lx, lz); stake(k, x, z, 0.08, shade(wood, (hash(i, lz, 1) - 0.5) * 0.3));
+            if (lx < -hw + 0.01 && Math.abs(lz) < 0.22) continue; // the gate, toward the town
+            const [x, z] = L2W(lx, lz); stake(k, x, z, 0.12, shade(wood, (hash(i, lz, 1) - 0.5) * 0.35));
           }
-          for (const [tx, tz, tr] of c.tents) { const [x, z] = L2W(-0.07 + tz * 0.19, tx * (c.w / 4.6)); tent(k, x, z, rot + (tr - 0.5) * 0.1, 0.17, 0.12, 0.085, C.canvas[Math.floor(tr * C.canvas.length)], tr < 0.25 ? fc : null); }
-          if (c.main) { const [x, z] = L2W(hw - 0.16, 0); tent(k, x, z, rot, 0.3, 0.22, 0.15, mix(fc, C.cream, 0.25), C.gilt); }
-          for (let f = 0; f < c.fires; f++) { const [x, z] = L2W(-hw + 0.18, (f - (c.fires - 1) / 2) * 0.4); campfire(k, x, z); fires.push([x, 0.05, z]); smoke.push([x, 0.08, z]); }
-          const [bx, bz] = L2W(-hw - 0.02, 0.17), [bx2, bz2] = L2W(-hw - 0.02, -0.17);
-          for (const [x, z] of c.main ? [[bx, bz], [bx2, bz2]] : [[bx, bz]]) { k.limb([x, 0.03, z], [x, 0.62, z], 0.008, 0x3b3129, true); flags.push([x, 0.62, z]); }
-          for (let i = 0; i < 2; i++) { const [x, z] = L2W(-hw + 0.35 + i * 0.08, hd - 0.2); ladder(k, x, z, rot + 0.1 * i, 0.46); }
-          const [kx, kz] = L2W(hw - 0.15, hd - 0.18); cart(k, kx, kz, rot + 1.2);
+          const rows = Math.ceil(c.tents.length / 4), back = c.main ? 0.5 : 0; // rows of tents, ridges along the camp's width
+          for (const [tx, tz, tr] of c.tents) { const [x, z] = L2W(-hw + 0.45 + (tz + (rows - 1) / 2) * ((c.dd - 0.65 - back) / Math.max(1, rows - 1)), tx * (c.w / 4.4)); tent(k, x, z, rot + Math.PI / 2 + (tr - 0.5) * 0.12, 0.17, 0.12, 0.085, C.canvas[Math.floor(tr * C.canvas.length)], tr < 0.3 ? fc : null); }
+          if (c.main) { const [x, z] = L2W(hw - 0.3, 0); tent(k, x, z, rot + Math.PI / 2, 0.3, 0.22, 0.15, mix(fc, C.cream, 0.2), C.gilt); }
+          for (let f = 0; f < c.fires; f++) { const [x, z] = L2W(-hw + 0.25, (f - (c.fires - 1) / 2) * 0.8 + (c.fires === 1 ? 0.45 : 0)); campfire(k, x, z); fires.push([x, G0 + 0.02, z]); smoke.push([x, G0 + 0.06, z]); }
+          for (const lz of c.main ? [0.3, -0.3] : [0.3]) { const [x, z] = L2W(-hw - 0.04, lz); k.limb([x, G0, z], [x, 1.02, z], 0.012, 0x3b3129, true); k.add(cone(0.02, 0.07, 5), C.gilt, [x, 1.06, z]); flags.push([x, 1.0, z]); }
+          for (let i = 0; i < 2; i++) { const [x, z] = L2W(hw - 0.3 - i * 0.14, -hd + 0.3); ladder(k, x, z, rot + 0.1 * i, 0.46); }
+          const [kx, kz] = L2W(hw - 0.3, hd - 0.32); cart(k, kx, kz, rot + 1.2);
         }
-        // the engines inside the ring, their arms toward the walls
+        // the engines inside the ring, facing the walls
         for (const e of plan.engines) {
           const x = Math.cos(e.a) * e.d, z = Math.sin(e.a) * e.d, yaw = Math.PI - e.a; // local +x toward the town's centre
           if (e.kind === 'trebuchet') trebuchet(k, x, z, yaw);
           else if (e.kind === 'ram') ramShed(k, x, z, yaw);
           else siegeTowerGeo(k, x, z, yaw);
         }
-        // ladders laid ready along the ring's inside, a few mantlets of wicker
-        for (let i = 0; i < (lite ? 3 : 6); i++) { const a = face + (rnd() - 0.5) * 1.6, d = r - 0.18 - rnd() * 0.15; ladder(k, Math.cos(a) * d, Math.sin(a) * d, -a + Math.PI / 2 + (rnd() - 0.5) * 0.4, 0.5); }
-        for (let i = 0; i < (lite ? 3 : 5); i++) { const a = face + (i - 2) * 0.22 + (rnd() - 0.5) * 0.1, d = r - 0.62; k.add(new T.BoxGeometry(0.02, 0.09, 0.16), 0x6d5436, [Math.cos(a) * d, 0.08, Math.sin(a) * d], [0, -a, 0.2]); }
-        // the ground each camp trampled: a low pad whose edge slopes into the land (like the town's apron, which covers it where they meet)
-        for (const c of plan.camps) { const rr = Math.max(c.w, c.dd) * 0.62; k.add(lathe([[rr + 0.9, -0.85], [rr, 0.02], [0, 0.02]], lite ? 14 : 22), 0x6a5a36, [Math.cos(c.a) * c.d, 0, Math.sin(c.a) * c.d], [0, -c.a, 0], [(c.dd / Math.max(c.w, c.dd)) * 1.05, 1, c.w / Math.max(c.w, c.dd)]); }
+        // ladders laid ready along the ring's inside, mantlets of wicker before the engines
+        for (let i = 0; i < (lite ? 3 : 6); i++) { const a = face + (rnd() - 0.5) * 1.4, d = r - 0.25 - rnd() * 0.2; ladder(k, Math.cos(a) * d, Math.sin(a) * d, -a + Math.PI / 2 + (rnd() - 0.5) * 0.4, 0.5); }
+        for (let i = 0; i < (lite ? 3 : 5); i++) { const a = face + (i - 2) * 0.2 + (rnd() - 0.5) * 0.08, d = r - 1.25; k.add(new T.BoxGeometry(0.035, 0.16, 0.28), 0x7a6040, [Math.cos(a) * d, G0 + 0.07, Math.sin(a) * d], [0, -a, 0.22]); }
         campCache[key] = { geo: k.geo(), fires, smoke, flags };
       }
       const c = campCache[key], g = new T.Group();
       const m = new T.Mesh(c.geo, mat); m.castShadow = !lite; m.receiveShadow = true; g.add(m);
-      const fx = new T.Group(); fx.add(HM.fire(c.fires, 0.65), HM.smoke(c.smoke, 0.6)); g.add(fx);
-      for (const p of c.flags) { const b = banner(fid, o.seal || '', { w: 0.16, h: 0.24, hold: 0.2, spar: false }); b.position.set(p[0], p[1], p[2]); g.add(b); }
+      const fx = new T.Group(); fx.add(HM.fire(c.fires, 1.5), HM.smoke(c.smoke, 1.1)); g.add(fx);
+      for (const p of c.flags) { const b = banner(fid, o.seal || '', { w: 0.32, h: 0.48, hold: 0.3 }); b.position.set(p[0], p[1], p[2]); g.add(b); }
       g.userData = { r, plan, stand: plan.stand, fires: c.fires, smoke: c.smoke, fx, shared: true };
       return g;
     };
