@@ -199,9 +199,9 @@
     const g = new T.Group(); if (!list.length) return g;
     const pole = new T.CylinderGeometry(0.06, 0.07, 6, 4).translate(0, 3, 0), cloth = new T.PlaneGeometry(1.4, 2.6, 4, 1), cp = cloth.attributes.position;
     for (let i = 0; i < cp.count; i++) cp.setZ(i, Math.sin((cp.getX(i) + 0.7) * 3) * 0.12); cloth.computeVertexNormals(); cloth.translate(0.72, 4.55, 0);
-    const rows = list.map((p) => [p[0], p[1], p[2], p[3] || 0, p[4] || 1]);
-    const pm = new T.InstancedMesh(bounded(pole, rows), new T.MeshStandardMaterial({ color: 0x3a2a1c, roughness: 0.8 }), list.length), cm = new T.InstancedMesh(bounded(cloth, rows), bannerCloth(cache, fc, glyph), list.length), Y = new T.Vector3(0, 1, 0);
-    rows.forEach((p, i) => { M4.compose(V3.set(p[0], p[1], p[2]), Q4.setFromAxisAngle(Y, p[3]), SC.setScalar(p[4])); pm.setMatrixAt(i, M4); cm.setMatrixAt(i, M4); });
+    const rows = list.map((p) => [p[0], p[1], p[2], p[3] || 0, p[4] || 1, p[5] || 0]); // p[5]: a tilt about the cloth's own z (a dropped standard)
+    const pm = new T.InstancedMesh(bounded(pole, rows), new T.MeshStandardMaterial({ color: 0x3a2a1c, roughness: 0.8 }), list.length), cm = new T.InstancedMesh(bounded(cloth, rows), bannerCloth(cache, fc, glyph), list.length);
+    rows.forEach((p, i) => { M4.compose(V3.set(p[0], p[1], p[2]), Q4.setFromEuler(EU.set(0, p[3], p[5], 'YXZ')), SC.setScalar(p[4])); pm.setMatrixAt(i, M4); cm.setMatrixAt(i, M4); });
     pm.castShadow = cm.castShadow = true; g.add(pm, cm); return g;
   };
 
@@ -361,7 +361,9 @@
   const buildCity = (ctx) => {
     const { HM, L, env, N, tier, def, desc } = ctx, P = HM.parts, C = P.C, rnd = lcg(11), group = new T.Group();
     const E = P.kit(), Bk = P.kit(); // E: rammed earth (the earth material), Bk: buildings (the kit's material)
-    const capital = def.rank === 'capital', H = capital ? 12 : 10, WB = capital ? 30 : 26, WT = capital ? 10 : 9, cw = 34; // wall height, base and top width, corner bastion
+    // wall height, base and top width, corner bastion; def.wallH (the battle cinema: the lũy the town has now) sets the
+    // height and the base and top follow it (10 m: 26 and 9, as a county town's before)
+    const capital = def.rank === 'capital', H = def.wallH || (capital ? 12 : 10), WB = def.wallH ? Math.round(4 + H * 2.2) : capital ? 30 : 26, WT = def.wallH ? Math.round(3 + H * 0.6) : capital ? 10 : 9, cw = 34;
     const earth = 0x9a7d5a, earthDark = 0x84694c, burnt = 0x5a4a3c, paving = 0x7d776d, KSv = [KS, KS, KS];
     const plan = B.plan(def), { S, rot } = plan, cs = Math.cos(rot), sn = Math.sin(rot);
     // tile columns on the gate towers and halls: every other one at mid, a plain roof at low (a capital's towers were
@@ -387,16 +389,17 @@
       const nm = len > 90 ? Math.max(1, Math.round(len / 150)) : 0;
       for (let i = 0; i < nm; i++) { const s = s0 + ((i + 0.5) * len) / nm; k.add(P.rbox(16, H + 3, 24, 0.05), earth, [s, y0 + (H - 3) / 2, WB / 2 - 4]); for (let j = 0; j < 4; j++) crenel(k, s - 6 + j * 4, y0 + H + 0.55, WB / 2 + 7.2); }
     };
-    // the gatehouse at local x = s: a wider earth block, flat-topped passages under timber, doors, the timber tower
+    // the gatehouse at local x = s: a wider earth block, flat-topped passages under timber, doors, the timber tower.
+    // doors: the kit the leaves go into (the attacked gate's are their own mesh, city.doors, so a shot can break them), or none
     const pass = clamp(def.passages || 1, 1, 3), gwOf = 34 + (pass - 1) * 12;
     const gateAt = (k, b, s, y0, main, doors) => {
-      const gw = gwOf, pw = main ? 6.5 : 5.5, ph = 7.2;
+      const gw = gwOf, pw = main ? 6.5 : 5.5, ph = Math.min(7.2, H * 0.72);
       k.add(P.rbox(gw, H + 3.5, WB + 6, 0.04), earth, [s, y0 + (H + 0.5 - 3) / 2, 0]);
       for (let i = 0; i < pass; i++) {
         const x = s + (i - (pass - 1) / 2) * (pw + 3);
         b.add(P.rbox(pw, ph, WB + 6.4, 0), 0x0e0a07, [x, y0 + ph / 2, 0]);
         for (const sz of [-1, 1]) { b.add(P.rbox(pw + 2.2, 0.9, 0.8, 0.2), 0x3a2414, [x, y0 + ph + 0.45, sz * (WB / 2 + 3.2)]); for (const sx of [-1, 1]) b.add(P.rbox(0.8, ph, 0.8, 0.2), 0x3a2414, [x + sx * (pw / 2 + 0.4), y0 + ph / 2, sz * (WB / 2 + 3.2)]); }
-        if (doors) for (const sx of [-1, 1]) b.add(P.rbox(0.35, ph * 0.95, pw * 0.5, 0.2), 0x4a2211, [x + sx * pw * 0.42, y0 + ph * 0.47, WB / 2 + 1.5], [0, sx * 0.7, 0]);
+        if (doors) for (const sx of [-1, 1]) doors.add(P.rbox(0.35, ph * 0.95, pw * 0.5, 0.2), 0x4a2211, [x + sx * pw * 0.42, y0 + ph * 0.47, WB / 2 + 1.5], [0, sx * 0.7, 0]);
       }
       b.push(P.xf(P.pavilion({ w: 0.9 + (pass - 1) * 0.3, d: 0.5, h: 0.2, storeys: main ? 3 : 2, rh: 0.17, base: 0.02, ov: 0.08, tiles: tl(0.028) }), [s, y0 + H + 0.5, 0], [0, 0, 0], KSv));
     };
@@ -431,14 +434,15 @@
     const onSide = gatesP.filter((g) => g.side === side).sort((a, b) => Math.abs(a.t - 0.5) - Math.abs(b.t - 0.5));
     const attack = onSide[0] || gatesP.slice().sort((a, b) => (b.e.nx * sd[0] + b.e.nz * sd[1]) - (a.e.nx * sd[0] + a.e.nz * sd[1]))[0] || null;
     if (attack) attack.attacked = true;
-    const win = desc.result === 'win';
+    const win = desc.result === 'win', Dk = P.kit();
     for (const e of edges) {
-      const k = P.kit(), b = P.kit(), ts = gatesP.filter((g) => g.e === e).map((g) => g.s), cut = cw * 0.4;
+      const k = P.kit(), b = P.kit(), dk = P.kit(), ts = gatesP.filter((g) => g.e === e).map((g) => g.s), cut = cw * 0.4;
       let s = cut;
       for (const [g0, g1] of [...ts.map((t) => [t - gwOf / 2, t + gwOf / 2]), [e.len - cut, e.len]]) { run(k, s, Math.min(g0, e.len - cut), e.y0); s = g1; }
-      for (const g of gatesP.filter((q) => q.e === e)) gateAt(k, b, g.s, e.y0, !!g.main, !(win && g.attacked));
+      for (const g of gatesP.filter((q) => q.e === e)) gateAt(k, b, g.s, e.y0, !!g.main, g.attacked ? (win ? null : dk) : b);
       if (k.n) E.push(P.xf(k.geo(), [e.a[0], 0, e.a[1]], [0, e.ry, 0]));
       if (b.n) Bk.push(P.xf(b.geo(), [e.a[0], 0, e.a[1]], [0, e.ry, 0]));
+      if (dk.n) Dk.push(P.xf(dk.geo(), [e.a[0], 0, e.a[1]], [0, e.ry, 0]));
     }
     // corner bastions with two-storey towers: turned to the incoming edge's outward side, crenels on the two outer faces
     polyP.forEach((v, i) => {
@@ -590,14 +594,15 @@
     const eMesh = new T.Mesh(E.geo(), earthMaterial(env, N)); eMesh.castShadow = true; eMesh.receiveShadow = true; eMesh.rotation.y = -rot;
     const bMesh = new T.Mesh(Bk.geo(), HM.mat); bMesh.castShadow = true; bMesh.receiveShadow = true; bMesh.rotation.y = -rot;
     group.add(eMesh, bMesh);
-    const wMeshes = [...wardKits.values()].filter((k) => k.n).map((k) => { const m = new T.Mesh(k.geo(), HM.mat); m.castShadow = tier === 'high'; m.receiveShadow = true; m.rotation.y = -rot; group.add(m); return m; });
+    let doors = null; if (Dk.n) { doors = new T.Mesh(Dk.geo(), HM.mat); doors.castShadow = true; doors.receiveShadow = true; doors.rotation.y = -rot; group.add(doors); }
+    const wMeshes =[...wardKits.values()].filter((k) => k.n).map((k) => { const m = new T.Mesh(k.geo(), HM.mat); m.castShadow = tier === 'high'; m.receiveShadow = true; m.rotation.y = -rot; group.add(m); return m; });
     // world-space edges and the two assaulted ones: the gate's and the next one round (the ladders' wall)
     const wEdges = edges.map((e) => ({ a: toW(...e.a), b: toW(...e.b), len: e.len, d: rotV(e.dx, e.dz), n: rotV(e.nx, e.nz), ry: e.ry - rot, y0: e.y0, side: e.side, i: e.i, gates: gatesP.filter((g) => g.e === e).map((g) => g.s) }));
     const attackGate = attack ? gates[gatesP.indexOf(attack)] : null, mainGate = main ? gates[gatesP.indexOf(main)] : null;
     const aEdge = attackGate ? wEdges[attackGate.edge.i] : wEdges.slice().sort((u, v) => (v.n[0] * sd[0] + v.n[1] * sd[1]) - (u.n[0] * sd[0] + u.n[1] * sd[1]))[0];
     const wallEdge = wEdges.filter((e) => e !== aEdge).sort((u, v) => { const du = Math.hypot((u.a[0] + u.b[0]) / 2 - (aEdge.b[0]), (u.a[1] + u.b[1]) / 2 - aEdge.b[1]), dv = Math.hypot((v.a[0] + v.b[0]) / 2 - aEdge.b[0], (v.a[1] + v.b[1]) / 2 - aEdge.b[1]); return du - dv; })[0] || aEdge;
     const fw = toW(flagAt[0], flagAt[2]);
-    return { group, gates, attackGate, mainGate, aEdge, wallEdge, edges: wEdges, poly: plan.poly, half: plan.half, D: plan.D, S, rot, flagAt: [fw[0], flagAt[1], fw[1]], H, WB, WT, G0, cw, trees: inTrees, burn, labels: labels.map((l) => { const [x, z] = toW(l.p[0], l.p[2]); return { ...l, p: [x, l.p[1], z] }; }), meshes: [eMesh, bMesh, ...wMeshes], wards: nWard };
+    return { group, gates, attackGate, mainGate, aEdge, wallEdge, edges: wEdges, poly: plan.poly, half: plan.half, D: plan.D, S, rot, flagAt: [fw[0], flagAt[1], fw[1]], H, WB, WT, G0, cw, trees: inTrees, burn, labels: labels.map((l) => { const [x, z] = toW(l.p[0], l.p[2]); return { ...l, p: [x, l.p[1], z] }; }), meshes: [eMesh, bMesh, ...wMeshes], wards: nWard, doors };
   };
 
   // ---------------------------------------------------------------- the besiegers' camp (營), from sg-camp.js, laid round the camp rectangle
@@ -1120,12 +1125,17 @@
     const mat = new T.ShaderMaterial({ uniforms: { map: { value: tex }, uTime: U }, vertexShader: BILL_VS, fragmentShader: BILL_FS, defines, transparent: true, depthWrite: !!o.depthWrite, blending: o.additive ? T.AdditiveBlending : T.NormalBlending });
     const m = new T.Mesh(g, mat); m.frustumCulled = false; m.renderOrder = o.order || 0; return m;
   };
-  const buildFx = (ctx, city, army, camp) => {
-    const { L, tier, res, group } = ctx, rnd = lcg(3), f = TIER[tier].fx, lights = TIER[tier].lights, texs = [], mats = [], U = { value: 0 };
+  // the sprites of fire and smoke (canvas, seeded): a puff of smoke, a flame, a glow
+  const fxTextures = (rnd, texs) => {
     const spriteTex = (draw, w = 128, h = 128) => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; draw(cv.getContext('2d'), w, h); const t = new T.CanvasTexture(cv); t.encoding = T.sRGBEncoding; texs.push(t); return t; };
     const smokeT = spriteTex((g, w, h) => { for (let i = 0; i < 30; i++) { const x = w / 2 + (rnd() - 0.5) * w * 0.45, y = h / 2 + (rnd() - 0.5) * h * 0.45, r = w * (0.14 + rnd() * 0.2), gr = g.createRadialGradient(x - r * 0.35, y - r * 0.35, 0, x, y, r); gr.addColorStop(0, 'rgba(255,246,232,0.34)'); gr.addColorStop(0.55, 'rgba(170,160,150,0.22)'); gr.addColorStop(1, 'rgba(90,84,78,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); } });
     const flameT = spriteTex((g, w, h) => { const gr = g.createRadialGradient(w / 2, h * 0.7, 2, w / 2, h * 0.62, h * 0.5); gr.addColorStop(0, 'rgba(255,245,200,1)'); gr.addColorStop(0.25, 'rgba(255,180,60,0.95)'); gr.addColorStop(0.6, 'rgba(230,80,20,0.55)'); gr.addColorStop(1, 'rgba(120,20,0,0)'); g.fillStyle = gr; g.beginPath(); g.moveTo(w / 2, 0); g.quadraticCurveTo(w, h * 0.55, w / 2, h); g.quadraticCurveTo(0, h * 0.55, w / 2, 0); g.fill(); }, 64, 128);
     const glowT = spriteTex((g, w, h) => { const gr = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); gr.addColorStop(0, 'rgba(255,170,80,0.8)'); gr.addColorStop(1, 'rgba(255,120,40,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+    return { smokeT, flameT, glowT };
+  };
+  const buildFx = (ctx, city, army, camp) => {
+    const { L, tier, res, group } = ctx, rnd = lcg(3), f = TIER[tier].fx, lights = TIER[tier].lights, texs = [], mats = [], U = { value: 0 };
+    const { smokeT, flameT, glowT } = fxTextures(rnd, texs);
     const FL = [], GL = [], SD = [], SS = [], WHITE = new T.Color(1, 1, 1);
     let lit = 0;
     const fire = (x, y, z, size, smokeH, light) => {
@@ -1208,7 +1218,7 @@
     if (!R) { const d = DIR[side], t = [d[1], -d[0]], cx = d[0] * (city.half + 640) + t[0] * 220, cz = d[1] * (city.half + 640) + t[1] * 220; R = { x0: cx - 180, x1: cx + 180, z0: cz - 125, z1: cz + 125 }; }
     ctx.R = R;
     let camp = null, army = null, fx = null;
-    if (mode === 'camp' || mode === 'assault' || mode === 'stand') camp = buildCamp(ctx, out);
+    if ((mode === 'camp' || mode === 'assault' || mode === 'stand') && desc.camp !== false) camp = buildCamp(ctx, out);
     if (mode !== 'camp') army = buildArmies(ctx, city, out);
     // the cap holds: if the camp, the crews and the guards took the figures past it, thin every list evenly
     const all = [...Object.values(out.R), ...Object.values(out.Gd), out.riders, out.dRiders, out.horses], total = all.reduce((a, l) => a + l.length, 0);
@@ -1261,11 +1271,369 @@
       return s;
     };
     const dispose = () => {
-      group.traverse((o) => { if (o.isMesh || o.isSprite) { if (o.geometry) o.geometry.dispose(); const ms = Array.isArray(o.material) ? o.material : [o.material]; for (const m of ms) if (m) { if (m.map) m.map.dispose(); m.dispose(); } } });
+      // a material marked userData.shared (the kit's HM.mat of a page that keeps its models) stays compiled for the next battle
+      group.traverse((o) => { if (o.isMesh || o.isSprite) { if (o.geometry) o.geometry.dispose(); const ms = Array.isArray(o.material) ? o.material : [o.material]; for (const m of ms) if (m && !m.userData.shared) { if (m.map) m.map.dispose(); m.dispose(); } } });
       for (const d of disposables) d.dispose(); crowdA.dispose(); crowdD.dispose(); if (fx) fx.dispose();
       for (const m of Object.values(bannerCache)) { if (m.map) m.map.dispose(); m.dispose(); }
       if (group.parent) group.parent.remove(group);
     };
-    return { group, tick, views, labels, focus, stats, dispose, trees: city.trees, land: L, city, camp, side, tier };
+    // what a stage (Battle.stage, the battle cinema) lays its wings with: the site's models, land, city and the figures it used
+    const kit = { HM, N, L, env, tier, q: deps.q, renderer: deps.renderer, Crowd: deps.Crowd || B.Crowd, animated: !!deps.Crowd, engines: ctx.engines, bannerCache, city, camp, side, k, cap, used: crowdA.count + crowdD.count };
+    return { group, tick, views, labels, focus, stats, dispose, trees: city.trees, land: L, city, camp, side, tier, kit };
+  };
+
+  // ---------------------------------------------------------------- the battle cinema: one turn of EmperorsBattle on a built site
+  // src/world/huainan-cinema.js builds a site once a battle (Battle.siege without armies: mode 'camp' gives the city, its
+  // land and the besiegers' camp; camp: false for a field battle) and lays a stage on it for each shot: the wings of the
+  // rules (src/engine/battle.js) as blocks of men where their lane and row put them, and what the turn did to them (a
+  // charge, a volley, a fire, the ladders and the ram, a breach, a rout, the fallen), nothing the state does not say.
+  // Grid → ground: lanes 0–2 run left to right as the attacker sees the attacked face (lane 1 holds its gate); rows 0–1 are
+  // the attacker's, 4–5 the defender's. In a siege row 4 is the wall walk, row 5 the ground behind the wall, row 3 its
+  // foot and rows 0–2 the field beyond the moat; in the field the six rows are 34 m apart on the ground before the walls.
+  // Men are figures at one ratio for the whole stage (the tier's cap less what the site's camp took, a floor of 14 a wing);
+  // a broken wing shows the half that still runs (Battle.lossOf counts the other half lost); this turn's losses lie where
+  // they fell. Each wing is its own crowd, so a wing that moved in the turn walks (or charges, or runs) the last stretch
+  // of its move during the shot by its group's offset; the animated crowd's loops (Crowd.ANIMS) are used when it has them.
+  //   Battle.frame(site, siege) → { W(u, v) → [x, z], laneU(l), rowV(r), sec[l], yawA, yawD, wallY, out, tan, … }
+  //   Battle.stage(site, spec) → { group, tick(dt), focus(camera), anchors, stats(), dispose() }
+  //   spec = { siege, wings: Battle state wings (men, start, lane, row, gone, routed, left, fought, hit, shot, burnt, breach,
+  //            charge, flank), from: { [id]: { lane, row, gone } } (before the turn; none: nothing moves), A / D: { fid,
+  //            color, glyph }, beat: { kind, side, lane, wing, target }, gate: 'open' | null, standards: { gate: 'A' | 'D' },
+  //            retreat: 'A' | 'D' | null (that side walks back: the end of a battle it lost), cheer: 'A' | 'D' | null,
+  //            burn: bool (houses burning in the town), dur (seconds), seed }
+  //   anchors = { wings: { [id]: { c, front, from, yaw, w, d, n, type, lane, side } }, lanes: [{ wall, foot, field, a, d }],
+  //               gate, gateTop, standards: { A, D }, frame }  (points [x, y, z], metres)
+  // Projectiles fly on the GPU: each instance leaves aA at aP.x seconds, lands on aB aP.y seconds later on an arc aP.z
+  // high and turns along its path; one draw call a look (shafts, fire streaks, stones).
+  const SHOT_VS = `attribute vec3 aA; attribute vec3 aB; attribute vec4 aP; uniform float uTime; varying vec3 vN;
+    void main() {
+      float t = (uTime - aP.x) / aP.y;
+      if (t < 0. || t > 1.) { gl_Position = vec4(2., 2., 2., 1.); vN = vec3(0., 1., 0.); return; }
+      vec3 p = mix(aA, aB, t) + vec3(0., 4. * aP.z * t * (1. - t), 0.);
+      vec3 d = normalize(aB - aA + vec3(0., 4. * aP.z * (1. - 2. * t), 0.));
+      vec3 up = abs(d.y) > .98 ? vec3(1., 0., 0.) : vec3(0., 1., 0.), x = normalize(cross(up, d)), y = cross(d, x);
+      vec3 q = p + x * position.x * aP.w + y * position.y * aP.w + d * position.z * aP.w;
+      vN = x * normal.x + y * normal.y + d * normal.z;
+      gl_Position = projectionMatrix * viewMatrix * vec4(q, 1.); }`;
+  const SHOT_FS = `uniform vec3 uColor, uSun; uniform float uLit; varying vec3 vN;
+    void main() { float l = mix(1., .4 + .8 * max(dot(normalize(vN), uSun), 0.), uLit); gl_FragColor = vec4(uColor * l, 1.);
+      #include <tonemapping_fragment>
+      #include <encodings_fragment>
+    }`;
+  const flights = (geo, list, o, U) => {
+    const n = list.length, g = new T.InstancedBufferGeometry(), A = new Float32Array(n * 3), Bv = new Float32Array(n * 3), Pp = new Float32Array(n * 4);
+    g.setIndex(geo.index); g.setAttribute('position', geo.attributes.position); g.setAttribute('normal', geo.attributes.normal);
+    list.forEach((f, i) => { A.set(f.a, i * 3); Bv.set(f.b, i * 3); Pp.set([f.t0, f.fly, f.h, f.s || 1], i * 4); });
+    g.setAttribute('aA', new T.InstancedBufferAttribute(A, 3)); g.setAttribute('aB', new T.InstancedBufferAttribute(Bv, 3)); g.setAttribute('aP', new T.InstancedBufferAttribute(Pp, 4)); g.instanceCount = n;
+    const m = new T.Mesh(g, new T.ShaderMaterial({ uniforms: { uTime: U, uColor: { value: new T.Color(o.color) }, uSun: { value: new T.Vector3(-0.82, 0.36, 0.3).normalize() }, uLit: { value: o.lit ? 1 : 0 } }, vertexShader: SHOT_VS, fragmentShader: SHOT_FS,
+      transparent: !!o.additive, depthWrite: !o.additive, blending: o.additive ? T.AdditiveBlending : T.NormalBlending }));
+    m.frustumCulled = false; m.renderOrder = o.additive ? 4 : 0; m.userData.source = geo; return m;
+  };
+
+  B.frame = function (site, siege) {
+    const K = site.kit, city = K.city, L = K.L, g = city.attackGate, e1 = city.aEdge, H = city.H, WB = city.WB, WT = city.WT;
+    const o = g ? g.out : e1.n, t = g ? g.tan : e1.d, gx = g ? g.x : (e1.a[0] + e1.b[0]) / 2, gz = g ? g.z : (e1.a[1] + e1.b[1]) / 2;
+    const W = (u, v) => [gx + u * t[0] + v * o[0], gz + u * t[1] + v * o[1]];
+    const rs = o[1] * t[0] - o[0] * t[1] >= 0 ? 1 : -1; // +1: u grows to the attacker's right
+    const s0 = g ? g.t * e1.len : e1.len / 2, gw = g ? g.gw : 34;
+    const lo = -(s0 - city.cw * 0.7), hi = e1.len - s0 - city.cw * 0.7; // the attacked face in u, clear of the corner bastions
+    const inner = gw / 2 + 26; // lane 1: the gatehouse and 26 m of wall either side; lanes 0 and 2: the rest of the face
+    const sec = [0, 1, 2].map((l) => { if (l === 1) return [-inner, inner]; const right = (l === 2) === (rs > 0); return right ? [inner + 2, Math.max(inner + 50, hi)] : [Math.min(-inner - 50, lo), -inner - 2]; });
+    const laneW = siege ? clamp((sec[0][1] - sec[0][0] + sec[2][1] - sec[2][0]) / 2, 60, 170) : 118;
+    const laneU = (l) => { const i = clamp(Math.round(l), 0, 2); return siege ? (sec[i][0] + sec[i][1]) / 2 : (i - 1) * laneW * rs; };
+    const moat = g && g.moat, vOut = moat ? moat[1] + 8 : WB / 2 + 18;
+    const V = siege ? [vOut + 180, vOut + 112, vOut + 46, WB / 2 + 8, WT / 2 - 2.4, -(WB / 2 + 24)] : [0, 1, 2, 3, 4, 5].map((r) => vOut + 210 + (2.5 - r) * 34);
+    const rowV = (r) => V[clamp(Math.round(r), 0, 5)];
+    return { W, rs, s0, gw, sec, laneW, laneU, rowV, V, siege, gate: g, edge: e1, out: o, tan: t, gx, gz, y: (x, z) => L.h(x, z), wallY: e1.y0 + H, y0: g ? g.y0 : e1.y0,
+      towerY: g ? g.towerY : e1.y0 + H, H, WB, WT, vOut, moat, yawA: yawTo(-o[0], -o[1]), yawD: yawTo(o[0], o[1]), L, city };
+  };
+
+  B.stage = function (site, spec) {
+    const K = site.kit, HM = K.HM, P = HM.parts, mat = HM.mat, L = K.L, tier = K.tier, TQ = TIER[tier], city = K.city;
+    const siege = !!spec.siege, F = B.frame(site, siege), rnd = lcg(((spec.seed >>> 0) % 2147483645) + 1), group = new T.Group();
+    const dur = spec.dur || 5, beat = spec.beat || {}, U = { value: 0 }, texs = [], crowds = [], movers = [], lights = [];
+    const S = { A: { ...spec.A, color: hex(spec.A.color) }, D: { ...spec.D, color: hex(spec.D.color) } };
+    const Y = (x, z) => L.h(x, z), dry = (x, z) => L.waterSD(x, z) > 1, at = (u, v, dy = 0) => { const [x, z] = F.W(u, v); return [x, Y(x, z) + dy, z]; };
+    const back = (side) => (side === 'A' ? 1 : -1); // ranks behind the front: +v for the attacker (who faces the walls), −v for the defender
+    const face = (side) => (side === 'A' ? F.yawA : F.yawD);
+    const shared = new Set([mat, ...Object.values(K.bannerCache)]);
+    for (const m of Object.values(K.bannerCache)) m.userData.shared = true;
+    const wings = spec.wings.filter((w) => w && !(w.gone && !w.routed));
+    const byId = {}; for (const w of spec.wings) byId[w.id] = w;
+    const from = spec.from || {};
+
+    // ---- figures: one ratio for the stage; a broken wing shows the half that still runs
+    const shown = (w) => Math.max(0, w.men) * (w.gone ? 0.5 : 1);
+    const total = wings.reduce((a, w) => a + shown(w), 0) || 1, capLeft = Math.max(260, (spec.figures || K.cap) - K.used - 100);
+    const k = Math.min(0.42, capLeft / total), figsOf = (w) => (shown(w) > 0 ? Math.max(14, Math.round(shown(w) * k)) : 0);
+    const C = K.Crowd, KINDS = C.KINDS || null, ANIMS = C.ANIMS || null;
+    const has = (kind, a) => !!(KINDS && ANIMS && KINDS[kind] && ANIMS[KINDS[kind][0]] && ANIMS[KINDS[kind][0]][a]);
+    const anim = (kind, ...names) => names.find((a) => has(kind, a)); // the first loop the crowd has, else its kind's own
+
+    // ---- where each wing stands: its type and block, side by side when wings share a cell
+    const retreat = spec.retreat || null;
+    const typeOf = (w) => {
+      if (siege && w.side === 'D' && w.row >= 4) return w.arm === 'ky' || w.arm === 'thuy' ? 'inside' : 'wall';
+      if (siege && w.side === 'A' && w.row >= 4 && !w.gone) return retreat === 'A' ? 'field' : 'breach';
+      if (siege && w.side === 'A' && w.row === 3 && !w.gone && w.arm !== 'cung') return retreat === 'A' ? 'field' : 'foot';
+      return 'field';
+    };
+    const SP = { bo: [1.5, 1.45, 2.2], cung: [1.9, 1.8, 3], ky: [3.1, 3.4, 2], thuy: [1.5, 1.45, 2.2] }; // spacing across, back, cols per row
+    const dims = (n, arm) => { const [su, sv, ratio] = SP[arm] || SP.bo, rows = Math.max(1, Math.round(Math.sqrt(n / ratio))), cols = Math.ceil(n / rows); return { rows, cols, su, sv, w: cols * su, d: rows * sv }; };
+    const lay = wings.map((w) => ({ w, type: typeOf(w), n: figsOf(w) }));
+    const riverAt = (x0, z0) => { // the nearest open water within 700 m (boats); null if none
+      if (!L.riverSD) return null; let best = null;
+      for (let r = 40; r < 700 && !best; r += 30) for (let a = 0; a < 16; a++) { const x = x0 + Math.cos((a / 16) * 6.283) * r, z = z0 + Math.sin((a / 16) * 6.283) * r; if (L.riverSD(x, z) < -18) { best = [x, z]; break; } }
+      return best;
+    };
+    // field cells: (side, lane, row) → the wings in it, spread across the lane by their widths
+    const cells = {};
+    for (const l of lay) { if (l.type !== 'field') continue; const w = l.w, key = w.side + w.lane + ':' + (retreat === w.side && siege && w.side === 'A' ? Math.min(w.row, 2) : w.row); (cells[key] = cells[key] || []).push(l); }
+    for (const list of Object.values(cells)) {
+      for (const l of list) l.dm = dims(l.n, l.w.arm);
+      const width = list.reduce((a, l) => a + l.dm.w, 0) + (list.length - 1) * 10; let u = -width / 2;
+      for (const l of list) { l.slot = u + l.dm.w / 2; u += l.dm.w + 10; }
+    }
+    // melee in the field: the two wings of a lane that fought this turn meet halfway between their rows
+    const contact = {};
+    for (const l of lay) { const w = l.w; if (l.type !== 'field' || !w.fought || w.gone) continue; const foe = lay.find((m) => m.type === 'field' && m.w.side !== w.side && m.w.lane === w.lane && m.w.fought && !m.w.gone && Math.abs(m.w.row - w.row) <= 1); if (foe) contact[w.id] = (F.rowV(w.row) + F.rowV(foe.w.row)) / 2; }
+    const cellUV = (w, lane, row, l) => { const r = siege && retreat === w.side && w.side === 'A' ? Math.min(row, 2) : row; let v = F.rowV(r); const u = F.laneU(lane) + (l && l.slot ? l.slot : 0); if (l && contact[w.id] !== undefined) v = contact[w.id] + back(w.side) * (1.6 + l.dm.d / 2); return [u, v]; };
+
+    // ---- the lists
+    const rowsBy = new Map(); // wing id → { crowd kind → rows }
+    const addRow = (id, kind, row) => { if (!rowsBy.has(id)) rowsBy.set(id, {}); const R = rowsBy.get(id); (R[kind] = R[kind] || []).push(row); };
+    const flags = { A: [], D: [] }, fallen = { A: [], D: [] }, fallenH = { A: [], D: [] }, engines = { ladder: [], ram: [], trebuchet: [], mantlet: [], jinglan: [] }, boats = { A: [], D: [] };
+    const arrows = [], fireArrows = [], stones = [], FL = [], GL = [], SD = [], SS = [], WHITE = new T.Color(1, 1, 1), DUST = new T.Color(0x9a8466);
+    const anchors = { wings: {}, lanes: [], gate: null, gateTop: null, standards: {}, frame: F };
+    const fa = TQ.fx;
+    const fire = (x, y, z, size, smokeH, light) => {
+      for (let i = 0, n = Math.round(14 * fa) + 2; i < n; i++) FL.push({ p: [x + (rnd() - 0.5) * size * 1.6, y + rnd() * size * 0.5, z + (rnd() - 0.5) * size], w: size * 0.5, h: size, ph: rnd() * 6, c: WHITE });
+      GL.push({ p: [x, y + size * 0.3, z], w: size * 3.2, h: size * 3.2, c: WHITE, a: 0.55 });
+      if (light && lights.length < TQ.lights) { const pl = new T.PointLight(0xff8a3a, 2.4, size * 14, 2); pl.position.set(x, y + size * 0.6, z); group.add(pl); lights.push(pl); }
+      for (let i = 0, n = Math.round(30 * fa) + 4; i < n; i++) { const t = i / n, g2 = 0.07 + 0.2 * t + 0.06 * rnd(), hgt = t * smokeH, sc = size * (1.1 + rnd() * 0.8) + hgt * 0.42; SD.push({ p: [x + hgt * 0.45 + (rnd() - 0.5) * 4, y + size + hgt, z - hgt * 0.2 + (rnd() - 0.5) * 4], w: sc, h: sc, rot: rnd() * 6, ph: rnd() * 6, c: new T.Color().setRGB(g2 * 1.05, g2, g2 * 0.92), a: 1 - t * 0.5 }); }
+    };
+    const dust = (x, z, n, size, a = 0.42) => { for (let i = 0; i < n; i++) { const sc = size * (0.7 + rnd() * 0.6), px = x + (rnd() - 0.5) * size * 2.2, pz = z + (rnd() - 0.5) * size * 2.2; SS.push({ p: [px, Y(px, pz) + sc * 0.28, pz], w: sc, h: sc, ph: rnd() * 6, c: DUST, a }); } };
+    const shoot = (list, a, b, t0, h, s) => { const d = Math.hypot(b[0] - a[0], b[2] - a[2]); list.push({ a, b, t0, fly: 0.9 + d / 95, h: h ?? 6 + d * 0.2, s: s || 1 }); };
+
+    for (const l of lay) {
+      const w = l.w, sd = w.side, fc = S[sd].color, n = l.n, yaw0 = face(sd), fled = w.gone && w.routed, fl = from[w.id];
+      const beatHere = beat.wing === w.id || beat.target === w.id;
+      let A = null; // the anchor
+      if (l.type === 'wall' || l.type === 'breach') {
+        // along the wall walk of the lane's stretch, up to three ranks deep; what does not fit stands behind the wall
+        const [a0, a1] = F.sec[w.lane], len = a1 - a0, per = Math.max(4, Math.floor(len / 1.7)), ranks = Math.min(3, Math.ceil(n / per)), onWall = Math.min(n, per * ranks);
+        const vW = F.WT / 2 - 2.2, yw = F.wallY, kind = w.arm === 'cung' ? 'bow' : 'spear';
+        for (let i = 0; i < onWall; i++) {
+          const r = i % ranks, c = Math.floor(i / ranks), u = a0 + ((c + 0.5) / Math.ceil(onWall / ranks)) * len + (rnd() - 0.5) * 0.6, v = vW - r * 1.5, [x, z] = F.W(u, v);
+          if (l.type === 'wall' && F.gate && Math.abs(u) < F.gw / 2 + 1) continue; // the gatehouse: its tower stands there
+          const fight = (w.fought || l.type === 'breach') && r === 0;
+          addRow(w.id, fight && kind === 'spear' ? 'fight' : kind, [x, yw, z, (sd === 'A' ? F.yawA : F.yawD) + (rnd() - 0.5) * 0.4, kind === 'bow' && !w.shot ? anim('bow', 'stand') : spec.cheer === sd ? anim(kind, 'cheer') : undefined]);
+        }
+        for (let u = a0 + 10; u < a1 - 4; u += 24) { if (F.gate && Math.abs(u) < F.gw / 2 + 2) continue; const [x, z] = F.W(u, F.WT / 2 - 1.1); flags[sd].push([x, yw, z, F.yawD, 1]); }
+        const rest = n - onWall;
+        if (rest > 0) { const dm = dims(rest, w.arm), c = [(a0 + a1) / 2, -(F.WB / 2 + 18)]; for (const p of blockRows(dm, c[0], c[1], sd === 'D' ? -1 : 1)) { const [x, z] = F.W(p[0], p[1]); if (dry(x, z)) addRow(w.id, w.arm === 'cung' ? 'bow' : 'idle', [x, Y(x, z), z, F.yawD + (rnd() - 0.5) * 0.3]); } }
+        const uc = (a0 + a1) / 2, [cx, cz] = F.W(uc, vW), [fx, fz] = F.W(uc, F.WT / 2);
+        A = { c: [cx, yw, cz], front: [fx, yw, fz], w: len, d: F.WT, yaw: F.yawD };
+        if (l.type === 'breach') {
+          // over the wall: the ladders stay up, men still on them, the attacker's banners planted on the parapet
+          ladders(w, uc, a0, a1, true, Math.max(2, Math.round(n / 40)));
+          for (let u = a0 + 14; u < a1 - 6; u += 30) { const [x, z] = F.W(u, F.WT / 2 - 1.4); flags.A.push([x, yw, z, F.yawA, 1.1]); }
+          if (w.lane === 1 && F.gate) pour(w, Math.round(n * 0.6));
+        }
+        if (w.hit > 0) for (let i = 0, m = Math.round(w.hit * k * 0.6); i < m; i++) { const u = a0 + rnd() * len, [x, z] = F.W(u, vW - rnd() * 3); fallen[sd].push([x, yw + 0.25, z, rnd() * 6.28]); }
+      } else if (l.type === 'inside') {
+        // horse and boats of a garrison wait behind the gate, facing it
+        const dm = dims(n, w.arm === 'thuy' ? 'bo' : w.arm), u0 = (F.laneU(w.lane) * 0.35), v0 = -(F.WB / 2 + 30 + dm.d / 2);
+        for (const p of blockRows(dm, u0, v0, -1)) { const [x, z] = F.W(p[0], p[1]); if (dry(x, z)) addRow(w.id, w.arm === 'ky' ? 'rider' : 'idle', [x, Y(x, z), z, F.yawD + (rnd() - 0.5) * 0.2, w.arm === 'ky' ? anim('rider', 'stand') : undefined]); }
+        const [x, z] = F.W(u0, v0); A = { c: [x, Y(x, z), z], front: at(u0, v0 + dm.d / 2), w: dm.w, d: dm.d, yaw: F.yawD };
+        flags.D.push([...at(u0, v0 - dm.d / 2 - 2), F.yawD, 1]);
+      } else if (l.type === 'foot') {
+        // at the foot of the wall: through the gate the ram and a packed column; elsewhere the ladders, men climbing, the rest bunched below
+        const [a0, a1] = F.sec[w.lane], uc = (a0 + a1) / 2, vF = F.WB / 2 + 4;
+        if (w.lane === 1 && F.gate) {
+          engines.ram.push([...at(0, F.WB / 2 + 8.5, -0.2), F.yawA]);
+          for (let i = 0; i < n; i++) { const u = (rnd() - 0.5) * 22 * (0.4 + rnd()), v = F.WB / 2 + 14 + rnd() * Math.max(20, n * 0.35), [x, z] = F.W(u, v); const br = F.moat && v > F.moat[0] - 4 && v < F.moat[1] + 4 && Math.abs(u) < 4.3; if (!br && !dry(x, z)) continue; addRow(w.id, rnd() < 0.3 ? 'fight' : 'run', [x, br ? F.gate.bridgeY + 0.35 : Y(x, z), z, F.yawA + (rnd() - 0.5) * 0.5]); }
+          dust(...F.W(0, F.WB / 2 + 14), Math.round(5 * fa) + 2, 9);
+        } else {
+          const nl = clamp(Math.round(n / 34), 2, 8), climbers = ladders(w, uc, a0, a1, false, nl), bunch = n - climbers;
+          for (let i = 0; i < bunch; i++) { const u = a0 + 6 + rnd() * (a1 - a0 - 12), v = vF + 2 + rnd() * rnd() * 16, [x, z] = F.W(u, v); if (!dry(x, z)) continue; addRow(w.id, rnd() < 0.35 ? 'fight' : 'spear', [x, Y(x, z), z, F.yawA + (rnd() - 0.5) * 0.6, anim('spear', 'brace', 'idle')]); }
+          // a jinglan tower beside the ladders, archers on it
+          const ju = uc + (uc > 0 ? 1 : -1) * Math.min(40, (a1 - a0) * 0.3), jv = Math.max(F.vOut + 24, F.WB / 2 + 60), [jx, jz] = F.W(ju, jv);
+          if (dry(jx, jz) && n > 60) { const jy = Y(jx, jz); engines.jinglan.push([jx, jy, jz, 0]); for (let i = 0; i < 6; i++) addRow(w.id, 'bow', [jx + (rnd() - 0.5) * 4.5, jy + 15.2, jz + (rnd() - 0.5) * 4.5, F.yawA]); }
+        }
+        if (w.hit > 0) for (let i = 0, m = Math.round(w.hit * k * 0.7); i < m; i++) { const u = a0 + rnd() * (a1 - a0), v = F.WB / 2 + 2 + rnd() * 12, [x, z] = F.W(u, v); if (dry(x, z)) fallen.A.push([x, Y(x, z) + 0.25, z, rnd() * 6.28]); }
+        const [cx, cz] = F.W(uc, vF + 8); A = { c: [cx, Y(cx, cz), cz], front: at(uc, F.WB / 2 + 1), w: a1 - a0, d: 20, yaw: F.yawA };
+      } else {
+        // a block in the field (or the broken remnant of one, running)
+        const dm = l.dm || dims(n, w.arm), [u, v] = cellUV(w, w.lane, w.row, l), bs = back(w.side);
+        const moving = fl && !fl.gone && (fl.lane !== w.lane || fl.row !== w.row), routing = fled, retreating = retreat === w.side && !fled;
+        let yaw = yaw0 + (routing || retreating ? Math.PI : 0);
+        const boatsHere = w.arm === 'thuy' && riverAt(...F.W(u, v));
+        if (boatsHere) {
+          const [bx, bz] = boatsHere, nb = clamp(Math.round(w.men / 250), 1, 7), e = 6, gxr = (L.riverSD(bx + e, bz) - L.riverSD(bx - e, bz)) / (2 * e), gzr = (L.riverSD(bx, bz + e) - L.riverSD(bx, bz - e)) / (2 * e), gl = Math.hypot(gxr, gzr) || 1, tx = -gzr / gl, tz = gxr / gl;
+          for (let i = 0; i < nb; i++) { const tt = (i - (nb - 1) / 2) * 24, s = (i % 2 ? 1 : -1) * 7, x = bx + tx * tt + (gxr / gl) * s, z = bz + tz * tt + (gzr / gl) * s; if (L.riverSD(x, z) < -6) boats[sd].push([x, L.WATER + 0.1, z, yawTo(tx, tz) + (i % 2) * 0.2, 10]); }
+          A = { c: [bx, L.WATER + 1, bz], front: [bx, L.WATER + 1, bz], w: 60, d: 20, yaw: yawTo(tx, tz) };
+          if (w.burnt) for (let i = 0; i < Math.min(3, boats[sd].length); i++) { const b0 = boats[sd][boats[sd].length - 1 - i]; fire(b0[0], b0[1] + 2, b0[2], 6, 70, i === 0); }
+        } else {
+          const kindOf = (rank) => {
+            if (routing) return w.arm === 'ky' ? 'rider' : 'run';
+            if (w.arm === 'ky') return 'rider';
+            if (w.arm === 'cung') return 'bow';
+            if (contact[w.id] !== undefined && rank < 2) return 'fight';
+            return moving || retreating ? 'spear' : 'idle';
+          };
+          const animOf = (kind) => {
+            if (kind === 'rider') return w.charge ? anim('rider', 'charge', 'trot') : moving || routing || retreating ? anim('rider', 'trot') : anim('rider', 'stand');
+            if (kind === 'bow') return w.shot ? anim('bow', 'volley', 'bow') : moving || retreating ? anim('bow', 'walk') : anim('bow', 'stand');
+            if (kind === 'fight') return anim('fight', 'strike', 'fight');
+            if (kind === 'run' && routing) return anim('run', 'rout', 'run');
+            if (kind === 'idle' && spec.cheer === w.side) return anim('idle', 'cheer');
+            if (kind === 'idle' && contact[w.id] === undefined && byId[beat.wing] && byId[beat.wing].charge && beat.target === w.id) return anim('idle', 'brace');
+            return undefined;
+          };
+          const jit = routing ? 2.6 : w.arm === 'ky' ? 0.35 : 0.28;
+          for (const p of blockRows(dm, u, v + (routing ? bs * 16 : 0), bs, jit)) {
+            const [x, z] = F.W(p[0], p[1]); if (!dry(x, z)) continue;
+            const kind = kindOf(p[2]); addRow(w.id, kind, [x, Y(x, z), z, yaw + (rnd() - 0.5) * (routing ? 1.2 : 0.25), animOf(kind)]);
+          }
+          // banners along the rear rank; a broken wing's are down
+          const nf = Math.max(1, Math.round(dm.cols / 8));
+          for (let i = 0; i < nf; i++) { const uu = u + (i - (nf - 1) / 2) * (dm.w / nf), vv = v + bs * (dm.d / 2 + 1.5) + (routing ? bs * 16 : 0), [x, z] = F.W(uu, vv); if (dry(x, z)) flags[sd].push([x, Y(x, z) + (routing ? 0.3 : 0), z, yaw0, 1, routing ? 1.35 + rnd() * 0.2 : 0]); }
+          // mantlets before the attacker's archers at a siege
+          if (siege && w.side === 'A' && w.arm === 'cung' && !routing && !retreating) for (let uu = u - dm.w / 2; uu <= u + dm.w / 2; uu += 3.4) { const [x, z] = F.W(uu, v - dm.d / 2 - 6); if (dry(x, z)) engines.mantlet.push([x, Y(x, z), z, F.yawA]); }
+          const [cx, cz] = F.W(u, v), [fx, fz] = F.W(u, v - bs * dm.d / 2);
+          A = { c: [cx, Y(cx, cz), cz], front: [fx, Y(fx, fz), fz], w: dm.w, d: dm.d, yaw };
+          if (contact[w.id] !== undefined && w.side === 'A') dust(fx, fz, Math.round(6 * fa) + 2, 10);
+          if (w.burnt) for (let i = 0; i < 4; i++) { const [x, z] = F.W(u + (rnd() - 0.5) * dm.w * 0.8, v + (rnd() - 0.5) * dm.d); fire(x, Y(x, z), z, 4 + rnd() * 3, 55, i === 0); }
+          if (w.hit > 0) for (let i = 0, m = Math.round(w.hit * k * 0.7); i < m; i++) { const uu = u + (rnd() - 0.5) * dm.w, vv = v - bs * (dm.d / 2) + bs * rnd() * rnd() * dm.d * 0.8 - bs * rnd() * 4, [x, z] = F.W(uu, vv); if (dry(x, z)) (w.arm === 'ky' ? fallenH : fallen)[sd].push([x, Y(x, z) + 0.25, z, rnd() * 6.28]); }
+          // how the wing moves during the shot: the last stretch of its move (a charge from 45 m back), a rout running on
+          if (routing) movers.push({ id: w.id, off0: [0, 0, 0], off1: [...F.W(0, bs * 40)].map((q, i) => q - [F.gx, F.gz][i]), t0: 0, t1: dur, ease: (x) => x });
+          else if (retreating) movers.push({ id: w.id, off0: [0, 0, 0], off1: [...F.W(0, bs * 28)].map((q, i) => q - [F.gx, F.gz][i]), t0: dur * 0.1, t1: dur, ease: (x) => x });
+          else if (moving || w.charge) {
+            const [u0, v0] = fl ? cellUV(w, fl.lane, fl.row, null) : [u, v + bs * 45];
+            let du = u0 - u, dv = v0 - v; const len = Math.hypot(du, dv), cap = w.charge ? 60 : 38;
+            if (w.charge && len < 30) { du = 0; dv = bs * 45; } else if (len > cap) { du *= cap / len; dv *= cap / len; }
+            const path = [0.25, 0.5, 0.75].every((f) => { const [x, z] = F.W(u + du * f, v + dv * f); return dry(x, z); });
+            if (path) { const [x0, z0] = F.W(u + du, v + dv); movers.push({ id: w.id, off0: [x0 - cx, Y(x0, z0) - Y(cx, cz), z0 - cz], off1: [0, 0, 0], t0: 0, t1: dur * (w.charge ? 0.45 : 0.6), ease: w.charge ? (x) => x * x : (x) => 1 - (1 - x) * (1 - x) }); if (w.charge || w.arm === 'ky') dust(x0, z0, Math.round(5 * fa) + 2, 12, 0.5); }
+          }
+        }
+      }
+      A.type = l.type; A.lane = w.lane; A.side = sd; A.n = n; A.arm = w.arm; A.routed = !!fled;
+      anchors.wings[w.id] = A;
+    }
+
+    // blocks of a wing in frame coordinates: [u, v, rank] from the front rank back (bs: +1 ranks go to +v)
+    function blockRows(dm, u, v, bs, jit = 0.28) {
+      const out = [], n = dm.rows * dm.cols;
+      for (let r = 0; r < dm.rows; r++) for (let c = 0; c < dm.cols; c++) {
+        if (out.length >= n) break;
+        out.push([u + (c - (dm.cols - 1) / 2) * dm.su + (rnd() - 0.5) * jit * dm.su * 2, v + bs * (r - (dm.rows - 1) / 2) * dm.sv + (rnd() - 0.5) * jit * dm.sv * 2, r]);
+      }
+      return out;
+    }
+    // ladders along a wall stretch: nl of them, five men on each, their foot 3 m out; returns the men used
+    function ladders(w, uc, a0, a1, over, nl) {
+      const dx = F.WB / 2 + 1.7 - F.WT / 2, lean = Math.atan2(dx, F.H + 1), len = Math.hypot(F.H + 1, dx), used = []; // from 1.7 m out to the parapet
+      for (let i = 0; i < nl; i++) {
+        const u = a0 + ((i + 0.5) / nl) * (a1 - a0) + (rnd() - 0.5) * 6; if (F.gate && Math.abs(u) < F.gw / 2 + 8) continue;
+        const [x, z] = F.W(u, F.WB / 2 + 1.7), yb = F.city.aEdge.y0 - 0.5;
+        engines.ladder.push([x, yb, z, Math.atan2(F.out[0], F.out[1]) - Math.PI / 2, 1, len / 15, 1, 0, lean]);
+        for (let j = 0; j < (over ? 3 : 5); j++) { const t = 0.12 + j * 0.17, hgt = t * (F.H + 1), bk = F.WB / 2 + 1.7 - Math.tan(lean) * hgt + 0.5, [cx, cz] = F.W(u, bk); addRow(w.id, 'climb', [cx, yb + hgt, cz, F.yawA, undefined, rnd()]); used.push(1); }
+      }
+      return used.length;
+    }
+    // through a broken gate: the column in the passage and on into the town
+    function pour(w, n) {
+      if (F.city.doors) F.city.doors.visible = false;
+      for (let i = 0; i < n; i++) { const v = F.WB / 2 + 10 - rnd() * (F.WB + 60), u = (rnd() - 0.5) * (Math.abs(v) < F.WB / 2 + 4 ? 5 : 26), [x, z] = F.W(u, v); if (dry(x, z) || Math.abs(v) < F.WB / 2 + 6) addRow(w.id, 'run', [x, Math.abs(v) < F.WB / 2 + 4 ? F.y0 : Y(x, z), z, F.yawA + (rnd() - 0.5) * 0.4]); }
+    }
+
+    // ---- the gate, the standards, the siege train
+    if (siege && F.gate) {
+      anchors.gate = [F.gate.x, F.gate.y0, F.gate.z]; anchors.gateTop = [F.gate.x, F.towerY + 6, F.gate.z];
+      const open = spec.gate === 'open'; if (F.city.doors) F.city.doors.visible = !open;
+      if (spec.standards && spec.standards.gate) { const s = spec.standards.gate; const [x, z] = F.W(-14, 1.5); flags[s].push([x, F.towerY - 0.5, z, F.yawD, 3.2]); if (s === 'A') { const [x2, z2] = F.W(14, 1.5); flags.A.push([x2, F.towerY - 0.5, z2, F.yawD, 2.4]); } }
+      if (open) { const [x, z] = F.W(-4, 1); fire(x, F.towerY + 9, z, 10, 110, true); const [x2, z2] = F.W(10, -3); fire(x2, F.towerY + 4, z2, 4, 40, false); }
+    }
+    const liveA = lay.filter((l) => l.w.side === 'A' && !l.w.gone), liveD = lay.filter((l) => l.w.side === 'D' && !l.w.gone);
+    if (liveA.length) { const p = at(F.laneU(1), F.rowV(0) + (siege ? 40 : 30)); flags.A.push([p[0], p[1], p[2], F.yawA, 3.2]); anchors.standards.A = p; }
+    if (siege && !(spec.standards && spec.standards.gate === 'A')) { const f = F.city.flagAt; flags.D.push([f[0], f[1], f[2], 0, 3.4]); anchors.standards.D = f; }
+    else if (!siege && liveD.length) { const p = at(F.laneU(1), F.rowV(5) - 30); flags.D.push([p[0], p[1], p[2], F.yawD, 3.2]); anchors.standards.D = p; }
+    if (siege && liveA.length && retreat !== 'A') {
+      const foot = liveA.reduce((a, l) => a + (l.w.arm === 'bo' ? l.w.men : 0), 0), nT = clamp(Math.round(foot / 1500), 1, 4), crew = [];
+      for (let i = 0; i < nT; i++) { const u = (nT > 1 ? (i - (nT - 1) / 2) * ((F.laneW * 2.2) / (nT - 1)) : 0) + (rnd() - 0.5) * 10, v = F.rowV(0) + 78, [x, z] = F.W(u, v); if (!dry(x, z)) continue; engines.trebuchet.push([x, Y(x, z), z, F.yawA + (rnd() - 0.5) * 0.15]); for (let c = 0; c < (tier === 'low' ? 4 : 8); c++) { const [px, pz] = F.W(u + ((c % 4) - 1.5) * 1.1, v + 4.5 + Math.floor(c / 4) * 1.4); crew.push([px, Y(px, pz), pz, F.yawD]); } if (i < 2 && beat.kind !== 'result') { const sec = F.sec[i % 2 ? 2 : 0], [tx, tz] = F.W(sec[0] + rnd() * (sec[1] - sec[0]), -8 - rnd() * 30); shoot(stones, [x, Y(x, z) + 9, z], [tx, F.wallY - 4, tz], dur * (0.15 + 0.35 * i), 70, 1); } }
+      for (const c of crew) addRow('_train', 'pull', c);
+    }
+    if (spec.retreat === 'A' && siege) for (const l of lay) if (l.w.side === 'A' && l.w.row >= 2 && l.w.arm === 'bo') { const [a0, a1] = F.sec[l.w.lane]; for (let i = 0; i < 3; i++) { const u = a0 + ((i + 0.5) / 3) * (a1 - a0), [x, z] = F.W(u, F.WB / 2 + 5); engines.ladder.push([x, Y(x, z) - 0.3, z, Math.atan2(F.out[0], F.out[1]) - Math.PI / 2, 1, 1, 1, 0, -(Math.PI / 2 - 0.06)]); } }
+    if (spec.burn && siege) for (const [x, y, z] of F.city.burn.slice(0, 2)) fire(x, y, z, 5, 60, false);
+
+    // ---- projectiles: the volleys of the wings that shot this turn (the beat's in full), the fire arrows, stones from the wall
+    // a point in a wing's block: across it (its width) and along its facing (its depth); yaw turns +x to (cos, −sin)
+    const inBlock = (A, spread = 1) => { const a = A.c, s = (rnd() - 0.5) * A.w * spread, t = (rnd() - 0.5) * A.d * spread, c = Math.cos(A.yaw), n = Math.sin(A.yaw); return [a[0] + n * s + c * t, a[1], a[2] + c * s - n * t]; };
+    for (const l of lay) {
+      const w = l.w, A = anchors.wings[w.id], T0 = w.shot && anchors.wings[w.shot]; if (!A || !T0 || w.gone) continue;
+      const main = beat.kind === 'volley' ? beat.side === w.side : false, nA = Math.round((main ? 170 : 55) * (0.4 + 0.6 * fa));
+      for (let i = 0; i < nA; i++) { const a = inBlock(A, 0.9), b = inBlock(T0, 1.15); a[1] += 1.8; b[1] = T0.type === 'wall' || T0.type === 'breach' ? F.wallY + 0.6 : Y(b[0], b[2]) + 0.2; shoot(arrows, a, b, dur * (0.04 + rnd() * (main ? 0.55 : 0.8)), null, 1); }
+    }
+    if (beat.kind === 'fire' && anchors.wings[beat.target]) {
+      const T0 = anchors.wings[beat.target], src = anchors.wings[beat.wing] || { c: at(F.laneU(T0.lane), F.rowV(beat.side === 'A' ? 1 : 4)), w: 30, d: 10, yaw: face(beat.side) };
+      for (let i = 0, n = Math.round(60 * (0.4 + 0.6 * fa)); i < n; i++) { const a = inBlock(src, 0.8), b = inBlock(T0, 1); a[1] += 2; b[1] = Y(b[0], b[2]) + 0.3; shoot(fireArrows, a, b, dur * (0.02 + rnd() * 0.45), null, 1); }
+    }
+    for (const l of lay) { // stones and logs dropped from the wall on the men at its foot
+      const w = l.w; if (l.type !== 'wall' || !w.fought) continue; const foe = lay.find((m) => m.type === 'foot' && m.w.lane === w.lane); if (!foe) continue;
+      const [a0, a1] = F.sec[w.lane]; for (let i = 0; i < Math.round(14 * fa) + 4; i++) { const u = a0 + rnd() * (a1 - a0), [x, z] = F.W(u, F.WT / 2), [bx, bz] = F.W(u + (rnd() - 0.5) * 4, F.WB / 2 + 2 + rnd() * 8); shoot(stones, [x, F.wallY + 1.5, z], [bx, Y(bx, bz), bz], dur * rnd() * 0.85, 1.5, 0.55); }
+    }
+
+    // ---- meshes
+    const crowdsBy = {};
+    for (const [id, R] of rowsBy) {
+      const w = byId[id], sd = w ? w.side : 'A', c = K.Crowd.create({ HM, colors: { [S[sd].fid]: S[sd].color }, q: K.q, Nature: K.N, renderer: K.renderer });
+      for (const [kind, rows] of Object.entries(R)) if (rows.length) c.add(kind, rows);
+      if (c.flush) c.flush(); crowds.push(c); crowdsBy[id] = c; group.add(c.group);
+    }
+    for (const m of movers) { const c = crowdsBy[m.id]; if (!c) continue; m.g = c.group; m.g.position.set(...m.off0); }
+    const own = []; // geometries built here that are not the site's
+    const instOwn = (geo, list, shadow = true) => { const g = geo.clone(); own.push(g); const m = inst(g, mat, list, shadow); group.add(m); return m; };
+    for (const [kind, list] of Object.entries(engines)) if (list.length) instOwn(K.engines[kind === 'ladder' ? 'ladder' : kind], list);
+    for (const sd of ['A', 'D']) {
+      if (boats[sd].length) { const ship = HM.figure('thuy', S[sd].fid); own.push(ship); group.add(inst(ship, mat, boats[sd].map((b) => [b[0], b[1], b[2], b[3], b[4], b[4], b[4]]))); }
+      // the fallen: the kit's man (a box man at low) lying on his side; horses and riders together
+      if (fallen[sd].length) { const g = tier === 'low' ? loFigure(P, S[sd].color, 'idle') : soldier(P, S[sd].color, 'idle'); own.push(g); group.add(inst(g, mat, fallen[sd].map((f) => [f[0], f[1], f[2], f[3], 1, 1, 1, 0, rnd() < 0.5 ? Math.PI / 2 : -Math.PI / 2]), tier !== 'low')); }
+      if (fallenH[sd].length) { const g1 = horse(P), g2 = soldier(P, S[sd].color, 'idle'); own.push(g1, g2); group.add(inst(g1, mat, fallenH[sd].map((f) => [f[0], f[1] + 0.1, f[2], f[3], 1, 1, 1, Math.PI / 2, 0, [0.55, 0.36, 0.22]]), tier !== 'low'), inst(g2, mat, fallenH[sd].map((f) => [f[0] + Math.cos(f[3]) * 1.6, f[1], f[2] - Math.sin(f[3]) * 1.6, f[3] + 1, 1, 1, 1, 0, -Math.PI / 2]), false)); } // a horse on its side (about its own length), the rider beside it
+      if (flags[sd].length) group.add(banners(K.bannerCache, flags[sd], S[sd].color, S[sd].glyph || '軍'));
+    }
+    const fxMats = [];
+    if (arrows.length) { const g = new T.BoxGeometry(0.06, 0.06, 1.1); own.push(g); const m = flights(g, arrows, { color: 0x1c140e }, U); fxMats.push(m.material); group.add(m); }
+    if (fireArrows.length) { const g = new T.BoxGeometry(0.16, 0.16, 3.2); own.push(g); const m = flights(g, fireArrows, { color: 0xffa040, additive: true }, U); m.material.uniforms.uColor.value.multiplyScalar(2.2); fxMats.push(m.material); group.add(m); }
+    if (stones.length) { const g = new T.IcosahedronGeometry(0.7, 1); own.push(g); const m = flights(g, stones, { color: 0x6f675c, lit: true }, U); fxMats.push(m.material); group.add(m); }
+    if (FL.length || SS.length || SD.length) {
+      const { smokeT, flameT, glowT } = fxTextures(rnd, texs);
+      for (const [list, tex, kind, o] of [[SD, smokeT, 3, { alphaTest: 0.18, depthWrite: true }], [SS, smokeT, 3, { order: 1 }], [GL, glowT, 2, { additive: true, order: 2 }], [FL, flameT, 1, { additive: true, order: 3 }]]) if (list.length) { const m = billboards(tex, kind, o, list, U); fxMats.push(m.material); group.add(m); }
+    }
+    // lanes for the camera: the wall top and foot of each stretch, the middle of the field, each side's line
+    for (let l = 0; l < 3; l++) { const uc = F.laneU(l), [wx, wz] = F.W(uc, 0); anchors.lanes.push({ wall: [wx, F.wallY, wz], foot: at(uc, F.WB / 2 + 10), field: at(uc, F.rowV(2)), a: at(uc, F.rowV(1)), d: at(uc, F.rowV(4)) }); }
+
+    // ---- motion, focus, measures
+    let time = 0;
+    const prune = (c) => c.group.traverse((m) => { if (m.isInstancedMesh) m.visible = m.count > 0; });
+    const tick = (dt = 0) => {
+      time += dt; U.value = time;
+      for (const m of movers) { if (!m.g) continue; const u = clamp((time - m.t0) / (m.t1 - m.t0 || 1), 0, 1), e = m.ease(u); m.g.position.set(m.off0[0] + (m.off1[0] - m.off0[0]) * e, m.off0[1] + (m.off1[1] - m.off0[1]) * e, m.off0[2] + (m.off1[2] - m.off0[2]) * e); }
+      for (const c of crowds) c.tick(time);
+    };
+    const eye = new T.Vector3();
+    const focus = (cam) => { const p = cam && (cam.isVector3 ? cam : cam.position); if (!p) return; for (const c of crowds) { c.focus(eye.copy(p).sub(c.group.position)); prune(c); } };
+    for (const c of crowds) prune(c);
+    const stats = () => ({ figures: crowds.reduce((a, c) => a + c.count, 0), wings: Object.keys(anchors.wings).length, perMan: +k.toFixed(3), fallen: fallen.A.length + fallen.D.length + fallenH.A.length + fallenH.D.length, arrows: arrows.length + fireArrows.length, stones: stones.length, fx: FL.length + GL.length + SD.length + SS.length, movers: movers.length, crowds: crowds.length });
+    const dispose = () => {
+      for (const c of crowds) c.dispose();
+      group.traverse((o) => { if (!o.isMesh) return; if (o.geometry && !(o.geometry.userData && o.geometry.userData.shared)) o.geometry.dispose(); for (const m of [].concat(o.material)) if (m && !shared.has(m) && !m.userData.shared) m.dispose(); });
+      for (const g of own) g.dispose(); for (const t of texs) t.dispose(); for (const m of fxMats) m.dispose(); for (const pl of lights) group.remove(pl);
+      if (F.city.doors) F.city.doors.visible = true;
+      if (group.parent) group.parent.remove(group);
+    };
+    tick(0);
+    const offsetOf = (id) => (crowdsBy[id] ? crowdsBy[id].group.position.toArray() : [0, 0, 0]); // where a moving wing's group is now, from its place
+    return { group, tick, focus, anchors, stats, dispose, offsetOf, frame: F, get time() { return time; } };
   };
 })();
