@@ -6,6 +6,7 @@
        &view=deploy|lane0|lane1|lane2|overview|result  &tier=high|mid|low  &w=&h=&dpr=  &labels=0  &t=4 (seconds played
        before the shot)  &measure=1 (window.__extra: renderer counts, stats)  &play=1 (orbit, live)  &crowd=static
        &atk=bo,cung,ky,thuy  &def=bo,cung,ky,thuy (troops; default Chu Nguyên Chương's two hosts against Trương Liêu)
+       &motion=0 (no staged motion)  &crowdjs=test-results/x/crowd.js (another crowd.js, e.g. a branch's, for a look)
      window.__show(view) re-aims at another view and renders it (the shot script uses it to take every view in one load).
      The sky, sun, hemisphere light and lens are this page's (the host's in the game); the sun follows battle.sun. -->
 <style>html,body{margin:0;background:#1a1712;overflow:hidden;font-family:"Be Vietnam Pro",system-ui,sans-serif}canvas{display:block}
@@ -22,7 +23,7 @@
 <script src="../../../src/world/kit.js"></script>
 <script src="../../../src/world/nature.js"></script>
 <script src="../../../src/world/han-models.js"></script>
-<script src="../../../src/world/crowd.js"></script>
+<script>/* &crowdjs=<path from the repo root>: try another crowd.js (a branch's copy under test-results/) */ document.write('<script src="' + (new URLSearchParams(location.search).get('crowdjs') ? '../../../' + new URLSearchParams(location.search).get('crowdjs') : '../../../src/world/crowd.js') + '"><\/script>');</script>
 <script src="../../../src/world/battle.js"></script>
 <script src="../../../src/world/battle-field.js"></script>
 <script>
@@ -38,7 +39,7 @@
       attacker: { fid: 'zhu_yuanzhang', color: '#b3262e', glyph: '明', name: 'Chu Nguyên Chương', general: 'Chu Nguyên Chương', troops: troops(q.get('atk'), '3800,1000,800,1800') },
       defender: { fid: 'cao_cao', color: '#4d6a3a', glyph: '魏', name: 'Tào', general: 'Trương Liêu', troops: troops(q.get('def'), '2000,500,3500,0') },
       lanes: (q.get('lanes') || 'open,ford,wood').split(','), river: q.get('river') === '1', season: q.get('season') || 'Thu', hour: q.get('hour') != null ? +q.get('hour') : 17.5,
-      seed: +(q.get('seed') || 7), mode: q.get('mode') || 'deploy', result: q.get('result') || undefined, fire: q.get('fire') != null ? q.get('fire').split(',').map(Number) : undefined,
+      seed: +(q.get('seed') || 7), mode: q.get('mode') || 'deploy', motion: q.get('motion') !== '0', result: q.get('result') || undefined, fire: q.get('fire') != null ? q.get('fire').split(',').map(Number) : undefined,
     };
     const t0 = performance.now();
     T.ColorManagement.legacyMode = false;

@@ -231,6 +231,19 @@
       }
       b.z = z;
     }
+    // ---- the staging, for a crowd that moves (crowd.js move/play; FieldBattle.create uses it when present): in a
+    // clash the attacker's front blocks close the last stretch (the foot 14 m at a run, the horse 45 m at the charge),
+    // lane by lane from the centre out, and meet the defender's braced ranks at the lane's contact time; in a result the
+    // beaten keep running (60 m over 10 s) and the victor's horse rides after them. Seconds from the build.
+    if (mode === 'clash') for (const l of lanes) {
+      let tc = 0.4;
+      for (const b of blocks) if (b.lane === l.i && b.side === 'A' && l.both && (b.state === 'fight' || b.state === 'charge')) {
+        const ky = b.state === 'charge'; b.move = { d: ky ? 45 : 14, t0: 0.2 + Math.abs(l.i - 1) * 0.45 + (ky ? 0.3 : 0), dur: ky ? 3.0 : 2.6, ease: ky ? 'charge' : 'march' };
+        tc = Math.max(tc, b.move.t0 + b.move.dur);
+      }
+      l.tc = +tc.toFixed(2);
+    }
+    if (mode === 'result') for (const b of blocks) { if (b.state === 'rout') b.move = { d: 60, t0: 0, dur: 10, ease: 'flee', away: true }; else if (b.state === 'pursue') b.move = { d: 40, t0: 0.3, dur: 8, ease: 'linear' }; }
     // ---- boats: on the river's deep water on their own side, nearest the ford (or the field) first, 30 m apart
     const boats = [];
     if (riv) for (const side of ['A', 'D']) for (const b of blocks.filter((q) => q.boat && q.side === side)) {
@@ -320,9 +333,9 @@
     const flags = [];
     for (const b of blocks) {
       if (b.boat) continue;
-      if (b.state === 'rout') { for (let i = 0; i < 2 && b.figs.length; i++) { const fg = b.figs[Math.floor(rnd() * Math.min(b.figs.length, 40))]; flags.push([fg[0], fg[1], R() * 0.4, 1, b.side, 1]); } continue; }
+      if (b.state === 'rout') { for (let i = 0; i < 2 && b.figs.length; i++) { const fg = b.figs[Math.floor(rnd() * Math.min(b.figs.length, 40))]; flags.push([fg[0], fg[1], R() * 0.4, 1, b.side, 1, b.id]); } continue; }
       const nf = Math.max(2, Math.round(b.F / 16)), zr = b.z - b.face * (b.depth / 2 + (b.arm === 'ky' ? 1.5 : 0.8));
-      for (let i = 0; i < nf; i++) flags.push([b.x + (i - (nf - 1) / 2) * (b.F / nf) + R() * 2, zr + R() * 1.5, R() * 0.3, (b.arm === 'ky' ? 0.95 : 1.2) * (0.92 + rnd() * 0.16), b.side, 0]);
+      for (let i = 0; i < nf; i++) flags.push([b.x + (i - (nf - 1) / 2) * (b.F / nf) + R() * 2, zr + R() * 1.5, R() * 0.3, (b.arm === 'ky' ? 0.95 : 1.2) * (0.92 + rnd() * 0.16), b.side, 0, b.id]);
     }
     if (ground) flags.length = 0;
     // ---- trees the plan asks for: the wood lane's edge, lone old trees, a row along the road, willows by the ford
@@ -671,17 +684,37 @@
     const crowds = { A: mkCrowd(atk), D: mkCrowd(dfd) }; group.add(crowds.A.group, crowds.D.group);
     const addRows = (side, kind, rows) => { if (!rows.length) return null; const h = crowds[side].add(kind, rows); return h && h !== crowds[side] && h.count != null ? h : null; };
     const deep = (y) => y < L.WATER - 0.95; // a man does not stand in water over his waist
+    // with a crowd that moves (crowd.js move / play): the plan's staging (block.move, lane.tc) is played from the build on
+    const MOVE = !!(crowds.A.move && crowds.A.play && crowds.D.move) && !(desc && desc.motion === false);
+    const T0 = MOVE && Number.isFinite(crowds.A.time) ? crowds.A.time : 0, tcOf = (b) => T0 + (lanes[b.lane].tc || 0.4);
+    const REST = { rider: 'stand', horse: 'stand' }, rest = (kind) => REST[kind] || 'idle';
+    const safe = (fn) => { try { fn(); } catch (e) { console.warn('FieldBattle: crowd motion', e); } };
     const units = [];
     for (const b of plan.blocks) {
-      const by = {};
+      const by = {}, mv = MOVE ? b.move : null, back = mv && !mv.away && b.state !== 'pursue' ? -b.face * mv.d : 0; // a block that closes starts `d` behind its place
       for (const [x, z, yaw, body, role, ph] of b.figs) {
         const y = Y(x, z); if (deep(y)) continue;
         const [kind, anim] = (ROLE[body] || ROLE.foot)[role] || ROLE.foot.stand;
-        (by[kind + '|' + anim] = by[kind + '|' + anim] || [kind, []])[1].push([x, y, z, yaw, anim, ph]);
+        (by[kind + '|' + anim] = by[kind + '|' + anim] || [kind, anim, []])[2].push([x, y, z, yaw, anim, ph]);
       }
-      const handles = Object.values(by).map(([kind, rows]) => ({ kind, handle: addRows(b.side, kind, rows), count: rows.length }));
-      units.push({ id: b.id, side: b.side, arm: b.arm, lane: b.lane, row: b.row, men: b.w.men, figures: handles.reduce((s, h) => s + h.count, 0), state: b.state, at: [+b.x.toFixed(1), +b.z.toFixed(1)], front: b.face, boats: b.boats || 0, handle: (handles.find((h) => h.handle) || {}).handle || null, handles });
+      const handles = [];
+      for (const [kind, anim, rows] of Object.values(by)) {
+        const brace = MOVE && b.state === 'fight' && !back && kind === 'fight'; // the side that is charged braces, then strikes
+        const add = back ? rows.map((r) => { const z = r[2] + back; return [r[0], Y(r[0], z), z, r[3], rest(kind), r[5]]; }) : brace ? rows.map((r) => [r[0], r[1], r[2], r[3], has('foot', 'brace') ? 'brace' : 'idle', r[5]]) : rows;
+        const h = addRows(b.side, kind, add), c = crowds[b.side];
+        handles.push({ kind, anim, handle: h, count: add.length });
+        if (!MOVE || !h) continue;
+        safe(() => {
+          if (back) c.move(h, { to: rows.map((r) => [r[0], r[1], r[2], r[3]]), t0: T0 + mv.t0, dur: mv.dur, ease: mv.ease, stagger: 0.35, anim: 'charge', then: anim });
+          else if (mv) c.move(h, { dx: 0, dz: (mv.away ? -1 : 1) * b.face * mv.d, ground: Y, t0: T0 + mv.t0, dur: mv.dur, ease: mv.ease, stagger: 0.6, anim: mv.away ? 'rout' : 'charge', then: false });
+          if (brace) c.play(h, anim, { t0: tcOf(b), stagger: 0.5 });
+          if (D.mode === 'clash' && (b.state === 'fight' || b.state === 'charge') && (kind === 'fight' || kind === 'rider')) { const pk = c.pick(h, 0.05); if (pk && pk.count) c.play(pk, 'die', { t0: tcOf(b) + 0.4, stagger: 2.4 }); }
+        });
+      }
+      const move = mv ? { dz: back ? -back : (mv.away ? -1 : 1) * b.face * mv.d, t0: T0 + mv.t0, dur: mv.dur } : null;
+      units.push({ id: b.id, side: b.side, arm: b.arm, lane: b.lane, row: b.row, men: b.w.men, figures: handles.reduce((s, h) => s + h.count, 0), state: b.state, at: [+b.x.toFixed(1), +b.z.toFixed(1)], front: b.face, boats: b.boats || 0, move, handle: (handles.find((h) => h.handle) || {}).handle || null, handles });
     }
+    const moveOf = {}; for (const u of units) if (u.move) moveOf[u.id] = u.move;
     // ---- the command posts: the tent facing the front, drums either side of its door, the weapon rack, the five
     // banners of the directions, the guard in two files, the bodyguard horse, tethered horses; the general before it
     // under his parasol with his standard (in a result the victor rides forward; the loser's post stands empty, its
@@ -713,7 +746,10 @@
       } else downFlags.push([gx, Y(gx, gz), gz, rnd() * 6.28, 3.1, side]);
       if (!G.forward && !G.down) stdRows[side].push([p.x + p.sx * 5, Y(p.x + p.sx * 5, p.z + f * 12), p.z + f * 12, R() * 0.2, 2.4]);
     }
-    for (const [x, z, yaw, size, side, carried] of plan.flags) flagRows[side].push([x, Y(x, z) + (carried ? -0.5 : 0), z, yaw, size]);
+    for (const [x, z, yaw, size, side, carried, id] of plan.flags) { // a flag of a block that moves starts where the block starts
+      const m = moveOf[id], z0 = m && !carried ? z - m.dz : z, dz = m ? m.dz : 0, y0 = Y(x, z0) + (carried ? -0.5 : 0);
+      flagRows[side].push([x, y0, z0, yaw, size, m ? [0, Y(x, z0 + dz) - Y(x, z0), dz, m.t0, m.dur] : null]);
+    }
     for (const c of Object.values(crowds)) if (c.flush) c.flush();
 
     // ---------------------------------------------------------------- the fallen, spent arrows, boats, hamlets
@@ -723,8 +759,11 @@
       if (horse) horsesDown.push([x, y + 0.02, z, yaw, 1.05, 1, 1.05, 0, 0, COATS[Math.floor(ph * COATS.length)].map((c) => c * 0.85)]);
       else fl[side][ph < 0.5 ? 0 : 1].push([x, y + 0.01, z, yaw, 1, 1, 1, 0, 0, [b, b, b]]);
     }
-    for (const side of ['A', 'D']) fl[side].forEach((list, v) => { if (list.length) inst(lyingGeo(SIDES[side].color, v), HM.mat, list, tier === 'high'); });
-    if (horsesDown.length) inst(deadHorseGeo(), HM.mat, horsesDown, tier === 'high');
+    // with the lines closing on screen the fallen lie there only once they have met
+    const late = [], tFall = MOVE && D.mode === 'clash' ? T0 + Math.min(...lanes.map((l) => l.tc || 0.4)) + 0.3 : -1;
+    for (const side of ['A', 'D']) fl[side].forEach((list, v) => { if (list.length) late.push(inst(lyingGeo(SIDES[side].color, v), HM.mat, list, tier === 'high')); });
+    if (horsesDown.length) late.push(inst(deadHorseGeo(), HM.mat, horsesDown, tier === 'high'));
+    for (const m of late) m.visible = tFall <= 0;
     if (plan.arrowsIn.length) inst(arrowGeo(), HM.mat, plan.arrowsIn.map(([x, z, yaw, tilt]) => [x, Y(x, z) - 0.12, z, yaw, 1, 1, 1, tilt, 0]), false);
     const boats = [];
     for (const side of ['A', 'D']) {
@@ -759,16 +798,42 @@
       float fbP = uTime * 2.3 + fbI.x * .071 + fbI.z * .053, fbA = fbP - fbU * 5.2, fbB = fbP * 1.63 - fbU * 9.1 + position.y * 1.3;
       float fbZ = (sin(fbA) * .19 + sin(fbB) * .055) * fbU, fbD = ((-cos(fbA) * 5.2 * .19 - cos(fbB) * 9.1 * .055) * fbU + sin(fbA) * .19 + sin(fbB) * .055) / 1.4;
       vec3 objectNormal = normalize(vec3(-fbD, 0., 1.));`;
+    // a flag carried with its block: the instance's world offset aMv reached from aMt.x over aMt.y seconds
+    const CARRY = `vec4 mvPosition = vec4(transformed, 1.0);
+      #ifdef USE_INSTANCING
+        mvPosition = instanceMatrix * mvPosition;
+      #endif
+      mvPosition.xyz += aMv * smoothstep(0., 1., clamp((uTime - aMt.x) / max(aMt.y, .001), 0., 1.));
+      mvPosition = modelViewMatrix * mvPosition; gl_Position = projectionMatrix * mvPosition;`;
+    const carried = (sh, wave) => {
+      sh.uniforms.uTime = U.time;
+      let v = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uTime; attribute vec3 aMv; attribute vec2 aMt;').replace('#include <project_vertex>', CARRY);
+      if (wave) v = v.replace('#include <beginnormal_vertex>', WAVE).replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed.z += fbZ; transformed.x -= abs(fbZ) * .3; transformed.y -= fbU * fbU * .1;');
+      sh.vertexShader = v;
+    };
     const clothMat = (map, glow = 0x4a4a4a) => { // a little light through the cloth: never a black flag against the sun
       const m = new T.MeshStandardMaterial({ map, emissiveMap: map, emissive: glow, side: T.DoubleSide, roughness: 0.85, metalness: 0 }); mats.push(m);
-      m.onBeforeCompile = (sh) => { sh.uniforms.uTime = U.time; sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uTime;').replace('#include <beginnormal_vertex>', WAVE).replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed.z += fbZ; transformed.x -= abs(fbZ) * .3; transformed.y -= fbU * fbU * .1;'); };
-      m.customProgramCacheKey = () => 'fb-cloth';
+      m.onBeforeCompile = (sh) => carried(sh, true); m.customProgramCacheKey = () => 'fb-cloth';
       return m;
     };
+    const poleMat = new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0, envMap: env, envMapIntensity: 0.5 }); mats.push(poleMat);
+    poleMat.onBeforeCompile = (sh) => carried(sh, false); poleMat.customProgramCacheKey = () => 'fb-pole';
+    const depthOf = (wave) => { const m = new T.MeshDepthMaterial({ depthPacking: T.RGBADepthPacking }); m.onBeforeCompile = (sh) => carried(sh, wave); m.customProgramCacheKey = () => 'fb-flag-depth' + (wave ? 1 : 0); mats.push(m); return m; };
+    const clothDepth = depthOf(true), poleDepth = depthOf(false);
     const clothGeo = new T.PlaneGeometry(1.4, 2.6, 12, 3).translate(0.72, 4.55, 0), sigCloth = new T.PlaneGeometry(1.4, 1.6, 10, 2).translate(0.72, 5.0, 0);
     const poleGeo = (() => { const k = P.kit(); k.add(P.cyl(0.06, 0.07, 6, 5), 0x3a2a1c, [0, 3, 0]); k.add(P.cone(0.07, 0.35, 4), 0x9aa0a8, [0, 6.17, 0]); k.add(P.sph(0.09, 5, 3), 0xb8893a, [0, 5.92, 0]); return k.geo(); })();
-    const poles = [];
-    const clothInst = (geo, mat, rows, tintRows) => { if (!rows.length) return; const m = new T.InstancedMesh(geo, mat, rows.length); rows.forEach((p, i) => { m.setMatrixAt(i, M4.compose(V3.set(p[0], p[1], p[2]), Q4.setFromAxisAngle(UP, p[3]), SC.setScalar(p[4]))); if (tintRows) m.setColorAt(i, C3.set(tintRows[i])); }); m.castShadow = shadowsOn; m.receiveShadow = false; m.frustumCulled = false; group.add(m); for (const p of rows) poles.push([p[0], p[1], p[2], p[3], p[4], p[4], p[4]]); };
+    // one cloth mesh and one pole mesh per kind of flag, the same rows [x, y, z, yaw, size, motion?] in both
+    const clothInst = (geo, mat, rows, tintRows) => {
+      if (!rows.length) return;
+      const mv = new Float32Array(rows.length * 3), mt = new Float32Array(rows.length * 2).fill(1e6);
+      rows.forEach((p, i) => { if (p[5]) { mv.set(p[5].slice(0, 3), i * 3); mt.set([p[5][3], p[5][4]], i * 2); } });
+      for (const [base, material, depth] of [[geo, mat, clothDepth], [poleGeo, poleMat, poleDepth]]) {
+        const g = base.clone(); g.setAttribute('aMv', new T.InstancedBufferAttribute(mv, 3)); g.setAttribute('aMt', new T.InstancedBufferAttribute(mt, 2));
+        const m = new T.InstancedMesh(g, material, rows.length);
+        rows.forEach((p, i) => { m.setMatrixAt(i, M4.compose(V3.set(p[0], p[1], p[2]), Q4.setFromAxisAngle(UP, p[3]), SC.setScalar(p[4]))); if (tintRows && material === mat) m.setColorAt(i, C3.set(tintRows[i])); });
+        m.customDepthMaterial = depth; m.castShadow = shadowsOn; m.receiveShadow = material === poleMat; m.frustumCulled = false; group.add(m);
+      }
+    };
     let nFlags = 0;
     for (const side of ['A', 'D']) {
       const s = SIDES[side];
@@ -776,7 +841,6 @@
       nFlags += flagRows[side].length + stdRows[side].length;
     }
     clothInst(sigCloth, clothMat(sigTex, 0x161616), sigRows.map((r) => r.slice(0, 5)), sigRows.map((r) => r[5])); nFlags += sigRows.length;
-    if (poles.length) inst(poleGeo, HM.mat, poles, true);
     // a standard thrown down: the pole on the ground, the cloth crumpled beside it (static)
     for (const [x, y, z, yaw, size, side] of downFlags) {
       const k = P.kit(); k.add(P.cyl(0.06, 0.07, 6, 5), 0x3a2a1c, [3, 0.1, 0], [0, 0, Math.PI / 2]);
@@ -885,7 +949,7 @@
     const focus = (c) => { cam = c || cam; if (!cam) return; trees.userData.focus(cam); for (const cr of Object.values(crowds)) if (cr.focus) cr.focus(cam); };
     if (cam) focus(cam);
     let time = 0;
-    const tick = (dt = 0) => { time += dt; U.time.value = time; trees.userData.U.uTime.value = time; if (water) water.userData.U.uTime.value = time; for (const cr of Object.values(crowds)) if (cr.tick) cr.tick(time); };
+    const tick = (dt = 0) => { time += dt; U.time.value = time; if (tFall > 0) for (const m of late) m.visible = time >= tFall; trees.userData.U.uTime.value = time; if (water) water.userData.U.uTime.value = time; for (const cr of Object.values(crowds)) if (cr.tick) cr.tick(time); };
     const buildMs = typeof performance !== 'undefined' ? Math.round(performance.now() - t0) : 0;
     const stats = () => {
       const s = { soldiers: crowds.A.count + crowds.D.count, attackers: crowds.A.count, defenders: crowds.D.count, fallen: plan.fallen.length, boats: plan.boats.length, flags: nFlags, reeds: reeds ? reeds.count : 0, trees: trees.userData.count, fx: nSprites, arrows: nArrows + plan.arrowsIn.length,
