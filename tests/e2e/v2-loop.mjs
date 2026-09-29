@@ -36,7 +36,7 @@ try {
   page.on('pageerror', (e) => { report.errors.push(e.message); console.error('PAGE_ERROR', e.stack || e.message); });
   page.on('console', (m) => { if (m.type() === 'error') { report.errors.push(m.text()); console.error('CONSOLE_ERROR', m.text()); } });
   const t0 = Date.now();
-  await page.goto(BASE_URL + `v2.html?seed=${seed}&tier=${tier}&w=${W}&h=${H}&dpr=1`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.goto(BASE_URL + `v2.html?seed=${seed}&tier=${tier}&w=${W}&h=${H}&dpr=1&fast=1`, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.waitForFunction(() => (window.__v2 && window.__v2.ready) || !!window.__error, { timeout: 600000, polling: 1000 });
   const err = await page.evaluate(() => window.__error);
   if (err) throw new Error('v2 failed: ' + err);
