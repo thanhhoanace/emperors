@@ -36,7 +36,7 @@
     "towns": {
       "chung_ly": { "owner": "zhu_yuanzhang", "gar": { "bo": 800 }, "walls": 2, "dan": 24000, "gov": null },
       "am_lang": { "owner": "zhu_yuanzhang", "gar": { "bo": 500 }, "walls": 1, "dan": 12000, "gov": null },
-      "tho_xuan": { "owner": "cao_cao", "gar": { "bo": 2000, "cung": 600 }, "walls": 3, "dan": 30000, "gov": "man_chong" },
+      "tho_xuan": { "owner": "cao_cao", "gar": { "bo": 3200, "cung": 1000 }, "walls": 3, "dan": 30000, "gov": "man_chong" },
       "hu_di": { "owner": "local", "gar": { "bo": 1200 }, "walls": 1, "dan": 14000, "gov": "tran" },
       "lich_duong": { "owner": "local", "gar": { "bo": 700 }, "walls": 1, "dan": 10000, "gov": null }
     },
@@ -49,7 +49,8 @@
     "chronicle": "Chu Nguyên Chương tỉnh dậy ở Chung Ly, Hoài Nam, với hai đạo quân và hai thành."
   },
   "ai": {
-    "cao_cao": { "style": "strike", "strike": 0.6, "growth": 150, "recall": { "gen": "zhang_liao", "season": 1, "text": "Tào Tháo gọi Trương Liêu về cứu Phàn Thành. Kỵ binh Tào rời Thọ Xuân lên bắc.", "chronicle": "Trương Liêu rời Hoài Nam." } },
+    "cao_cao": { "style": "strike", "strike": 0.6, "growth": 150, "recall": { "gen": "zhang_liao", "season": 1, "text": "Tào Tháo gọi Trương Liêu về cứu Phàn Thành. Kỵ binh Tào rời Thọ Xuân lên bắc.", "chronicle": "Trương Liêu rời Hoài Nam.",
+      "back": { "season": 4, "units": { "bo": 1000, "cung": 500, "ky": 2000 }, "text": "Quan Vũ đã bại: Trương Liêu trở lại {town} với 3.500 quân.", "chronicle": "Trương Liêu trở lại {town}.", "strike": "Quan Vũ đã bại: Trương Liêu trở lại với 3.500 quân, đánh thẳng vào {town}." } } },
     "sun_quan": { "style": "river", "target": "lich_duong", "chance": 0.35, "leave": { "season": 2, "text": "Thuyền Chu Thái ngược sông về tây: Ngô đánh Kinh Châu." } },
     "local": { "style": "hold", "growth": 50 }
   },
@@ -61,7 +62,8 @@
     "famine": "Hai mùa liền hết lương: quân làm binh biến, trói ta nộp cho Tào.",
     "revolt": "Uy về 0 hai mùa: dân Hoài Nam nổi dậy, ta mất ngôi.",
     "famineWarn": "Kho lương âm: quân đói, 10% bỏ trốn. Mùa sau còn âm là binh biến.",
-    "revoltWarn": "Uy về 0: dân bất phục. Mùa sau còn 0 là nổi loạn."
+    "revoltWarn": "Uy về 0: dân bất phục. Mùa sau còn 0 là nổi loạn.",
+    "allianceEnd": "Tôn Quyền dâng biểu xưng thần với Tào: minh ước với {name} tan, Lịch Dương thành đất ai lấy được thì lấy."
   },
   "tasks": {
     "ruong": { "name": "Khai ruộng", "seasons": 2, "cost": { "tien": 300 }, "text": "Lương thu ở thành này +25%", "done": { "farm": true } },
@@ -77,10 +79,10 @@
       "id": "history_fan", "kind": "history", "when": { "season": 1 },
       "who": "Ký ức người xuyên không",
       "title": "Quan Vũ sắp dìm bảy quân ở Phàn Thành",
-      "text": "Tháng 8 năm 219. Ta nhớ: Tào Tháo sẽ gọi quân Hoài Nam về cứu Tương Dương. Trương Liêu có thể rời Thọ Xuân ngay mùa này, hoặc không.",
+      "text": "Tháng 8 năm 219. Ta nhớ: Tào Tháo sẽ gọi quân Hoài Nam về cứu Tương Dương. Trương Liêu có thể rời Thọ Xuân ngay mùa này, hoặc không. Quan Vũ bại rồi, hạ 220 ông sẽ trở lại Thọ Xuân.",
       "yes": { "label": "Tung tin Hoài Nam yếu", "fx": "Tào rút Trương Liêu: 85% · Uy −5" },
       "no": { "label": "Im lặng chờ", "fx": "Tào rút Trương Liêu: 50%" },
-      "effect": "rumor", "params": { "yes": 0.85, "no": 0.5, "uy": -5 },
+      "effect": "rumor", "params": { "yes": 0.85, "no": 0.5, "uy": -5, "back": { "season": 4, "town": "tho_xuan", "gen": "zhang_liao", "fid": "cao_cao", "units": { "bo": 1000, "cung": 500, "ky": 2000 } } },
       "chronicle": { "yes": "Tung tin Hoài Nam suy yếu để Tào rút Trương Liêu.", "no": "Im lặng chờ Tào tự rút quân." }
     },
     {
@@ -88,9 +90,9 @@
       "who": "Sứ Ngô",
       "title": "Tôn Quyền xin kết minh đánh Tào",
       "text": "Ngô không động tới đất ta. Đổi lại Ngô lấy Lịch Dương. Thuyền Ngô giúp ta khi ta đánh ven sông.",
-      "yes": { "label": "Kết minh", "fx": "Ngô lấy Lịch Dương · +1.200 thủy Ngô khi ta đánh ven sông" },
+      "yes": { "label": "Kết minh", "fx": "Ngô lấy Lịch Dương · +1.200 thủy Ngô khi ta đánh ven sông · minh ước tới xuân 220" },
       "no": { "label": "Từ chối", "fx": "Ngô tự do · Lịch Dương còn bỏ ngỏ" },
-      "effect": "alliance", "params": { "fid": "sun_quan", "boats": 1200 },
+      "effect": "alliance", "params": { "fid": "sun_quan", "boats": 1200, "until": 3 },
       "chronicle": { "yes": "Kết minh với Tôn Quyền, nhường Lịch Dương." }
     },
     {
@@ -113,13 +115,13 @@
       "effect": "vanguard", "params": { "yes": 10, "no": -12, "broken": -15 }
     },
     {
-      "id": "history_lu", "kind": "history", "when": { "season": 2 },
+      "id": "history_lu", "kind": "history", "when": { "season": 2, "owner": { "lich_duong": "local" } },
       "who": "Ký ức người xuyên không",
       "title": "Lã Mông áo trắng qua sông",
       "text": "Đông 219. Ngô sắp đánh úp Kinh Châu. Thuyền Chu Thái sẽ bị gọi về tây, Lịch Dương bỏ ngỏ.",
-      "yes": { "label": "Đòi Lịch Dương hàng", "fx": "Uy ≥ 45: Lịch Dương hàng ta · Ngô thù ta" },
+      "yes": { "label": "Đòi Lịch Dương hàng", "fx": "Uy ≥ 55: Lịch Dương hàng ta · Ngô thù ta" },
       "no": { "label": "Đứng ngoài", "fx": "Không gì đổi" },
-      "effect": "demand", "params": { "town": "lich_duong", "from": "local", "uy": 45, "angers": "sun_quan", "flash": "Lịch Dương mở cổng.", "fail": "Lịch Dương không nghe." },
+      "effect": "demand", "params": { "town": "lich_duong", "from": "local", "uy": 55, "angers": "sun_quan", "flash": "Lịch Dương mở cổng.", "fail": "Lịch Dương không nghe." },
       "chronicle": { "yes": "Lịch Dương hàng ta khi thuyền Ngô đi vắng." }
     },
     {

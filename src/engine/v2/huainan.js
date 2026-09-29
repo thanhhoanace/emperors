@@ -16,6 +16,8 @@
  *   V2.transfer(g, townId, armyId, arm, n) · V2.answer(g, cardId, yes) · V2.forecast(g, armyIds, target)
  *   V2.endSeason(g) → g.pending (a battle of ours: V2.battle / battleTurn / autoBattle) or the next season, g.report
  *   V2.lastBattle(g) → the battle that just ended, { plan, b, me, proposed: {}, outcome }, for the screen after it
+ *   V2.battle(g).hopeless / .withdraw · V2.withdraw(g) → yield the battle before its first turn, at its cost (29/9)
+ *   V2.advise(g) → the general's plan for the season · V2.adviseCards(g) → his answers to the cards (29/9)
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(require('../battle.js'));
@@ -27,6 +29,7 @@
   // ---------------------------------------------------------------- tier B numbers (GAMEPLAY-FREEZE.md B, demo 1)
   const ARMS = ['bo', 'cung', 'ky', 'thuy'];
   const RES_NAME = { luong: 'lương', tien: 'tiền', uy: 'Uy' };
+  const ARM_TEXT = { bo: 'bộ', cung: 'cung', ky: 'kỵ', thuy: 'thủy' };
   const REACH = { land: 36, fast: 45, fleet: 60 }; // world units a season (1 = 3 km): foot 108 km, horse 135, boats 180 on one river
   const NEAR = 33; // ~100 km of our towns or armies: numbers within ±20 %; farther only the flag and the arms
   const SPREAD = 0.2;
@@ -37,10 +40,13 @@
   const SIEGE = { gar: 0.8, dan: 0.92, open: 0.3, keep: 0.15 };
   const TAKE = { gar: 0.2, army: 0.8 }; // a town taken: garrison 20 % of the winners, the armies keep 80 %
   const RETREAT = 300, DISBAND = 200, GUARD = 300, KEEP = 100;
-  const UY = { win: 4, lose: -6, lost: -8, held: 5, opened: 3 };
+  // yielding a battle before its first turn (a hopeless one): a town given up costs more Uy than one lost fighting, a
+  // field battle or an attack called off a little less than one lost; the men are kept (29/9)
+  const UY = { win: 4, lose: -6, lost: -8, held: 5, opened: 3, yieldTown: -10, yieldField: -5 };
   const LEAVE = 30; // Trung below this: the general walks out with his army
   const DESERT = 0.9; // a season below zero grain: a tenth of the men run
-  const RULES = { REACH, NEAR, SPREAD, GUESS, UPKEEP, GARRISON, GRAIN, COIN, FARM, MARKET, MAX_WALLS, SIEGE, TAKE, RETREAT, DISBAND, GUARD, KEEP, UY, LEAVE, DESERT };
+  const HOPE = { days: 6 }; // a battle is hopeless when no way of ours wins or draws on any of these other days
+  const RULES = { REACH, NEAR, SPREAD, GUESS, UPKEEP, GARRISON, GRAIN, COIN, FARM, MARKET, MAX_WALLS, SIEGE, TAKE, RETREAT, DISBAND, GUARD, KEEP, UY, LEAVE, DESERT, HOPE };
 
   // ---------------------------------------------------------------- helpers
   const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -105,7 +111,7 @@
       gens: {}, towns: {}, armies: {}, captives: [], allies: {}, angry: {}, vanguard: null,
       rumor: rumor ? rumor.params.no : 0.5,
       cards: [], queue: [], pending: null, lastBattle: null, battleNo: 0, taken: [],
-      report: null, flash: null, log: [], moves: [], fought: [], chronicle: [],
+      report: null, flash: null, log: [], moves: [], fought: [], seen: [], sieges: [], done: [], chronicle: [], sight: null, recalled: null,
       data: null,
     };
     for (const [id, x] of Object.entries(data.generals)) g.gens[id] = { fid: x.fid, loyal: x.loyal, dead: false, free: false };
@@ -130,6 +136,10 @@
     return out;
   }
   const isNear = (g, fid, tid) => eyes(g, fid).some((e) => dist(e, posOf(g, tid)) < NEAR);
+  // the towns the player watches now (near his towns and armies); g.sight keeps the ones he watched when the season began
+  const sightOf = (g) => g.data.towns.map((t) => t.id).filter((tid) => isNear(g, g.me, tid));
+  // whether the player sees what happens at a town this season: near it now, or near it when the season began
+  const watched = (g, tid) => !!tid && ((g.sight && g.sight.indexOf(tid) !== -1) || isNear(g, g.me, tid));
   // one fixed factor per (game, season, viewer, thing), from a hash: the same all season, no draw from the game's RNG
   function factor(g, fid, key, spread) {
     const h = hash32(g.seed + '|' + g.season + '|' + fid + '|' + key);
@@ -195,8 +205,14 @@
       cards: g.cards.map(cardView),
       gens,
       report: g.report ? clone(g.report) : null,
-      pending: !!g.pending, flash: g.flash ? clone(g.flash) : null, moves: clone(g.moves || []),
+      pending: !!g.pending, flash: g.flash ? clone(g.flash) : null, moves: seenMoves(g),
+      alerts: g.over || g.pending ? [] : alerts(g),
     };
+  }
+  // the season's marches the player saw: his own, and the others' that began or ended near him (a far army's march
+  // is not his to know; the army itself stays on the map, flag and arms, where it now stands)
+  function seenMoves(g) {
+    return (g.moves || []).filter((m) => m.fid === g.me || watched(g, m.from) || watched(g, m.to)).map((m) => clone(m));
   }
   function cardView(c) {
     const o = { id: c.id, kind: c.kind, who: c.who };
@@ -282,13 +298,15 @@
     });
   }
   // 2–3 tasks by context: a town an enemy can reach walls up and recruits; a rear town farms and trades; a river town
-  // without boats builds them. The rest stay under "more" (freeze B, owner 29/9).
+  // without boats builds them. The rest stay under "more" (freeze B, owner 29/9). A front town where an army of ours
+  // stands recruits first: the new men join that army (29/9)
   function suggest(g, tid, all) {
     const t = g.towns[tid], d = place(g, tid);
     if (t.owner !== g.me || (t.task && !t.task.fresh)) return [];
     const front = threatened(g, tid);
     const boats = (t.gar.thuy || 0) > 0 || armiesOf(g, g.me).some((a) => a.at === tid && a.arm === 'fleet');
-    const want = (front ? ['luy', 'mo_bo'] : ['ruong', 'cho']).concat(d.river && !boats ? ['mo_thuy'] : []);
+    const camp = armiesOf(g, g.me).some((a) => a.at === tid && a.arm === 'land' && !a.besieging);
+    const want = (front ? (camp ? ['mo_bo', 'luy'] : ['luy', 'mo_bo']) : ['ruong', 'cho']).concat(d.river && !boats ? ['mo_thuy'] : []);
     const spare = front ? ['mo_cung', 'ruong', 'mo_ky', 'cho'] : ['mo_bo', 'luy', 'mo_cung', 'mo_ky'];
     const can = (k) => { const x = all.find((y) => y.key === k); return !!x && !x.rule; };
     const out = want.filter(can).slice(0, 3);
@@ -358,6 +376,8 @@
       }
       if (w.season != null && g.season !== w.season) continue;
       if (w.from != null && g.season < w.from) continue;
+      // a card about a town only while the town is still whose the card says (Lã Mông's: Lịch Dương still the hào tộc's)
+      if (w.owner && Object.entries(w.owner).some(([tid, fid]) => !g.towns[tid] || g.towns[tid].owner !== fid)) continue;
       let o = {};
       if (w.gen) {
         const s = g.gens[w.gen];
@@ -380,9 +400,11 @@
       if (yes) g.res.uy += p.uy;
       chron(g, d.chronicle && d.chronicle[yes ? 'yes' : 'no']);
     },
+    // an alliance with an end in history (params.until: the season it breaks, e.g. Tôn Quyền bowing to Tào in spring
+    // 220), so an ally's town does not stay out of reach for good (29/9: Ngô at Lịch Dương was a dead end)
     alliance(g, c, p, yes, d) {
       if (!yes) return;
-      g.allies[p.fid] = { boats: p.boats || 0 };
+      g.allies[p.fid] = { boats: p.boats || 0, until: p.until || null };
       chron(g, d.chronicle && d.chronicle.yes);
     },
     submit(g, c, p, yes, d) {
@@ -547,8 +569,18 @@
     if (must) throw new Error('V2.endSeason: card ' + must.id + ' must be answered first');
     const g = copy(g0);
     g.log = []; g.moves = []; g.fought = []; g.queue = []; g.taken = []; g.report = null; g.lastBattle = null;
+    g.seen = []; g.sieges = []; g.done = [];
+    g.sight = sightOf(g); // what the player watched as the season began: a march that starts there is his to see
     for (const c of g.cards.slice()) applyCard(g, c, false); // unanswered cards take their "no"
     g.flash = null;
+    // an alliance ends when its history says (Tôn Quyền bows to Tào): the ally's towns are anyone's to take again
+    for (const [fid, x] of Object.entries(g.allies)) {
+      if (!x || !x.until || g.season < x.until) continue;
+      delete g.allies[fid];
+      const t = fill((g.data.texts || {}).allianceEnd || 'Minh ước với {name} hết.', { name: short(g, fid) });
+      log(g, '!' + t);
+      chron(g, t);
+    }
     aiOrders(g);
     // the vanguard promise: an army that was promised the first blow and neither attacks nor besieges
     const van = g.vanguard && g.armies[g.vanguard.army];
@@ -572,16 +604,17 @@
   }
   function queueAttack(g, q) {
     const t = q.target, site = t.kind === 'town' ? t.id : g.armies[t.id] && g.armies[t.id].at;
-    for (const i of q.ids) g.moves.push({ id: i, from: g.armies[i].at, to: site || null, attack: true });
+    for (const i of q.ids) g.moves.push({ id: i, fid: q.fid, from: g.armies[i].at, to: site || null, attack: true });
     g.queue.push(q);
   }
   // a move or a siege order carried out (the season's end and the preview share it)
   function march(g, a, say) {
     const o = a.order, tid = o.target.id, t = g.towns[tid];
     if (o.intent === 'move' && hostile(g, a.fid, t.owner)) { if (say) log(g, armyName(g, a) + ' không vào được ' + townName(g, tid) + '.'); return; }
-    if (say) g.moves.push({ id: a.id, from: a.at, to: tid });
+    const siege = o.intent === 'siege' && hostile(g, a.fid, t.owner);
+    if (say) g.moves.push(Object.assign({ id: a.id, fid: a.fid, from: a.at, to: tid }, siege ? { siege: true } : {}));
     a.at = tid;
-    a.besieging = o.intent === 'siege' && hostile(g, a.fid, t.owner) ? tid : null;
+    a.besieging = siege ? tid : null;
     if (say) log(g, armyName(g, a) + (a.besieging ? ' vây ' : ' tới ') + townName(g, tid) + '.');
   }
   // the next battle of the season (plans are drawn when the battle starts, so earlier battles count), else the end
@@ -596,8 +629,14 @@
       plan.seed = seedFrom(g);
       const b = Battle.create(plan);
       const me = plan.attacker.fid === g.me ? 'A' : plan.defender.fid === g.me ? 'D' : null;
-      if (me) { g.battleNo += 1; g.pending = { id: g.battleNo, plan, b, me, orders: null }; return g; }
-      settle(g, plan, Battle.simulate(b), null); // AI against AI: both sides on their own orders
+      // a battle of ours waits for the player, unless we have no wing on the field (an empty town falls at once)
+      if (me && Battle.live(b, me).length) {
+        g.battleNo += 1;
+        g.pending = { id: g.battleNo, plan, b, me, orders: null, hopeless: false };
+        g.pending.hopeless = hopeless(g, g.pending);
+        return g;
+      }
+      settle(g, plan, Battle.simulate(b), me); // AI against AI (or an empty town of ours): on their own orders
     }
     g.queue = [];
     g.pending = null;
@@ -626,30 +665,28 @@
     const dBefore = clone(town ? town.gar : {});
     for (const i of plan.defender.armies) if (g.armies[i]) addUnits(dBefore, g.armies[i].units);
     share(plan.defender.armies, D, dBefore, town ? town.gar : null);
-    // the battle's line first, then what follows from it (captures, retreats)
+    // the battle's line first, then what follows from it (captures, retreats). Ours in full; the others' only as the
+    // player saw it: near him who won, far only a town changing hands (that is on the map for all), never their losses
     const nameA = short(g, plan.attacker.fid), nameD = short(g, plan.defender.fid), where = townName(g, site);
     const lossA = Battle.lossOf(b, 'A'), lossD = Battle.lossOf(b, 'D');
     const txt = (winA ? nameA + ' thắng ' + nameD + ' ở ' + where : nameA + ' không thắng được ' + nameD + ' ở ' + where) + '. Thương vong: ' + nameA + ' ' + fmt(lossA) + ', ' + nameD + ' ' + fmt(lossD) + '.';
+    const ours = plan.attacker.fid === mine || plan.defender.fid === mine;
     const bad = (plan.attacker.fid === mine && !winA) || (plan.defender.fid === mine && winA);
-    log(g, (bad ? '!' : '') + txt);
+    if (ours) log(g, (bad ? '!' : '') + txt);
+    else if (watched(g, site)) log(g, (winA ? nameA + ' thắng ' + nameD : nameA + ' không thắng được ' + nameD) + ' ở ' + where + '.');
+    else if (winA && town) log(g, where + ' về tay ' + nameA + '.');
+    if (ours || watched(g, site)) g.seen.push({ site, a: plan.attacker.fid, d: plan.defender.fid, win: b.over.win, me: me || null });
     chron(g, txt);
     if (winA) {
-      if (town) {
-        const gov = town.gov;
-        g.taken.push({ town: tn, from: town.owner, to: plan.attacker.fid });
-        town.owner = plan.attacker.fid; town.walls = Math.max(0, town.walls - 1); town.task = null; town.gov = null; town.taxFree = 0;
-        town.gar = { bo: r100(total(A) * TAKE.gar) };
-        for (const i of plan.attacker.armies) {
-          const a = g.armies[i];
-          if (!a) continue;
-          for (const k of Object.keys(a.units)) a.units[k] = Math.round(a.units[k] * TAKE.army);
-          a.at = tn; a.besieging = null;
-        }
-        if (gov && plan.attacker.fid === mine && g.gens[gov] && !g.gens[gov].dead) g.captives.push(gov);
-      }
+      if (town) takeTown(g, tn, plan.attacker.fid, plan.attacker.armies, total(A), false);
       for (const i of plan.defender.armies) retreat(g, i, site, plan.attacker.fid === mine);
     } else {
-      for (const i of plan.attacker.armies) { const a = g.armies[i]; if (a && total(a.units) < RETREAT) retreat(g, i, site, plan.defender.fid === mine); }
+      for (const i of plan.attacker.armies) {
+        const a = g.armies[i];
+        if (!a) continue;
+        if (total(a.units) < RETREAT) retreat(g, i, site, plan.defender.fid === mine);
+        else if (!a.besieging && hostile(g, a.fid, g.towns[a.at].owner)) fallBack(g, a); // it came from outside Hoài Nam: back it goes
+      }
     }
     for (const i of plan.attacker.armies.concat(plan.defender.armies)) { const a = g.armies[i]; if (a && total(a.units) < DISBAND) retreat(g, i, site, false); }
     if (plan.attacker.fid === mine) g.res.uy += winA ? UY.win : UY.lose;
@@ -667,10 +704,11 @@
     const home = ownTowns(g, a.fid).filter((t) => t !== site).sort((x, y) => dist(posOf(g, x), here) - dist(posOf(g, y), here))[0];
     const lord = isLord(g, a.gen);
     if (home && lord && total(a.units) < GUARD) a.units = { bo: GUARD }; // the lord's guard gets him out
+    const seen = a.fid === g.me || watched(g, site) || watched(g, home);
     if (home && total(a.units) >= RETREAT) {
-      g.moves.push({ id, from: a.at, to: home, retreat: true });
+      g.moves.push({ id, fid: a.fid, from: a.at, to: home, retreat: true });
       a.at = home; a.besieging = null; a.order = null;
-      log(g, armyName(g, a) + ' rút về ' + townName(g, home) + '.');
+      if (seen) log(g, armyName(g, a) + ' rút về ' + townName(g, home) + '.');
       return;
     }
     if (home) addUnits(g.towns[home].gar, a.units);
@@ -681,7 +719,37 @@
     }
     const taken = capture && a.gen && g.gens[a.gen] && !g.gens[a.gen].dead;
     if (taken) g.captives.push(a.gen);
-    log(g, (a.fid === g.me ? '!' : '') + 'Đạo quân ' + armyName(g, a) + (home ? ' tan, nhập đồn ' + townName(g, home) : ' tan') + (taken ? ', tướng bị bắt.' : '.'));
+    if (seen || taken) log(g, (a.fid === g.me ? '!' : '') + 'Đạo quân ' + armyName(g, a) + (home ? ' tan, nhập đồn ' + townName(g, home) : ' tan') + (taken ? ', tướng bị bắt.' : '.'));
+  }
+  // an army standing in a town not its side's (it lost the town, or came from outside and failed): to its side's
+  // nearest town, and with none left out of Hoài Nam
+  function fallBack(g, a) {
+    if (ownTowns(g, a.fid).length) { retreat(g, a.id, a.at, false); return; }
+    g.moves.push({ id: a.id, fid: a.fid, from: a.at, to: null, leave: true });
+    delete g.armies[a.id];
+    log(g, (a.fid === g.me ? '!' : '') + armyName(g, a) + ' rời Hoài Nam.');
+  }
+  // a town taken, by storm (a battle won), by a siege that opened its gates, or given up: the new owner garrisons it
+  // with a part of the men who took it; the governor is taken if the player took the town
+  function takeTown(g, tid, fid, armyIds, men, how) {
+    const town = g.towns[tid], gov = town.gov;
+    g.taken.push({ town: tid, from: town.owner, to: fid, siege: how === 'siege' });
+    if (how === 'yield') g.taken[g.taken.length - 1].yielded = true;
+    town.owner = fid; town.task = null; town.gov = null; town.taxFree = 0;
+    if (how === 'siege') town.gar = { bo: r100(men * SIEGE.keep) };
+    else {
+      if (how !== 'yield') town.walls = Math.max(0, town.walls - 1);
+      town.gar = { bo: r100(men * TAKE.gar) };
+      for (const i of armyIds) {
+        const a = g.armies[i];
+        if (!a) continue;
+        for (const k of Object.keys(a.units)) a.units[k] = Math.round(a.units[k] * TAKE.army);
+        a.at = tid; a.besieging = null;
+      }
+    }
+    for (const i of armyIds) if (g.armies[i]) g.armies[i].besieging = null;
+    if (gov && fid === g.me && how !== 'yield' && g.gens[gov] && !g.gens[gov].dead) g.captives.push(gov);
+    return gov;
   }
 
   // ---------------------------------------------------------------- the pending battle (fought by the player, turn by turn)
@@ -691,15 +759,33 @@
     for (const w of x.wings) if (w.side === side && !w.gone) out[w.id] = w.order;
     return out;
   }
+  // what the player is shown of a battle: the board both sides see (every wing's men, morale and place, the wind),
+  // not the day's hidden fortune (luck), the dice (rs, the plan's seed) or the enemy general's stats (his name only)
+  function forPlayer(plan0, b0, me) {
+    const plan = clone(plan0), b = clone(b0), foe = me === 'A' ? 'D' : 'A', side = foe === 'A' ? 'attacker' : 'defender';
+    const brief = (x) => (x ? { id: x.id, name: x.name, lord: !!x.lord, traits: (x.traits || []).slice() } : x);
+    delete plan.seed; delete b.rs; delete b.luck;
+    plan[side].gen = brief(plan[side].gen);
+    b[foe].gen = brief(b[foe].gen);
+    return { plan, b };
+  }
+  // V2.battle(g) → null | { plan, b, me, proposed, orders, id, hopeless, withdraw: null | { lines } }
+  //   hopeless: no way of ours wins or draws (below); withdraw: before the first turn the player may yield, at the cost
+  //   the lines say (V2.withdraw)
   function battle(g) {
     if (!g.pending) return null;
-    const P = g.pending;
-    return { plan: clone(P.plan), b: clone(P.b), me: P.me, proposed: P.b.over ? {} : proposal(P.b, P.me), orders: P.orders ? clone(P.orders) : null, id: P.id };
+    const P = g.pending, x = forPlayer(P.plan, P.b, P.me);
+    return {
+      plan: x.plan, b: x.b, me: P.me, proposed: P.b.over ? {} : proposal(P.b, P.me), orders: P.orders ? clone(P.orders) : null, id: P.id,
+      hopeless: !!P.hopeless, withdraw: canWithdraw(P) ? { lines: withdrawal(g, P, false).lines } : null,
+    };
   }
   // the battle that just ended (its last state and outcome), for the screen after it
   function lastBattle(g) {
     const L = g.lastBattle;
-    return L ? { plan: clone(L.plan), b: clone(L.b), me: L.me, proposed: {}, outcome: clone(L.outcome) } : null;
+    if (!L) return null;
+    const x = forPlayer(L.plan, L.b, L.me);
+    return { plan: x.plan, b: x.b, me: L.me, proposed: {}, outcome: clone(L.outcome) };
   }
   // one turn: our wings take the proposal unless overridden, the other side its own orders
   function battleTurn(g0, overrides) {
@@ -726,9 +812,85 @@
   }
   function afterTurn(g, b) {
     const P = g.pending;
-    if (!b.over) { P.b = b; return g; }
+    if (!b.over) { P.b = b; P.hopeless = hopeless(g, P); return g; }
     g.pending = null;
     settle(g, P.plan, b, P.me);
+    return next(g);
+  }
+
+  // ---------------------------------------------------------------- hopeless battles and yielding (29/9)
+  // The owner played a defence of 500 men against five wings turn by turn. A battle is hopeless when, on the board both
+  // sides see (never this day's hidden fortune or dice), none of three ways of ours (the general's proposals, hold
+  // everywhere, all forward) wins or draws on any of HOPE.days other days (fortune and dice from a hash of the battle)
+  // against the other side's own orders.
+  const WAYS = {
+    hold: () => 'giu',
+    press: (legal) => (legal.indexOf('xung') !== -1 ? 'xung' : legal.indexOf('ban') !== -1 ? 'ban' : 'tien'),
+  };
+  function hopeless(g, P) {
+    const b0 = P.b, me = P.me, foe = me === 'A' ? 'D' : 'A';
+    if (b0.over) return false;
+    if (!Battle.live(b0, me).length) return true;
+    const key = g.seed + '|hope|' + P.id + '|' + b0.turn;
+    for (let d = 0; d < HOPE.days; d++) {
+      const day = clone(b0);
+      day.rs = hash32(key + '|' + d) || 1;
+      day.luck = { A: 0.85 + (0.3 * hash32(key + '|A|' + d)) / 4294967296, D: 0.85 + (0.3 * hash32(key + '|D|' + d)) / 4294967296 };
+      for (const way of ['auto', 'hold', 'press']) {
+        let b = day;
+        for (let k = 0; !b.over && k <= Battle.MAX_TURN; k++) {
+          let mine = proposal(b, me);
+          if (way !== 'auto') { const m = {}; for (const id of Object.keys(mine)) m[id] = WAYS[way](Battle.legalOrders(b, id)); mine = m; }
+          b = Battle.resolve(Battle.orders(Battle.orders(b, me, mine), foe, proposal(b, foe)));
+        }
+        if (b.over.win === me || b.over.win === 'draw') return false;
+      }
+    }
+    return true;
+  }
+  const canWithdraw = (P) => !!P && !P.b.over && P.b.turn === 1 && !P.b.log.length;
+  // what yielding costs, and (act) doing it: an attack called off (the armies stay where they stood, Uy −5); a field
+  // battle refused (our armies fall back to our nearest town, a siege lifted, Uy −5); a town given up (the enemy walks
+  // in, walls whole; our garrison and armies there fall back to our nearest town, the governor with them, Uy −10)
+  function withdrawal(g, P, act) {
+    const plan = P.plan, lines = [], site = plan.site, where = townName(g, site);
+    const ours = (P.me === 'A' ? plan.attacker.armies : plan.defender.armies).filter((i) => g.armies[i]);
+    const home = (from) => ownTowns(g, g.me).filter((t) => t !== from).sort((x, y) => dist(posOf(g, x), posOf(g, from)) - dist(posOf(g, y), posOf(g, from)))[0];
+    let uy;
+    if (P.me === 'A') {
+      uy = UY.yieldField;
+      lines.push('Rút lệnh đánh ' + (plan.defender.town ? where : 'ở ' + where) + ': quân đứng lại chỗ cũ, không mất người.');
+    } else if (plan.defender.town) {
+      uy = UY.yieldTown;
+      const to = home(site), men = total(g.towns[site].gar) + ours.reduce((s, i) => s + total(g.armies[i].units), 0);
+      lines.push('Bỏ ' + where + ' không đánh: ' + (to ? fmt(men) + ' quân rút về ' + townName(g, to) : fmt(men) + ' quân tan, không còn thành để về') + '.');
+      if (act) {
+        const gar = clone(g.towns[site].gar);
+        takeTown(g, site, plan.attacker.fid, plan.attacker.armies, total(plan.attacker.units) - (plan.ally || 0), 'yield');
+        if (to) addUnits(g.towns[to].gar, gar);
+        for (const i of ours) retreat(g, i, site, false);
+      }
+    } else {
+      uy = UY.yieldField;
+      lines.push('Không nhận trận ở ' + where + ': quân lui về thành gần nhất' + (ours.some((i) => g.armies[i].besieging) ? ', bỏ vây' : '') + '.');
+      if (act) for (const i of ours) retreat(g, i, site, false);
+    }
+    lines.push('Uy ' + fmt(uy) + (P.me === 'D' && plan.defender.town ? ' (mất thành khi đánh thua: ' + fmt(UY.lost) + ')' : ' (đánh thua: ' + fmt(P.me === 'A' ? UY.lose : UY.lost) + ')') + '.');
+    if (act) {
+      g.res.uy += uy;
+      log(g, '!' + lines.join(' '));
+      chron(g, lines[0]);
+      g.seen.push({ site, a: plan.attacker.fid, d: plan.defender.fid, win: P.me === 'A' ? 'D' : 'A', me: P.me, yielded: true });
+    }
+    return { lines, uy };
+  }
+  // V2.withdraw(g): yield the pending battle before its first turn, at the cost V2.battle(g).withdraw says
+  function withdraw(g0) {
+    if (!g0.pending) throw new Error('V2.withdraw: no battle');
+    if (!canWithdraw(g0.pending)) throw new Error('V2.withdraw: only before the first turn');
+    const g = copy(g0), P = g.pending;
+    g.pending = null;
+    withdrawal(g, P, true);
     return next(g);
   }
 
@@ -739,7 +901,8 @@
     strike(g, fid, p) {
       for (const a of armiesOf(g, fid)) {
         if (p.recall && g.season === p.recall.season && a.gen === p.recall.gen && rnd(g) < g.rumor) {
-          g.moves.push({ id: a.id, from: a.at, to: null, leave: true });
+          g.moves.push({ id: a.id, fid: a.fid, from: a.at, to: null, leave: true });
+          g.recalled = { id: a.id, gen: a.gen, at: a.at };
           delete g.armies[a.id];
           log(g, p.recall.text);
           chron(g, p.recall.chronicle);
@@ -753,13 +916,32 @@
         const weakest = inReach.sort((x, y) => seen[x] - seen[y])[0];
         if (weakest && seen[weakest] < total(a.units) * p.strike) a.order = { intent: 'attack', target: { kind: 'town', id: weakest } };
       }
+      // back from Phàn Thành (history, 29/9): the recalled army returns in its season with fresh men. Its side still
+      // holds a town here: it comes into the one nearest where it left and strikes from the season after. The town it
+      // left fell to the player meanwhile: it marches on it at once, from outside; beaten, it goes home.
+      const back = p.recall && p.recall.back;
+      if (back && g.season === back.season && g.recalled && !g.armies[g.recalled.id]) {
+        const was = posOf(g, g.recalled.at), R = g.recalled;
+        const home = ownTowns(g, fid).sort((x, y) => dist(posOf(g, x), was) - dist(posOf(g, y), was))[0];
+        const at = home || (g.towns[R.at].owner === g.me ? R.at : null);
+        if (at) {
+          g.armies[R.id] = { id: R.id, fid, gen: R.gen, arm: 'land', at, units: clone(back.units), order: home ? null : { intent: 'attack', target: { kind: 'town', id: at } }, besieging: null };
+          g.moves.push({ id: R.id, fid, from: null, to: at, arrive: true });
+          const t = fill(home ? back.text : back.strike || back.text, { town: townName(g, at) });
+          log(g, '!' + t);
+          chron(g, t);
+        }
+        g.recalled = null;
+      }
     },
-    // Ngô: sails west in its season unless allied; allied (or 35 %) it takes its town from the hào tộc; angry, it retakes it
+    // Ngô: sails west in its season (allied, when the alliance ends); allied (or 35 %) it takes its town from the hào
+    // tộc; angry, it retakes it
     river(g, fid, p) {
       const a = armiesOf(g, fid)[0], t = g.towns[p.target];
       if (!a || !t) return;
-      if (p.leave && g.season === p.leave.season && !g.allies[fid]) {
-        g.moves.push({ id: a.id, from: a.at, to: null, leave: true });
+      // it sails in its season, or, allied then, the season the alliance ends (Ngô's war is in Kinh Châu either way)
+      if (p.leave && g.season >= p.leave.season && !g.allies[fid]) {
+        g.moves.push({ id: a.id, fid: a.fid, from: a.at, to: null, leave: true });
         delete g.armies[a.id];
         log(g, p.leave.text);
         return;
@@ -774,7 +956,8 @@
   }
 
   // ---------------------------------------------------------------- after the battles: siege, work, income, Trung, floors
-  // the siege step: once a town a season, whoever besieges it; below 30 % of the besiegers the gates open
+  // the siege step: once a town a season, whoever besieges it; its walls down and its defenders below 30 % of the
+  // besiegers, the gates open (29/9: the walls first, so a walled town is a siege of seasons, not one of a single season)
   function siegeStep(g, say) {
     const me = g.me, by = {};
     for (const a of armiesOf(g, me)) if (a.besieging) (by[a.besieging] = by[a.besieging] || []).push(a.id);
@@ -785,16 +968,26 @@
       t.walls = Math.max(0, t.walls - 1);
       t.dan = Math.round(t.dan * SIEGE.dan);
       const men = ids.reduce((s, i) => s + total(g.armies[i].units), 0);
-      if (defenders(g, tid) < men * SIEGE.open) {
-        const gov = t.gov, was = t.owner;
-        g.taken.push({ town: tid, from: was, to: me, siege: true });
-        t.owner = me; t.gar = { bo: r100(men * SIEGE.keep) }; t.gov = null; t.task = null; t.taxFree = 0;
-        for (const i of ids) g.armies[i].besieging = null;
+      const fresh = ids.some((i) => (g.moves || []).some((m) => m.id === i && m.siege && m.to === tid));
+      const open = t.walls <= 0 && defenders(g, tid) < men * SIEGE.open;
+      if (say) g.sieges.push({ town: tid, by: me, armies: ids.slice(), fresh, walls: t.walls, open });
+      if (open) {
+        const was = t.owner;
+        takeTown(g, tid, me, ids, men, 'siege');
         g.res.uy += UY.opened;
-        if (gov && g.gens[gov] && !g.gens[gov].dead) g.captives.push(gov);
         for (const e of armiesOf(g, was).filter((x) => x.at === tid)) retreat(g, e.id, tid, true);
         if (say) { log(g, townName(g, tid) + ' mở cổng hàng sau khi bị vây.'); chron(g, townName(g, tid) + ' hàng sau khi bị vây.'); }
-      } else if (say) log(g, townName(g, tid) + ' bị vây: đồn còn ' + fmt(defenders(g, tid)) + ', lũy còn ' + t.walls + '.');
+      } else if (say) log(g, townName(g, tid) + ' bị vây: đồn còn ~' + fmt(r100(seenDefenders(g, me, tid))) + ', lũy còn ' + t.walls + '.');
+    }
+  }
+  // new men from a town's recruiting (29/9): into the army of ours standing in the town (foot, bows and horse into
+  // the largest land army, boats into a fleet), so a staging town feeds its army without a transfer; none there,
+  // into the garrison
+  function recruit(g, tid, add) {
+    const here = armiesOf(g, g.me).filter((a) => a.at === tid && !a.besieging).sort((x, y) => total(y.units) - total(x.units));
+    for (const [k, n] of Object.entries(add)) {
+      const a = here.find((x) => (k === 'thuy' ? x.arm === 'fleet' : x.arm === 'land'));
+      addUnits(a ? a.units : g.towns[tid].gar, { [k]: n });
     }
   }
   function townWork(g, say) {
@@ -803,7 +996,10 @@
       if (t.owner !== g.me) {
         t.task = null;
         const ai = g.data.ai && g.data.ai[t.owner];
-        if (ai && ai.growth) t.gar.bo = (t.gar.bo || 0) + ai.growth;
+        // the other sides refill a garrison, up to what the town held when the game began (29/9: Thọ Xuân grew without
+        // end and a slow player met a fortress no army could take)
+        const cap = total((g.data.start.towns[d.id] || {}).gar);
+        if (ai && ai.growth) t.gar.bo = (t.gar.bo || 0) + Math.max(0, Math.min(ai.growth, cap - total(t.gar)));
         continue;
       }
       if (!t.task) continue;
@@ -811,12 +1007,12 @@
       t.task.fresh = false;
       t.task.left -= 1;
       if (t.task.left > 0) { if (say) log(g, d.name + ': ' + T.name.toLowerCase() + ', còn ' + t.task.left + ' mùa.'); continue; }
-      if (done.add) addUnits(t.gar, done.add);
+      if (done.add) recruit(g, d.id, done.add);
       if (done.dan) t.dan -= done.dan;
       if (done.walls) t.walls = Math.min(MAX_WALLS, t.walls + done.walls);
       if (done.farm) t.farm = true;
       if (done.market) t.market = true;
-      if (say) log(g, d.name + ': xong ' + T.name.toLowerCase() + '.');
+      if (say) { log(g, d.name + ': xong ' + T.name.toLowerCase() + '.'); g.done.push({ town: d.id, key: t.task.key }); }
       t.task = null;
     }
   }
@@ -840,10 +1036,7 @@
     for (const a of Object.values(g.armies)) {
       if (a.besieging || !hostile(g, a.fid, g.towns[a.at].owner)) continue;
       if (!(g.taken || []).some((x) => x.town === a.at && x.from === a.fid)) continue;
-      if (ownTowns(g, a.fid).length) { retreat(g, a.id, a.at, false); continue; }
-      g.moves.push({ id: a.id, from: a.at, to: null, leave: true });
-      delete g.armies[a.id];
-      log(g, (a.fid === g.me ? '!' : '') + armyName(g, a) + ' rời Hoài Nam.');
+      fallBack(g, a);
     }
   }
   function finishSeason(g) {
@@ -861,6 +1054,7 @@
       if (s.fid !== me || s.dead || s.loyal >= LEAVE || isLord(g, gid)) continue;
       const a = armiesOf(g, me).find((x) => x.gen === gid);
       if (!a) continue;
+      g.moves.push({ id: a.id, fid: me, from: a.at, to: null, leave: true });
       delete g.armies[a.id];
       s.fid = g.data.rebels || 'local';
       for (const t of Object.values(g.towns)) if (t.gov === gid) t.gov = null;
@@ -882,13 +1076,24 @@
     if (!g.over && own.length === g.data.towns.length) g.over = { win: true, why: T.win };
     if (!g.over && !own.length) g.over = { win: false, why: T.lostAll };
     if (g.over) chron(g, g.over.why);
-    // taken: every town that changed hands this season (the owners are on the map for all to see), in the order it fell
-    const taken = g.taken.map((x) => ({ town: x.town, from: x.from, to: x.to, siege: !!x.siege }));
-    g.report = { season: cal(g, g.season), lines: g.log.slice(), fought: clone(g.fought), income: clone(inc), towns: own.length, taken };
+    // the recap and the map's playback, all of it what the player saw: taken, every town that changed hands (the owners
+    // are on the map for all), in the order it fell; done, the work finished in our towns; sieges, ours this season
+    // (fresh: begun now; open: the gates opened); battles, ours and the others' near us (no losses of theirs)
+    const taken = g.taken.map((x) => Object.assign({ town: x.town, from: x.from, to: x.to, siege: !!x.siege }, x.yielded ? { yielded: true } : {}));
+    g.report = {
+      season: cal(g, g.season), lines: g.log.slice(), fought: clone(g.fought), income: clone(inc), towns: own.length, taken,
+      done: clone(g.done), sieges: clone(g.sieges), battles: clone(g.seen),
+    };
     g.season += 1;
     for (const a of Object.values(g.armies)) a.order = null;
     g.vanguard = null;
     g.cards = g.over ? [] : seasonCards(g);
+    // the outlook for the season that begins, with its way out (D9): a warning the player reads before it bites
+    if (!g.over) for (const x of alerts(g)) {
+      const said = x.key === 'luong' ? T.famineWarn : T.revoltWarn; // the floor's own line is already in the recap
+      if (!(x.level === 'floor' && g.log.some((l) => l.slice(1) === said))) g.report.lines.push('!' + x.text);
+      if (x.fix.length) g.report.lines.push('Cách cứu: ' + x.fix[0]);
+    }
     return g;
   }
 
@@ -904,18 +1109,84 @@
     const inc = economy(g);
     return { luong: g.res.luong + inc.luong - inc.up, tien: g.res.tien + inc.tien, uy: g.res.uy, income: inc };
   }
-  // seasons of siege until the gates open, from the garrison and the armies inside as the player sees them
+  // seasons of siege until the gates open (the walls down, then the defenders below 30 %), from the garrison and the
+  // armies inside as the player sees them
   function fallIn(g, tid, men) {
     const t = g.towns[tid];
-    let gar = total(seenGar(g, g.me, tid)), inside = 0;
+    let gar = total(seenGar(g, g.me, tid)), inside = 0, walls = t.walls;
     for (const e of Object.values(g.armies)) {
       if (e.fid !== t.owner || e.at !== tid || e.besieging) continue;
       const u = seenUnits(g, g.me, e, false);
       if (!u) return null;
       inside += total(u);
     }
-    for (let n = 1; n <= 8; n++) { gar *= SIEGE.gar; if (gar + inside < men * SIEGE.open) return n; }
+    for (let n = 1; n <= 8; n++) { gar *= SIEGE.gar; walls -= 1; if (walls <= 0 && gar + inside < men * SIEGE.open) return n; }
     return null;
+  }
+  // ---------------------------------------------------------------- alerts (GPT D9: a warning shows a way out)
+  // The grain and Uy outlook from what the player knows: his own towns, men and work and the orders given so far; no
+  // battles, no AI, no cards. 'soon': the grain runs out at the end of this season or the next at this rate, or Uy is
+  // near 0; 'floor': warned last season, one more at the floor and the game is lost. Each alert names the ways out
+  // that are legal now, with their numbers (fix), or says plainly that none is in time.
+  //   → [{ key: 'luong'|'uy', level: 'soon'|'floor', text, fix: [string] }]
+  function alerts(g) {
+    const out = [], p = project(g), net = p.income.luong - p.income.up;
+    if (g.warn.luong || p.luong < 0 || p.luong + net < 0) {
+      const need = p.luong < 0 ? -p.luong : g.warn.luong ? 0 : -(p.luong + net);
+      const f = grainFixes(g, need, p.luong < 0);
+      let text;
+      if (g.warn.luong) text = p.luong < 0 ? 'Kho lương âm lần hai: cuối mùa này còn âm (' + fmt(p.luong) + ') là binh biến.' : 'Kho lương vừa âm: mùa này đã đủ lương (' + fmt(p.luong) + ' cuối mùa), giữ vậy là qua.';
+      else if (p.luong < 0) text = 'Cuối mùa này kho lương âm (' + fmt(p.luong) + '): một phần mười quân sẽ bỏ trốn, mùa sau còn âm là binh biến.';
+      else text = 'Lương chỉ đủ tới cuối mùa sau: thu ' + fmt(p.income.luong) + ', nuôi quân ' + fmt(p.income.up) + ' mỗi mùa.';
+      if (g.warn.luong && p.luong < 0 && !f.enough) text += ' Không còn cách nào đủ lương kịp cuối mùa này' + (f.take ? ', trừ lấy thêm một thành ngay mùa này.' : '.');
+      if (!(g.warn.luong && p.luong >= 0)) out.push({ key: 'luong', level: g.warn.luong ? 'floor' : 'soon', text, fix: f.lines });
+    }
+    if (g.warn.uy || p.uy <= 10) {
+      const fix = [];
+      for (const c of g.cards) if (c.kind === 'captive' && /Uy \+\d+/.test(c.no.fx)) fix.push('Thả ' + genName(g, c.gen) + ' về: ' + c.no.fx + '.');
+      fix.push('Thắng một trận: Uy +' + UY.win + '; vây cho một thành mở cổng: Uy +' + UY.opened + '; giữ được thành bị đánh: Uy +' + UY.held + '.');
+      const text = g.warn.uy ? (p.uy <= 0 ? 'Uy ở đáy lần hai: cuối mùa này còn 0 là dân nổi loạn.' : 'Uy vừa chạm đáy: mùa này đã lên lại (' + p.uy + '), giữ vậy là qua.') : p.uy <= 0 ? 'Cuối mùa này Uy về 0: dân bất phục, mùa sau còn 0 là nổi loạn.' : 'Uy còn ' + p.uy + ': về 0 là dân bất phục.';
+      if (!(g.warn.uy && p.uy > 0)) out.push({ key: 'uy', level: g.warn.uy ? 'floor' : 'soon', text, fix });
+    }
+    return out;
+  }
+  // ways to find `need` grain: men from an army into the garrison of the town it stands in (a garrison eats 0,05 a
+  // man, horse in the field 0,2), a fresh task's grain back, then the slower ones (fields). `now`: only what counts
+  // at the end of this season. → { lines, enough, take }
+  function grainFixes(g, need, now) {
+    const lines = [];
+    let got = 0;
+    for (const a of armiesOf(g, g.me)) {
+      const t = g.towns[a.at];
+      if (a.besieging || t.owner !== g.me || (a.order && a.order.intent !== 'move')) continue;
+      let room = total(a.units) - KEEP;
+      const parts = [];
+      let save = 0;
+      for (const k of ARMS.slice().sort((x, y) => UPKEEP[y] - UPKEEP[x])) {
+        if (room <= 0 || got + save >= need) break;
+        const per = UPKEEP[k] - GARRISON, n = Math.min(a.units[k] || 0, room, Math.ceil((need - got - save) / per / 100) * 100);
+        if (n <= 0) continue;
+        parts.push(fmt(n) + ' ' + ARM_TEXT[k]); save += n * per; room -= n;
+      }
+      if (!parts.length) continue;
+      got += save;
+      lines.push('Cho ' + parts.join(', ') + ' của ' + armyName(g, a) + ' vào đồn ' + townName(g, a.at) + ': nuôi quân −' + fmt(save) + ' lương mỗi mùa.');
+    }
+    for (const tid of ownTowns(g, g.me)) {
+      const t = g.towns[tid];
+      if (!t.task || !t.task.fresh) continue;
+      const back = g.data.tasks[t.task.key].cost.luong || 0;
+      if (!back) continue;
+      got += back;
+      lines.push('Bỏ việc ' + g.data.tasks[t.task.key].name.toLowerCase() + ' ở ' + townName(g, tid) + ': hoàn ' + fmt(back) + ' lương.');
+    }
+    if (!now || got < need) {
+      const farm = ownTowns(g, g.me).filter((tid) => !g.towns[tid].farm && !g.towns[tid].task && !(g.towns[tid].taxFree && g.season < g.towns[tid].taxFree)).sort((x, y) => g.towns[y].dan - g.towns[x].dan)[0];
+      if (farm && !now) lines.push('Khai ruộng ở ' + townName(g, farm) + ': sau ' + g.data.tasks.ruong.seasons + ' mùa thu thêm ' + fmt(g.towns[farm].dan * GRAIN * (FARM - 1)) + ' lương mỗi mùa.');
+    }
+    const take = armiesOf(g, g.me).some((a) => targets(g, a.id).some((t) => t.intent === 'ask'));
+    if (take && got < need) lines.push('Lấy thêm một thành ngay mùa này: thu của thành đó tính luôn cuối mùa.');
+    return { lines: lines.slice(0, 3), enough: got >= need, take };
   }
   function preview(g, act) {
     if (!act || (act.type !== 'order' && act.type !== 'task')) throw new Error("V2.preview: act.type is 'order' or 'task'");
@@ -937,8 +1208,10 @@
       else {
         const men = armiesOf(h, g.me).filter((x) => x.id === a.id || x.besieging === tgt.id || (x.order && x.order.intent === 'siege' && x.order.target.id === tgt.id)).reduce((s, x) => s + total(x.units), 0);
         fall = fallIn(g, tgt.id, men);
-        lines.push('Vây ' + where + ': mỗi mùa đồn −20%, lũy −1; thủ dưới 30% quân vây thì mở cổng.');
-        lines.push(fall ? 'Ước mở cổng sau ' + fall + ' mùa vây.' : 'Quân vây chưa đủ để thành mở cổng.');
+        // the owner, 29/9: a weak town that opens the same season must say so plainly, first
+        if (fall === 1) lines.push('Thủ ' + where + ' quá yếu trước quân vây: mở cổng ngay cuối mùa này, không đánh (Uy +' + UY.opened + ').');
+        lines.push('Vây ' + where + ': mỗi mùa đồn −20%, lũy −1; lũy sụp hết và thủ dưới 30% quân vây thì mở cổng.');
+        if (fall !== 1) lines.push(fall ? 'Ước mở cổng sau ' + fall + ' mùa vây.' : 'Quân vây chưa đủ để thành mở cổng.');
       }
     } else {
       const c = act.key ? taskCheck(g, act.town, act.key) : { ok: true };
@@ -959,16 +1232,284 @@
     return out;
   }
 
+  // ---------------------------------------------------------------- the general's plan for the season (V2.advise)
+  // What a sound general proposes this season, from what the player sees and nothing more: the enemy as the View shows
+  // him (near ±20 %, far a guess), the forecast (V2.forecast), the siege estimate and the season's projection; never
+  // the truth of another side, its AI or its dice. The watch mode plays on it; "Đề xuất" shows it to a new player. Each
+  // army gets an order (target null: hold, and a siege under way goes on) and each town without work under way may get
+  // a task, each with one short line saying why.
+  //   V2.advise(g) → [{ type: 'order', army, target: { kind, id } | null, intent, why } | { type: 'task', town, key, why }]
+  //   V2.adviseCards(g) → [{ card, yes, why }] for the cards in the queue, in the order to answer them
+  const RANK = {};
+  Battle.LABELS.forEach(([, l], i) => { RANK[l] = Battle.LABELS.length - 1 - i; }); // Thắng lớn 4 … Thua lớn 0
+  const DANGER = 0.35; // an enemy's odds on one of our towns, as our general reads them, from which he guards it
+  // an enemy army's men as the player's general reads them (near: the View's ±20 %; far: his guess)
+  const guessMen = (g, a) => total(seenUnits(g, g.me, a, true));
+  // the reach of an army as its flag and arms show it: boats on their river, horse fast, foot slow
+  const seenReach = (a) => (a.arm === 'fleet' ? REACH.fleet : (a.units.ky || 0) > 0 ? REACH.fast : REACH.land);
+  function reachers(g, tid) {
+    const p = posOf(g, tid), riv = riverOf(g, tid);
+    return Object.values(g.armies).filter((a) => hostile(g, g.me, a.fid) && !(a.arm === 'fleet' && (!riv || riverOf(g, a.at) !== riv)) && dist(p, posOf(g, a.at)) <= seenReach(a) + 0.5);
+  }
+  // an enemy army's attack on our town as our general reads it: its odds on the battle as he sees it (its men through
+  // perception, ours as they are), from a few days' simulation
+  function threatOf(g, tid, e, memo) {
+    let w = g;
+    if (!g.armies[e.id]) { w = copy(g); w.armies[e.id] = clone(e); } // an army the player remembers coming (history)
+    const plan = planFor(w, [e.id], { kind: 'town', id: tid }, null);
+    if (!plan) return 0;
+    plan.attacker.units = full(seenUnits(w, g.me, w.armies[e.id], true));
+    const key = [g.seed, g.season, 'threat', tid, e.id, JSON.stringify(plan.defender.units)].join('|');
+    if (!(key in memo)) memo[key] = Battle.odds(plan, { key, runs: 8 }).win;
+    return memo[key];
+  }
+  function danger(g, tid, memo, ghosts) {
+    let p = 0, who = null;
+    const more = (ghosts || []).filter((e) => e.at === tid);
+    for (const e of reachers(g, tid).concat(more)) { const x = threatOf(g, tid, e, memo || {}); if (x > p) { p = x; who = e; } }
+    return { p, who };
+  }
+  // the transmigrant's memory (a history card's `back`): an enemy he knows comes back this season to a town of ours
+  function ghostsOf(g) {
+    const out = [];
+    for (const c of g.data.cards || []) {
+      const b = c.params && c.params.back;
+      if (!b || b.season !== g.season || !g.towns[b.town] || g.towns[b.town].owner !== g.me) continue;
+      if (Object.values(g.armies).some((a) => a.gen === b.gen)) continue; // he never left, or is back already
+      out.push({ id: '~' + b.gen, fid: b.fid, gen: b.gen, arm: 'land', at: b.town, units: clone(b.units), order: null, besieging: null, memory: true });
+    }
+    return out;
+  }
+  const menOf = (g, ids) => ids.reduce((s, i) => s + total(g.armies[i].units), 0);
+  const nearestFoe = (g, tid) => g.data.towns.map((t) => t.id).filter((x) => hostile(g, g.me, g.towns[x].owner)).sort((x, y) => dist(posOf(g, x), posOf(g, tid)) - dist(posOf(g, y), posOf(g, tid)))[0];
+
+  function advise(g0) {
+    if (!g0 || g0.pending || g0.over) return [];
+    const me = g0.me, memo = {}, fmemo = {}, ghosts = ghostsOf(g0);
+    const dz = (g, tid) => danger(g, tid, memo, ghosts);
+    const comes = (d) => armyName(g0, d.who) + (d.who.memory ? ' trở lại mùa này, như ta nhớ' : ' đánh tới được');
+    let h = copy(g0);
+    for (const a of armiesOf(h, me)) a.order = null;
+    for (const tid of ownTowns(h, me)) if (h.towns[tid].task && h.towns[tid].task.fresh) h = setTask(h, tid, null);
+    const out = [], free = {}, why = {};
+    for (const a of armiesOf(h, me)) free[a.id] = true;
+    const leaving = {}; // armies given an order that takes them out of the town they stand in
+    const give = (id, target, intent, line) => {
+      out.push({ type: 'order', army: id, target, intent, why: line });
+      delete free[id];
+      if (target && !(target.kind === 'town' && target.id === h.armies[id].at && intent === 'move')) leaving[id] = true;
+      h = order(h, id, target, target && target.kind === 'town' && intent !== 'move' ? intent : undefined);
+    };
+    // an army whose going would open the town of ours it stands in to an enemy in reach stays: "Giữ" with the reason
+    const xmemo = {};
+    // (going at the very enemy that threatens it, or at the town he stands in, is not leaving it open)
+    const exposes = (id, tg) => {
+      const a = h.armies[id], key = id + '|' + Object.keys(leaving).sort().join(',');
+      if (!(key in xmemo)) {
+        let d = { p: 0, who: null };
+        if (!a.besieging && h.towns[a.at].owner === me && !threatened[a.at]) {
+          const t = copy(h);
+          for (const x of armiesOf(t, me)) if (x.at === a.at && (leaving[x.id] || x.id === id)) delete t.armies[x.id];
+          d = dz(t, a.at);
+        }
+        xmemo[key] = d;
+      }
+      const d = xmemo[key];
+      if (d.p < DANGER) return false;
+      if (tg && d.who && !d.who.memory && (tg.kind === 'army' ? tg.id === d.who.id : tg.id === d.who.at)) return false;
+      why[id] = 'Giữ ' + townName(h, a.at) + ': đi thì ' + comes(d) + '.';
+      return true;
+    };
+    const tname = (t) => (t.kind === 'town' ? townName(h, t.id) : armyName(h, h.armies[t.id]));
+    const inReach = (id, t) => targets(h, id).some((x) => x.kind === t.kind && x.id === t.id);
+    const fc = (ids, t) => { const k = ids.slice().sort().join('+') + '>' + t.kind + ':' + t.id; if (!(k in fmemo)) fmemo[k] = forecast(h, ids, t); return fmemo[k]; };
+    const vanguard = h.vanguard && h.armies[h.vanguard.army] ? h.vanguard.army : null;
+    // a race the history cards set: a town the remembered enemy comes back to, still the enemy's, is worth taking first
+    const race = {};
+    for (const c of g0.data.cards || []) {
+      const b = c.params && c.params.back;
+      if (b && b.season > h.season && h.towns[b.town] && hostile(h, me, h.towns[b.town].owner) && !Object.values(h.armies).some((a) => a.gen === b.gen)) race[b.town] = b;
+    }
+
+    // the best strike the free armies have: a weak town that opens this season, a battle the general reads as won, a
+    // siege that opens within three seasons (its army safe from a sally). Scores: 100 / 70–90 / 36–52
+    function bestStrike() {
+      const ids = Object.keys(free);
+      const cands = {};
+      for (const id of ids) for (const t of targets(h, id)) if (t.intent !== 'move') cands[t.kind + ':' + t.id] = { kind: t.kind, id: t.id };
+      let best = null;
+      const take = (x) => { if (!best || x.score > best.score) best = x; };
+      for (const t of Object.values(cands)) {
+        const group = ids.filter((id) => inReach(id, t) && !exposes(id, t));
+        if (!group.length) continue;
+        const bonus = (vanguard && group.indexOf(vanguard) !== -1 ? 5 : 0) + (t.kind === 'town' && race[t.id] ? 65 : 0);
+        if (t.kind === 'town') {
+          const already = armiesOf(h, me).filter((a) => a.besieging === t.id).map((a) => a.id);
+          // the besiegers sit outside the walls: only armies that outnumber any army inside, which may sally
+          const inside = Object.values(h.armies).filter((e) => e.at === t.id && e.fid === h.towns[t.id].owner && !e.besieging);
+          const need = Math.max.apply(null, [0].concat(inside.map((e) => guessMen(h, e) * 1.3)));
+          const sg = group.filter((i) => total(h.armies[i].units) >= need);
+          const sb = (vanguard && sg.indexOf(vanguard) !== -1 ? 5 : 0) + (race[t.id] ? 65 : 0);
+          if (sg.length) {
+            const fall = fallIn(h, t.id, menOf(h, sg) + menOf(h, already));
+            if (fall && fall <= 3) take({ score: (fall === 1 ? 100 : 60 - 8 * fall) + sb, t, group: sg, intent: 'siege', line: fall === 1 ? 'Vây ' + townName(h, t.id) + ': thủ yếu, mở cổng ngay cuối mùa này, không phải đánh.' : 'Vây ' + townName(h, t.id) + ': đồn đói dần, lũy −1 mỗi mùa; ước mở cổng sau ' + fall + ' mùa.' });
+            // an army inside that our besiegers outnumber: the siege draws it out to fight in the open
+            else if (inside.length) take({ score: 45 + sb, t, group: sg, intent: 'siege', line: 'Vây ' + townName(h, t.id) + ': dụ ' + armyName(h, inside[0]) + ' ra đánh ngoài thành; lũy −1, đồn −20% mỗi mùa.' });
+            // a storm not yet good: a siege first brings the walls down and starves the garrison
+            const f0 = fc(group, t);
+            if (f0 && RANK[f0.label] >= RANK['Thua'] && RANK[f0.label] < RANK['Thắng'] && h.towns[t.id].walls > 0) take({ score: 30 + sb, t, group: sg, intent: 'siege', line: 'Vây ' + townName(h, t.id) + ' trước: lũy −1, đồn −20% mỗi mùa, rồi mới đánh (tướng đoán đánh ngay: ' + f0.label + ').' });
+          }
+        }
+        const f = fc(group, t);
+        if (f && RANK[f.label] >= RANK['Thắng']) take({ score: 70 + 5 * RANK[f.label] + bonus, t, group, intent: 'attack', line: 'Đánh ' + tname(t) + ': tướng đoán ' + f.label + ' (ta ' + fmt(f.sa) + ', địch ' + fmt(f.sd) + ').' });
+      }
+      return best;
+    }
+    // hold what we have: a town an enemy can take this season gets an army that turns it (moved only where leaving
+    // does not open the town it stands in)
+    const threatened = {};
+    for (const tid of ownTowns(h, me)) { const d = dz(h, tid); if (d.p >= DANGER) threatened[tid] = d; }
+    function guard() {
+      for (const tid of Object.keys(threatened).sort((x, y) => h.towns[y].dan - h.towns[x].dan)) {
+        const d = threatened[tid];
+        if (h.towns[tid].owner !== me) continue;
+        const here = armiesOf(h, me).filter((a) => a.at === tid && !a.besieging && (free[a.id] || (a.order && a.order.intent === 'move' && a.order.target.id === tid)));
+        if (here.length) { for (const a of here) if (free[a.id]) { why[a.id] = 'Giữ ' + townName(h, tid) + ': ' + comes(d) + '.'; delete free[a.id]; } continue; }
+        if (dz(h, tid).p < DANGER) continue; // an army already sent there
+        const helpers = armiesOf(h, me).filter((a) => free[a.id] && inReach(a.id, { kind: 'town', id: tid })).sort((x, y) => total(y.units) - total(x.units));
+        for (const a of helpers) {
+          const t = copy(h);
+          t.armies[a.id].at = tid; t.armies[a.id].besieging = null;
+          const left = !a.besieging && t.towns[a.at] && t.towns[a.at].owner === me && a.at !== tid ? dz(t, a.at).p : 0;
+          if (dz(t, tid).p < DANGER && left < DANGER) { give(a.id, { kind: 'town', id: tid }, 'move', 'Về giữ ' + townName(h, tid) + ': ' + comes(d) + ', đồn không đủ.'); break; }
+        }
+      }
+    }
+    // guarding first, unless a storm read as won takes a town worth more than any town at risk
+    const first = bestStrike();
+    const risk = Math.max.apply(null, [0].concat(Object.keys(threatened).map((tid) => h.towns[tid].dan)));
+    if (first && first.intent === 'attack' && first.score >= 80 && first.t.kind === 'town' && h.towns[first.t.id].dan > risk) for (const id of first.group) give(id, first.t, first.intent, first.line);
+    guard();
+    for (let round = 0; round < 4 && Object.keys(free).length; round++) {
+      const s = bestStrike();
+      if (!s) break;
+      for (const id of s.group) give(id, s.t, s.intent, s.line);
+    }
+    // a siege under way that still stands: hold it (no order)
+    for (const a of armiesOf(h, me)) {
+      if (!free[a.id] || !a.besieging) continue;
+      const fall = fallIn(h, a.besieging, menOf(h, armiesOf(h, me).filter((x) => x.besieging === a.besieging).map((x) => x.id)));
+      why[a.id] = 'Giữ vòng vây ' + townName(h, a.besieging) + (fall ? ': ước mở cổng sau ' + fall + ' mùa.' : ': chờ đồn đói, lũy sụt.');
+      delete free[a.id];
+    }
+    // the rest close in: to our (or an ally's) town nearest the nearest enemy town, when that is nearer than here
+    for (const id of Object.keys(free)) {
+      const a = h.armies[id];
+      if (threatened[a.at] && h.towns[a.at].owner === me) { why[id] = 'Giữ ' + townName(h, a.at) + ': địch đánh tới được.'; continue; }
+      if (exposes(id, null)) continue;
+      const foe = nearestFoe(h, a.at);
+      if (!foe) continue;
+      const step = targets(h, id).filter((t) => t.kind === 'town' && t.intent === 'move').sort((x, y) => dist(posOf(h, x.id), posOf(h, foe)) - dist(posOf(h, y.id), posOf(h, foe)))[0];
+      if (step && dist(posOf(h, step.id), posOf(h, foe)) < dist(posOf(h, a.at), posOf(h, foe)) - 1) give(id, { kind: 'town', id: step.id }, 'move', 'Tiến về ' + townName(h, step.id) + ', áp sát ' + townName(h, foe) + '.');
+    }
+    for (const a of armiesOf(h, me)) {
+      if (out.some((x) => x.army === a.id)) continue;
+      out.push({ type: 'order', army: a.id, target: null, intent: 'hold', why: why[a.id] || 'Giữ ' + townName(h, a.at) + ': chưa có đích đáng đánh; không lệnh thì thủ +15% nếu bị đánh.' });
+    }
+
+    // town work, with the purse and the grain in mind: fields while grain is short; walls and foot where an enemy can
+    // strike; recruits where our army stands (they join it) while the next objective reads worse than a win; fields and
+    // a market behind the line. Never a recruit that leaves the grain below a season's upkeep.
+    const short = () => { const p = project(h); return p.luong + (p.income.luong - p.income.up) < p.income.up * 0.5; };
+    const main = armiesOf(h, me).filter((a) => a.arm === 'land').sort((x, y) => total(y.units) - total(x.units))[0];
+    const goal = main && nearestFoe(h, main.at);
+    let weak = false;
+    if (main && goal) {
+      const all = armiesOf(h, me).filter((a) => inReach(a.id, { kind: 'town', id: goal }) || a.at === main.at).map((a) => a.id);
+      const inRange = all.filter((id) => inReach(id, { kind: 'town', id: goal }));
+      const f = inRange.length ? fc(inRange, { kind: 'town', id: goal }) : null;
+      weak = !f || RANK[f.label] < RANK['Thắng'];
+    }
+    for (const tid of ownTowns(h, me).sort((x, y) => h.towns[y].dan - h.towns[x].dan)) {
+      const t = h.towns[tid];
+      if (t.task) continue;
+      const low = short(), front = !!threatened[tid] || reachers(h, tid).length > 0;
+      const camp = main && main.at === tid && !main.besieging && !(main.order && main.order.intent !== 'move');
+      const all = tasks(h, tid).all;
+      const can = (k) => { const x = all.find((y) => y.key === k); return !!x && x.ok; };
+      const wants = [];
+      const farm = !t.farm && !(t.taxFree && h.season < t.taxFree);
+      if (low && farm) wants.push(['ruong', 'Khai ruộng: lương thu ở ' + townName(h, tid) + ' +25%, kho đang mỏng.']);
+      if (threatened[tid] && t.walls < 3) wants.push(['luy', 'Đắp lũy: ' + townName(h, tid) + ' giáp địch.']);
+      if (threatened[tid] && total(t.gar) < 2000 && !camp) wants.push(['mo_bo', 'Mộ bộ binh: đồn ' + townName(h, tid) + ' mỏng, địch đánh tới được.']);
+      if (camp && weak && goal) {
+        // foot for walls, some bows behind them; horse only for a town without walls
+        const u = main.units, k = h.towns[goal].walls ? ((u.cung || 0) < total(u) * 0.2 ? 'mo_cung' : 'mo_bo') : h.res.tien >= 900 ? 'mo_ky' : 'mo_bo';
+        wants.push([k, 'Mộ quân vào đạo ' + armyName(h, main) + ': chưa đủ sức lấy ' + townName(h, goal) + '.']);
+        wants.push(['mo_bo', 'Mộ bộ binh vào đạo ' + armyName(h, main) + ': chưa đủ sức lấy ' + townName(h, goal) + '.']);
+      }
+      if (farm) wants.push(['ruong', 'Khai ruộng: lương thu ở ' + townName(h, tid) + ' +25%.']);
+      if (!t.market) wants.push(['cho', 'Dựng chợ: thêm ' + fmt(MARKET) + ' tiền mỗi mùa.']);
+      if (front && t.walls < 3) wants.push(['luy', 'Đắp lũy: ' + townName(h, tid) + ' ở tiền tuyến.']);
+      for (const [k, line] of wants) {
+        if (!can(k)) continue;
+        const trial = setTask(h, tid, k), p = project(trial);
+        if (g0.data.tasks[k].cost.luong && p.luong < p.income.up) continue;
+        h = trial;
+        out.push({ type: 'task', town: tid, key: k, why: line });
+        break;
+      }
+    }
+    return out;
+  }
+
+  // the cards, as the general would answer them (the watch mode; a hint for a new player), from the card's own words
+  // and the board as the player sees it; answered one after the other (the vanguard last: it hangs on the season's plan)
+  function adviseCards(g0) {
+    const out = [];
+    if (!g0 || g0.pending || g0.over) return out;
+    let g = g0;
+    const order0 = g0.cards.slice();
+    const effect = (c) => ((g.data.cards || []).find((x) => x.id === c.src) || {}).effect;
+    order0.sort((x, y) => (effect(x) === 'vanguard' ? 1 : 0) - (effect(y) === 'vanguard' ? 1 : 0));
+    for (const c of order0) {
+      const d = (g.data.cards || []).find((x) => x.id === c.src) || {}, p = d.params || {};
+      let yes = false, why = '';
+      switch (d.effect) {
+        case 'rumor': yes = g.res.uy + (p.uy || 0) > 20; why = yes ? 'Tung tin: Trương Liêu đi thì Thọ Xuân trống lưng.' : 'Uy đã mỏng, không đổi lấy tin đồn.'; break;
+        case 'alliance': yes = false; why = 'Lịch Dương là đất Hoài Nam; thuyền Ngô sắp phải về tây.'; break;
+        case 'submit': yes = g.res.luong + (p.luong || 0) >= 0; why = yes ? townName(g, p.town) + ' về ta không mất một người.' : 'Kho lương không kham nổi.'; break;
+        case 'vanguard': {
+          const a = armiesOf(g, g.me).find((x) => x.gen === c.gen);
+          yes = !!a && advise(g).some((x) => x.type === 'order' && x.army === a.id && (x.intent === 'attack' || x.intent === 'siege'));
+          why = yes ? 'Mùa này đạo của ông có trận để đánh.' : 'Mùa này chưa có trận cho ông; hứa rồi không cho đánh thì mất lòng hơn.';
+          break;
+        }
+        case 'demand': { const t = g.towns[p.town]; yes = g.res.uy >= p.uy && !!t && t.owner === p.from; why = yes ? 'Uy đủ ' + p.uy + ': ' + townName(g, p.town) + ' hàng không cần đánh.' : 'Uy chưa tới ' + p.uy + ': đòi mà không được còn mất lòng Ngô.'; break; }
+        case 'appease': yes = true; why = 'Giữ lòng tướng: ông bỏ đi thì mất cả đạo quân.'; break;
+        case 'captive': {
+          const s = g.gens[c.gen], pct = s && s.loyal >= p.loyalHigh ? p.pHigh : p.pLow;
+          yes = pct >= 0.5; why = yes ? 'Nhiều phần ông theo ta.' : 'Ông khó theo; thả về được Uy +' + p.uyFree + '.';
+          break;
+        }
+        default: yes = false;
+      }
+      out.push({ card: c.id, yes, why });
+      g = answer(g, c.id, yes);
+    }
+    return out;
+  }
+
   return {
     RULES, ARMS,
     newGame, view, targets, preview, order, tasks, setTask, transfer, answer, forecast, endSeason,
-    battle, battleTurn, autoBattle, lastBattle,
+    battle, battleTurn, autoBattle, lastBattle, withdraw, advise, adviseCards,
     cal: (g) => cal(g, g.season), fmt,
     // for tests and the balance report, not for the UI: the true plan and the one the player reads
     internal: {
       plan: (g, ids, target) => planFor(g, [].concat(ids), target, null),
       seenPlan: (g, ids, target) => planFor(g, [].concat(ids), target, g.me),
-      forecastKey, economy, project, reachOf, seenUnits, seenGar, defenders, battleGen, proposal, hash32,
+      forecastKey, economy, project, reachOf, seenUnits, seenGar, defenders, battleGen, proposal, hash32, alerts, hopeless, danger, fallIn,
     },
   };
 });

@@ -17,10 +17,12 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
 const V2 = require(path.join(ROOT, 'src/engine/v2/huainan.js'));
 const Battle = require(path.join(ROOT, 'src/engine/battle.js'));
-const DATA = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/scenario/huainan.json'), 'utf8'));
+// V2SIM_DATA=path: another scenario file with the same shape (a balance experiment), instead of the demo's
+const DATA = JSON.parse(fs.readFileSync(process.env.V2SIM_DATA || path.join(ROOT, 'data/scenario/huainan.json'), 'utf8'));
 
 const TRACE = process.argv[2] === '--trace' ? { policy: process.argv[3] || 'greedy', seed: Number(process.argv[4]) || 1 } : null;
 const N = Math.max(1, Number(process.argv[2]) || 200);
+const ONLY = !TRACE && process.argv[3] ? process.argv[3].split(',') : null; // `npm run v2sim -- 200 greedy,advise`: only these
 const CAP = 24; // seasons: six years, then the game counts as undecided
 const RANK = Object.fromEntries(Battle.LABELS.map(([, l], i) => [l, Battle.LABELS.length - 1 - i])); // Thắng lớn 4 … Thua lớn 0
 
@@ -82,6 +84,24 @@ const POLICIES = {
     },
     battle: (g) => ({ g: V2.battleTurn(g, {}), touches: 1 }),
   },
+  // the general's own plan (V2.advise, what the watch mode plays): his answers to the cards, his orders and tasks; each
+  // battle on his proposals, yielded before the first turn when it is hopeless
+  advise: {
+    season(g) {
+      let touches = 0;
+      for (const c of V2.adviseCards(g)) { g = V2.answer(g, c.card, c.yes); touches++; }
+      for (const x of V2.advise(g)) {
+        if (x.type === 'order') { if (x.target) { g = V2.order(g, x.army, x.target, x.intent); touches++; } }
+        else { g = V2.setTask(g, x.town, x.key); touches++; }
+      }
+      return { g, touches };
+    },
+    battle(g) {
+      const B = V2.battle(g);
+      if (B.hopeless && B.withdraw) return { g: V2.withdraw(g), touches: 1 };
+      return { g: V2.battleTurn(g, {}), touches: 1 };
+    },
+  },
   random: {
     season(g, r) {
       let touches = 0;
@@ -113,7 +133,7 @@ const POLICIES = {
 
 function play(policy, seed, trace) {
   const P = POLICIES[policy], r = rng(seed);
-  let g = V2.newGame(DATA, seed), touches = 0, battles = 0, won = 0;
+  let g = V2.newGame(DATA, seed), touches = 0, battles = 0, won = 0, lost = 0, fell = 0, warned = 0, yielded = 0;
   while (!g.over && g.season <= CAP) {
     const s = P.season(g, r);
     if (trace) {
@@ -132,11 +152,16 @@ function play(policy, seed, trace) {
       g = b.g;
       if (!g.pending || g.pending.id !== before.id) { const f = g.fought[g.fought.length - 1]; if (f && f.win === f.me) won++; }
     }
+    // the setbacks of the season: battles of ours lost, towns of ours that fell, a floor's warning
+    lost += g.report.fought.filter((f) => f.win !== f.me).length;
+    fell += g.report.taken.filter((t) => t.from === g.me).length;
+    yielded += (g.report.battles || []).filter((b) => b.yielded).length;
+    if (g.warn.luong || g.warn.uy) warned++;
     if (trace) for (const l of g.report.lines) console.log('    ' + l);
   }
   if (trace) console.log(g.over ? (g.over.win ? 'THẮNG: ' : 'THUA: ') + g.over.why : 'chưa ngã ngũ sau ' + CAP + ' mùa');
   const seasons = g.season - 1;
-  return { seed, win: g.over ? g.over.win : null, why: g.over ? g.over.why : 'chưa ngã ngũ', seasons, touches, battles, won, towns: ownTowns(g).length };
+  return { seed, win: g.over ? g.over.win : null, why: g.over ? g.over.why : 'chưa ngã ngũ', seasons, touches, battles, won, lost, fell, warned, yielded, towns: ownTowns(g).length };
 }
 
 const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0) + '%';
@@ -146,7 +171,7 @@ const median = (xs) => { if (!xs.length) return 0; const s = xs.slice().sort((a,
 if (TRACE) { play(TRACE.policy, TRACE.seed, true); process.exit(0); }
 const t0 = process.hrtime.bigint();
 console.log('Demo Hoài Nam (v2) · ' + N + ' ván mỗi lối chơi · tối đa ' + CAP + ' mùa\n');
-for (const policy of Object.keys(POLICIES)) {
+for (const policy of Object.keys(POLICIES).filter((k) => !ONLY || ONLY.includes(k))) {
   const runs = [];
   for (let seed = 1; seed <= N; seed++) runs.push(play(policy, seed));
   const wins = runs.filter((x) => x.win === true), losses = runs.filter((x) => x.win === false), open = runs.filter((x) => x.win === null);
@@ -157,7 +182,10 @@ for (const policy of Object.keys(POLICIES)) {
   const battles = runs.reduce((s, x) => s + x.battles, 0), won = runs.reduce((s, x) => s + x.won, 0);
   console.log(policy);
   console.log('  thắng ' + pct(wins.length, N) + ' · thua ' + pct(losses.length, N) + ' · chưa ngã ngũ ' + pct(open.length, N));
-  console.log('  mùa tới hết ván: trung bình ' + mean(ended).toFixed(1) + ' · trung vị ' + median(ended) + (wins.length ? ' · thắng sau ' + mean(wins.map((x) => x.seasons)).toFixed(1) + ' mùa' : ''));
+  console.log('  mùa tới hết ván: trung bình ' + mean(ended).toFixed(1) + ' · trung vị ' + median(ended) + (wins.length ? ' · thắng sau ' + mean(wins.map((x) => x.seasons)).toFixed(1) + ' mùa (trung vị ' + median(wins.map((x) => x.seasons)) + ')' : ''));
+  // setbacks: how often a game has a battle lost or a town lost on the way (the freeze's "với vấp ngã")
+  const hurt = runs.filter((x) => x.lost || x.fell);
+  console.log('  vấp: ' + pct(hurt.length, N) + ' số ván thua trận hay mất thành · mỗi ván thua ' + mean(runs.map((x) => x.lost)).toFixed(1) + ' trận, mất ' + mean(runs.map((x) => x.fell)).toFixed(1) + ' thành, bỏ ' + mean(runs.map((x) => x.yielded)).toFixed(1) + ' trận · mùa bị cảnh báo đáy ' + mean(runs.map((x) => x.warned)).toFixed(1) + (wins.length ? ' · ván thắng có vấp ' + pct(wins.filter((x) => x.lost || x.fell).length, wins.length) : ''));
   console.log('  lần chạm mỗi mùa: ' + tps.toFixed(1) + ' · trận của ta mỗi ván: ' + (battles / N).toFixed(1) + ' (thắng ' + pct(won, battles) + ')');
   console.log('  thành cuối ván: ' + mean(runs.map((x) => x.towns)).toFixed(1));
   for (const [w, n] of Object.entries(why).sort((a, b) => b[1] - a[1])) console.log('    thua: ' + w + ' ' + pct(n, N));

@@ -37,11 +37,21 @@ V2.forecast(g, armyIds, target) → { label, sa, sd, est: { la, ld }, reasons: [
                                                đọc trên quân địch như View cho thấy (không truth); không bao giờ có tỉ lệ thật
 V2.endSeason(g) → g                            thẻ chưa trả lời = "không"; AI; đi; trận. Có trận của người chơi → g.pending ≠ null, dừng chờ;
                                                không → hết mùa (vây, việc, thu chi, Trung, chạm đáy, thắng thua), g.report, mùa mới
-V2.battle(g) → null | { plan, b, me: 'A'|'D', proposed: { wingId: order } }
+V2.battle(g) → null | { plan, b, me: 'A'|'D', proposed: { wingId: order }, hopeless, withdraw: null | { lines: [string] } }
                                                b là state của Battle (src/engine/battle.js); proposed = lệnh tướng đề xuất cho cánh ta
+                                               (29/9) b và plan không có rs, luck, plan.seed; tướng địch chỉ { id, name, lord, traits }
+                                               hopeless: không cách nào của ta thắng hay hòa (6 ngày khác, 3 cách đánh, trên bàn trận hai bên thấy)
+                                               withdraw: trước lượt 1, giá của việc bỏ trận (các dòng để hiện ngay trên nút)
 V2.battleTurn(g, overrides) → g                overrides = { wingId: order } (chỉ cánh người chơi đổi); cánh khác theo đề xuất; bên kia tự động.
                                                Trận hết → áp hậu quả, sang trận kế hoặc hết mùa
 V2.autoBattle(g) → g                           đánh hết trận bằng đề xuất (người chơi bỏ qua)
+V2.withdraw(g) → g                             (29/9) bỏ trận đang chờ trước lượt 1, theo giá withdraw; rồi sang trận kế hoặc hết mùa
+V2.advise(g) → [{ type: 'order', army, target: { kind, id } | null, intent: 'move'|'attack'|'siege'|'hold', why }
+               | { type: 'task', town, key, why }]
+                                               (29/9) kế hoạch của tướng cho mùa, chỉ từ những gì người chơi thấy: mỗi đạo quân một dòng
+                                               (target null = Giữ; áp bằng V2.order(g, army, target, intent)), việc cho thành
+                                               (V2.setTask); why: một câu tiếng Việt. Chế độ Xem, nút "Đề xuất"
+V2.adviseCards(g) → [{ card, yes, why }]       (29/9) trả lời thẻ trong hàng chờ, theo thứ tự nên trả lời (V2.answer)
 ```
 
 `View` (UI và cảnh chỉ đọc cái này):
@@ -58,7 +68,15 @@ V2.autoBattle(g) → g                           đánh hết trận bằng đ�
   cards: [{ id, kind: 'history'|'envoy'|'general'|'captive', who, gen, title, text, yes: { label, fx }, no: { label, fx }, urgent }],
   gens: { [id]: GenCard },                      // tướng ta, đủ chỉ số; tướng địch chỉ { id, name, fid, seal }
   report: null | { season, lines: [string], fought: [{ site, win, me, la, ld }], income, towns,
-            taken: [{ town, from, to, siege }] }   thành đổi chủ trong mùa, theo thứ tự mất (vây mở cổng: siege true)
+            taken: [{ town, from, to, siege, yielded? }],   thành đổi chủ trong mùa, theo thứ tự mất (vây mở cổng: siege true; bỏ thành: yielded)
+            done: [{ town, key }],                 (29/9) việc xong mùa này ở thành ta
+            sieges: [{ town, by, armies, fresh, walls, open }],   (29/9) vây của ta mùa này (fresh: vừa vây; open: mở cổng)
+            battles: [{ site, a, d, win, me, yielded? }] }         (29/9) trận ta thấy: của ta, và của phe khác gần ta (không số)
+  moves: [{ id, fid, from, to, attack?, siege?, retreat?, leave?, arrive? }],
+                                                (29/9) đường đi trong mùa, chỉ quân ta và quân phe khác đầu hay cuối ở chỗ ta thấy;
+                                                from null + arrive: vào Hoài Nam từ ngoài; to null + leave: rời Hoài Nam
+  alerts: [{ key: 'luong'|'uy', level: 'soon'|'floor', text, fix: [string] }]
+                                                (29/9) cảnh báo đáy sớm một mùa, kèm cách cứu còn hợp lệ (GPT D9); rỗng khi đang có trận
 }
 GenCard = { id, name, fid, seal, cls?, uy?, tai?, muu?, dung?, kien?, loyal?, trait?, traitText? }
 ```
