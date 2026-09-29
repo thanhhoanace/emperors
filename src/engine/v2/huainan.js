@@ -296,13 +296,15 @@
     });
   }
   // 2–3 tasks by context: a town an enemy can reach walls up and recruits; a rear town farms and trades; a river town
-  // without boats builds them. The rest stay under "more" (freeze B, owner 29/9).
+  // without boats builds them. The rest stay under "more" (freeze B, owner 29/9). A front town where an army of ours
+  // stands recruits first: the new men join that army (29/9)
   function suggest(g, tid, all) {
     const t = g.towns[tid], d = place(g, tid);
     if (t.owner !== g.me || (t.task && !t.task.fresh)) return [];
     const front = threatened(g, tid);
     const boats = (t.gar.thuy || 0) > 0 || armiesOf(g, g.me).some((a) => a.at === tid && a.arm === 'fleet');
-    const want = (front ? ['luy', 'mo_bo'] : ['ruong', 'cho']).concat(d.river && !boats ? ['mo_thuy'] : []);
+    const camp = armiesOf(g, g.me).some((a) => a.at === tid && a.arm === 'land' && !a.besieging);
+    const want = (front ? (camp ? ['mo_bo', 'luy'] : ['luy', 'mo_bo']) : ['ruong', 'cho']).concat(d.river && !boats ? ['mo_thuy'] : []);
     const spare = front ? ['mo_cung', 'ruong', 'mo_ky', 'cho'] : ['mo_bo', 'luy', 'mo_cung', 'mo_ky'];
     const can = (k) => { const x = all.find((y) => y.key === k); return !!x && !x.rule; };
     const out = want.filter(can).slice(0, 3);
@@ -1295,20 +1297,34 @@
     };
     // an army whose going would open the town of ours it stands in to an enemy in reach stays: "Giữ" with the reason
     const xmemo = {};
-    const exposes = (id) => {
+    // (going at the very enemy that threatens it, or at the town he stands in, is not leaving it open)
+    const exposes = (id, tg) => {
       const a = h.armies[id], key = id + '|' + Object.keys(leaving).sort().join(',');
-      if (key in xmemo) return xmemo[key];
-      if (a.besieging || h.towns[a.at].owner !== me || threatened[a.at]) return (xmemo[key] = false);
-      const t = copy(h);
-      for (const x of armiesOf(t, me)) if (x.at === a.at && (leaving[x.id] || x.id === id)) delete t.armies[x.id];
-      const d = dz(t, a.at);
-      if (d.p >= DANGER) why[id] = 'Giữ ' + townName(h, a.at) + ': đi thì ' + comes(d) + '.';
-      return (xmemo[key] = d.p >= DANGER);
+      if (!(key in xmemo)) {
+        let d = { p: 0, who: null };
+        if (!a.besieging && h.towns[a.at].owner === me && !threatened[a.at]) {
+          const t = copy(h);
+          for (const x of armiesOf(t, me)) if (x.at === a.at && (leaving[x.id] || x.id === id)) delete t.armies[x.id];
+          d = dz(t, a.at);
+        }
+        xmemo[key] = d;
+      }
+      const d = xmemo[key];
+      if (d.p < DANGER) return false;
+      if (tg && d.who && !d.who.memory && (tg.kind === 'army' ? tg.id === d.who.id : tg.id === d.who.at)) return false;
+      why[id] = 'Giữ ' + townName(h, a.at) + ': đi thì ' + comes(d) + '.';
+      return true;
     };
     const tname = (t) => (t.kind === 'town' ? townName(h, t.id) : armyName(h, h.armies[t.id]));
     const inReach = (id, t) => targets(h, id).some((x) => x.kind === t.kind && x.id === t.id);
     const fc = (ids, t) => { const k = ids.slice().sort().join('+') + '>' + t.kind + ':' + t.id; if (!(k in fmemo)) fmemo[k] = forecast(h, ids, t); return fmemo[k]; };
     const vanguard = h.vanguard && h.armies[h.vanguard.army] ? h.vanguard.army : null;
+    // a race the history cards set: a town the remembered enemy comes back to, still the enemy's, is worth taking first
+    const race = {};
+    for (const c of g0.data.cards || []) {
+      const b = c.params && c.params.back;
+      if (b && b.season > h.season && h.towns[b.town] && hostile(h, me, h.towns[b.town].owner) && !Object.values(h.armies).some((a) => a.gen === b.gen)) race[b.town] = b;
+    }
 
     // the best strike the free armies have: a weak town that opens this season, a battle the general reads as won, a
     // siege that opens within three seasons (its army safe from a sally). Scores: 100 / 70–90 / 36–52
@@ -1319,21 +1335,25 @@
       let best = null;
       const take = (x) => { if (!best || x.score > best.score) best = x; };
       for (const t of Object.values(cands)) {
-        const group = ids.filter((id) => inReach(id, t) && !exposes(id));
+        const group = ids.filter((id) => inReach(id, t) && !exposes(id, t));
         if (!group.length) continue;
-        const bonus = vanguard && group.indexOf(vanguard) !== -1 ? 5 : 0;
+        const bonus = (vanguard && group.indexOf(vanguard) !== -1 ? 5 : 0) + (t.kind === 'town' && race[t.id] ? 65 : 0);
         if (t.kind === 'town') {
           const already = armiesOf(h, me).filter((a) => a.besieging === t.id).map((a) => a.id);
-          const fall = fallIn(h, t.id, menOf(h, group) + menOf(h, already));
+          // the besiegers sit outside the walls: only armies that outnumber any army inside, which may sally
           const inside = Object.values(h.armies).filter((e) => e.at === t.id && e.fid === h.towns[t.id].owner && !e.besieging);
-          const weakest = Math.min.apply(null, group.map((i) => total(h.armies[i].units)));
-          const safe = inside.every((e) => weakest >= guessMen(h, e) * 1.3);
-          if (fall && fall <= 3 && safe) take({ score: (fall === 1 ? 100 : 60 - 8 * fall) + bonus, t, group, intent: 'siege', line: fall === 1 ? 'Vây ' + townName(h, t.id) + ': thủ yếu, mở cổng ngay cuối mùa này, không phải đánh.' : 'Vây ' + townName(h, t.id) + ': đồn đói dần, lũy −1 mỗi mùa; ước mở cổng sau ' + fall + ' mùa.' });
-          // an army inside that our besiegers outnumber: the siege draws it out to fight in the open
-          else if (inside.length && safe) take({ score: 45 + bonus, t, group, intent: 'siege', line: 'Vây ' + townName(h, t.id) + ': dụ ' + armyName(h, inside[0]) + ' ra đánh ngoài thành; lũy −1, đồn −20% mỗi mùa.' });
-          const f0 = fc(group, t);
-          // a storm not yet good: a siege first brings the walls down and starves the garrison
-          if (safe && f0 && RANK[f0.label] >= RANK['Thua'] && RANK[f0.label] < RANK['Thắng'] && h.towns[t.id].walls > 0) take({ score: 30 + bonus, t, group, intent: 'siege', line: 'Vây ' + townName(h, t.id) + ' trước: lũy −1, đồn −20% mỗi mùa, rồi mới đánh (tướng đoán đánh ngay: ' + f0.label + ').' });
+          const need = Math.max.apply(null, [0].concat(inside.map((e) => guessMen(h, e) * 1.3)));
+          const sg = group.filter((i) => total(h.armies[i].units) >= need);
+          const sb = (vanguard && sg.indexOf(vanguard) !== -1 ? 5 : 0) + (race[t.id] ? 65 : 0);
+          if (sg.length) {
+            const fall = fallIn(h, t.id, menOf(h, sg) + menOf(h, already));
+            if (fall && fall <= 3) take({ score: (fall === 1 ? 100 : 60 - 8 * fall) + sb, t, group: sg, intent: 'siege', line: fall === 1 ? 'Vây ' + townName(h, t.id) + ': thủ yếu, mở cổng ngay cuối mùa này, không phải đánh.' : 'Vây ' + townName(h, t.id) + ': đồn đói dần, lũy −1 mỗi mùa; ước mở cổng sau ' + fall + ' mùa.' });
+            // an army inside that our besiegers outnumber: the siege draws it out to fight in the open
+            else if (inside.length) take({ score: 45 + sb, t, group: sg, intent: 'siege', line: 'Vây ' + townName(h, t.id) + ': dụ ' + armyName(h, inside[0]) + ' ra đánh ngoài thành; lũy −1, đồn −20% mỗi mùa.' });
+            // a storm not yet good: a siege first brings the walls down and starves the garrison
+            const f0 = fc(group, t);
+            if (f0 && RANK[f0.label] >= RANK['Thua'] && RANK[f0.label] < RANK['Thắng'] && h.towns[t.id].walls > 0) take({ score: 30 + sb, t, group: sg, intent: 'siege', line: 'Vây ' + townName(h, t.id) + ' trước: lũy −1, đồn −20% mỗi mùa, rồi mới đánh (tướng đoán đánh ngay: ' + f0.label + ').' });
+          }
         }
         const f = fc(group, t);
         if (f && RANK[f.label] >= RANK['Thắng']) take({ score: 70 + 5 * RANK[f.label] + bonus, t, group, intent: 'attack', line: 'Đánh ' + tname(t) + ': tướng đoán ' + f.label + ' (ta ' + fmt(f.sa) + ', địch ' + fmt(f.sd) + ').' });
@@ -1381,6 +1401,7 @@
     for (const id of Object.keys(free)) {
       const a = h.armies[id];
       if (threatened[a.at] && h.towns[a.at].owner === me) { why[id] = 'Giữ ' + townName(h, a.at) + ': địch đánh tới được.'; continue; }
+      if (exposes(id, null)) continue;
       const foe = nearestFoe(h, a.at);
       if (!foe) continue;
       const step = targets(h, id).filter((t) => t.kind === 'town' && t.intent === 'move').sort((x, y) => dist(posOf(h, x.id), posOf(h, foe)) - dist(posOf(h, y.id), posOf(h, foe)))[0];

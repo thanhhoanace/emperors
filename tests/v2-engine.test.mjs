@@ -620,8 +620,8 @@ test('tasks: every task with ok and why, 2–3 suggested by the town\'s situatio
   const all = V2.tasks(g, 'chung_ly').all;
   assert.deepEqual(all.map((x) => x.key), Object.keys(DATA.tasks));
   for (const x of all) assert.deepEqual(Object.keys(x).sort(), ['cost', 'key', 'name', 'ok', 'seasons', 'text', 'why']);
-  // Liêu can reach both our towns: walls and foot
-  assert.deepEqual(V2.tasks(g, 'chung_ly').suggested, ['luy', 'mo_bo']);
+  // Liêu can reach both our towns: walls and foot; where our army stands, foot first (the new men join it)
+  assert.deepEqual(V2.tasks(g, 'chung_ly').suggested, ['mo_bo', 'luy']);
   assert.deepEqual(V2.tasks(g, 'am_lang').suggested, ['luy', 'mo_bo']);
   assert.equal(V2.tasks(g, 'am_lang').all.find((x) => x.key === 'mo_thuy').why, 'Chỉ thành ven sông.');
   // with Liêu gone they are rear towns: fields and a market; a river town with no boats builds them
@@ -838,8 +838,12 @@ test('advise reads only what the player sees: the AI\'s settings, its dice and t
   assert.equal(a1.why, 'Giữ Chung Ly: đi thì Trương Liêu đánh tới được.');
   // a weak town in reach opens this season: the general besieges it and says so
   const w = newGame(1);
-  w.cards = []; delete w.armies.e1;
+  w.cards = []; delete w.armies.e1; w.towns.tho_xuan.owner = w.me;
   const x = V2.advise(w).find((o) => o.intent === 'siege' && o.target.id === 'hu_di');
+  // and a town history says the enemy comes back to is worth taking first: Thọ Xuân before Trương Liêu returns
+  const r = newGame(1);
+  r.cards = []; delete r.armies.e1;
+  assert.deepEqual(V2.advise(r).filter((o) => o.type === 'order').map((o) => o.target && o.target.id), ['tho_xuan', 'tho_xuan']);
   assert.ok(x, 'siege Hu Dị');
   assert.match(x.why, /mở cổng ngay cuối mùa này/);
 });
