@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,">
+<title>Cảnh Hoài Nam</title>
+<!-- Harness of src/world/huainan-scene.js (docs/design/v2-build.md §S): the scene on the normal world runtime, fed by the fixtures
+     of docs/design/v2-fixtures/ (or data/scenario/huainan.json when it exists). Serve the repo root (node server/server.js) and open
+       docs/design/prototypes/huainan.html?view=start|season2 &shot=overview|town:<id>|army:<id> &battle=turn1|turn3|over &tier=high|mid|low
+       &w=&h=&dpr=  &d=&az=&el= (camera)  &data=fixture (skip the scenario file)  &probe=1 (taps on everything, the answers in __extra)
+     Sets window.__done when drawn; window.__extra = { measure, times, … } for tools/shoot.mjs. -->
+<style>html,body{margin:0;background:#15120f;overflow:hidden}canvas{display:block}</style>
+</head><body>
+<script src="https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/utils/BufferGeometryUtils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/geometries/RoundedBoxGeometry.js"></script>
+<script src="../../../src/world/kit.js"></script>
+<script src="../../../src/world/quality.js"></script>
+<script src="../../../src/world/city.js"></script>
+<script src="../../../src/world/hancity.js"></script>
+<script src="../../../src/world/terrain.js"></script>
+<script src="../../../src/world/terrain-real.js"></script>
+<script src="../../../src/world/flora.js"></script>
+<script src="../../../src/world/world-runtime.js"></script>
+<script src="../../../src/world/han-models.js"></script>
+<script src="../../../src/world/huainan-scene.js"></script>
+<script>
+(async () => {
+  const q = new URLSearchParams(location.search), ROOT = '../../../', FIX = ROOT + 'docs/design/v2-fixtures/';
+  const W = Number(q.get('w')) || innerWidth, H = Number(q.get('h')) || innerHeight;
+  const tier = q.get('tier') || 'high', quality = Quality.pick({ override: tier });
+  const json = (u) => fetch(u).then((r) => { if (!r.ok) throw new Error(u + ' ' + r.status); return r.json(); });
+  const T0 = performance.now(), times = {};
+  try {
+    // the scenario's towns, seats and factions: data/scenario/huainan.json when it exists, else the fixture
+    const scen = q.get('data') === 'fixture' ? null : await json(ROOT + 'data/scenario/huainan.json').catch(() => null);
+    const [world, cities, view, fixData] = await Promise.all([
+      json(ROOT + 'data/world.json'), json(ROOT + 'data/cities.json').then((j) => j.cities),
+      json(FIX + 'view-' + (q.get('view') || 'start') + '.json'), scen ? null : json(FIX + 'data-towns.json'),
+    ]);
+    const data = scen || fixData;
+    times.fetchMs = Math.round(performance.now() - T0);
+    const dpr = Number(q.get('dpr')) || Math.min(quality.dpr, devicePixelRatio || 1);
+    const rt = await WorldRuntime.create({ world, cities, width: W, height: H, dpr, quality, base: ROOT + 'assets/map/', hamlets: false }); // the scene draws its own villages
+    times.runtimeMs = Math.round(performance.now() - T0 - times.fetchMs);
+    const T1 = performance.now();
+    const sc = (window.__sc = await HuaiNanScene.create(rt, { data, width: W, height: H, quality, groundMargin: q.get('gm') ? Number(q.get('gm')) : undefined }));
+    times.sceneMs = Math.round(performance.now() - T1);
+    // ?order=1: our army a1 carries an order (move to Âm Lăng), a2 an attack order on Thọ Xuân, as the View's army.order says
+    if (q.get('order')) { view.armies.find((a) => a.id === 'a1').order = { intent: 'attack', target: { kind: 'town', id: 'hu_di' } }; view.armies.find((a) => a.id === 'a2').order = { intent: 'move', target: { kind: 'town', id: 'am_lang' } }; }
+    sc.sync(view);
+    if (q.get('then')) { // the next season's View after this one: armies march, towns change hands (?then=season2)
+      sc.settle();
+      const next = await json(FIX + 'view-' + q.get('then') + '.json');
+      sc.sync(next);
+      window.__marching = Object.entries(sc.armies).filter(([, m]) => m.moving).map(([k]) => k);
+      Object.assign(view, next);
+    }
+    const marchingNow = window.__marching || [];
+    const [kind, id] = (q.get('shot') || 'overview').split(':');
+    // a plausible V2.targets for the shot: the towns and enemy armies within one season's reach
+    const targetsOf = (aid) => {
+      const a = view.armies.find((x) => x.id === aid), m = sc.armies[aid], c = m.to, R = HuaiNanScene.reachOf(a), out = [];
+      for (const t of view.towns) { const p = sc.place[t.id], d = Math.hypot(p.x - c[0], p.z - c[2]); if (d > R + 0.5 || t.id === a.at) continue; out.push({ kind: 'town', id: t.id, intent: t.owner === a.fid ? 'move' : 'ask', d: Math.round(d) }); }
+      for (const b of view.armies) { if (b.fid === a.fid) continue; const p = sc.armies[b.id].to, d = Math.hypot(p[0] - c[0], p[2] - c[2]); if (d <= R + 0.5) out.push({ kind: 'army', id: b.id, intent: 'attack', d: Math.round(d) }); }
+      return out;
+    };
+    if (kind === 'town' && sc.place[id]) { sc.focus(id); sc.select({ kind: 'town', id }); }
+    else if (kind === 'army' && sc.armies[id]) { const p = sc.armies[id].to; sc.flyTo({ t: [p[0], p[2]], dist: 78 }); sc.select({ kind: 'army', id }); sc.targets(id, targetsOf(id)); } // pulled back: the reach ring and the routes in view
+    else sc.overview();
+    sc.settle();
+    if (q.get('d') || q.get('az') || q.get('el')) { Object.assign(sc.cam, { dist: Number(q.get('d')) || sc.cam.dist, az: q.get('az') != null ? Number(q.get('az')) : sc.cam.az, el: q.get('el') != null ? Number(q.get('el')) : sc.cam.el }); sc.apply(); sc.settle(); }
+    const extra = { tier, times, marching: marchingNow, armyAt: Object.fromEntries(Object.entries(sc.armies).map(([k, m]) => [k, [+m.g.position.x.toFixed(1), +m.g.position.z.toFixed(1), m.moving ? 'moving' : 'still']])), riverSD: Object.fromEntries(Object.entries(sc.place).map(([k, p]) => [k, +rt.terr.riverSD(p.x, p.z).toFixed(2)])), cam: JSON.parse(JSON.stringify(sc.cam)), trees: sc.trees.count, towns: Object.fromEntries(Object.entries(sc.place).map(([k, p]) => [k, [+p.x.toFixed(1), +p.z.toFixed(1)]])) };
+    if (q.get('battle')) {
+      const B = await json(FIX + 'battle-' + q.get('battle') + '.json');
+      sc.battle.begin({ site: B.plan.site, from: B.b.from, me: B.me, siege: B.plan.siege });
+      sc.battle.show(B.b, B.me);
+      sc.settle();
+      extra.lanes = sc.lanesAt(B.plan.site, B.b.from);
+      if (q.get('probe')) { const cards = sc.battle.cards(); extra.wingTaps = cards.map((c) => [c.id, sc.battle.pickWing(c.x, c.y + 8)]); extra.wingMiss = sc.battle.pickWing(3, 3); }
+    } else if (q.get('probe')) {
+      extra.taps = [];
+      for (const [k, ids] of [['town', Object.keys(sc.place)], ['army', Object.keys(sc.armies)]]) for (const i of ids) { const s = sc.screenOf(k, i); if (s && s.visible) { const r = sc.pick(s.x, s.y + (k === 'army' ? 12 : 0)); extra.taps.push([k + ':' + i, r.kind + ':' + (r.id || '')]); } }
+      extra.ground = sc.pick(W * 0.5, H * 0.9);
+    }
+    extra.fleets = Object.fromEntries(Object.entries(sc.armies).filter(([, m]) => m.a.arm === 'fleet').map(([k, m]) => [k, { at: m.a.at, to: m.to.map((v) => +v.toFixed(2)), riverSD: +rt.terr.riverSD(m.to[0], m.to[2]).toFixed(2) }]));
+    extra.waterNear = Object.fromEntries(Object.entries(sc.place).filter(([, p]) => p.kind === 'town').map(([k, p]) => { let mn = 1e9; for (let r = 0.5; r < 14; r += 0.5) for (let a = 0; a < 6.28; a += 0.2) mn = Math.min(mn, rt.terr.riverSD(p.x + Math.cos(a) * r, p.z + Math.sin(a) * r)); return [k, +mn.toFixed(2)]; }));
+    if (q.get('measure') !== '0') extra.measure = sc.measure();
+    if (q.get('tri')) { // where the triangles are: the visible meshes, biggest first (one pass; the shadow pass draws the casters again)
+      const rows = [], vis = (o) => { for (let p = o; p; p = p.parent) if (!p.visible) return false; return true; };
+      const fr = new THREE.Frustum().setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(rt.camera.projectionMatrix, rt.camera.matrixWorldInverse)), wp = new THREE.Vector3();
+      rt.scene.traverse((o) => { if (!o.isMesh || !vis(o) || !o.geometry || (o.frustumCulled && !o.isInstancedMesh && !fr.intersectsObject(o))) return; const g = o.geometry, n = (g.index ? g.index.count : g.attributes.position.count) / 3 * (o.isInstancedMesh ? o.count : 1); o.getWorldPosition(wp); rows.push([Math.round(n), o.isInstancedMesh ? 'inst×' + o.count : 'mesh', o.castShadow ? 'cast' : '', o.material && o.material.type, o.parent && o.parent.type, wp.toArray().map((v) => Math.round(v)).join(','), g.attributes.position.count]); });
+      rows.sort((a, b) => b[0] - a[0]); extra.tri = { visibleMeshes: rows.length, sum: rows.reduce((s, r) => s + r[0], 0), top: rows.slice(0, 14) };
+    }
+    extra.rt = rt.stats; extra.G = rt.terr.G && { x0: rt.terr.G.x0, z0: rt.terr.G.z0, w: rt.terr.G.w, d: rt.terr.G.d }; extra.region = sc.region;
+    window.__extra = extra; window.__stats = rt.stats;
+    sc.loop(null);
+    window.__done = true;
+  } catch (e) { console.error(e); window.__error = String(e.stack || e); }
+})();
+</script></body></html>
