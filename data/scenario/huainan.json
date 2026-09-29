@@ -1,0 +1,144 @@
+{
+  "id": "huainan",
+  "name": "Hoài Nam, thu 219",
+  "seeDocs": "docs/product/GAMEPLAY-FREEZE.md (v2, tầng B); luật: src/engine/v2/huainan.js; rules.md mục Demo Hoài Nam",
+  "me": "zhu_yuanzhang",
+  "calendar": { "year": 219, "season": 2, "names": ["Xuân", "Hạ", "Thu", "Đông"] },
+  "towns": [
+    { "id": "chung_ly", "name": "Chung Ly", "seat": "huai", "lonlat": null, "xz": [170.4, -51.3], "river": "hoai", "terrain": "Đồng bằng ven sông Hoài", "lanes": ["open", "ford", "open"] },
+    { "id": "tho_xuan", "name": "Thọ Xuân", "seat": null, "lonlat": [116.78, 32.58], "xz": [144.7, -35.7], "river": "hoai", "terrain": "Đồng bằng, sông Phì chảy qua", "lanes": ["open", "ford", "wood"] },
+    { "id": "am_lang", "name": "Âm Lăng", "seat": null, "lonlat": [117.72, 32.52], "xz": [173.7, -37.0], "river": null, "terrain": "Đồng bằng, rừng thưa", "lanes": ["open", "open", "wood"] },
+    { "id": "hu_di", "name": "Hu Dị", "seat": null, "lonlat": [118.52, 33.0], "xz": [195.6, -58.1], "river": "hoai", "terrain": "Gò đồi ven hồ", "lanes": ["wood", "open", "ford"] },
+    { "id": "lich_duong", "name": "Lịch Dương", "seat": null, "lonlat": [118.36, 31.74], "xz": [197.1, -10.5], "river": "giang", "terrain": "Bờ bắc Trường Giang", "lanes": ["ford", "open", "open"] }
+  ],
+  "seats": [
+    { "id": "xu", "name": "Bành Thành" },
+    { "id": "yang", "name": "Kiến Nghiệp" },
+    { "id": "yan", "name": "Xương Ấp" },
+    { "id": "yu", "name": "Hứa Xương" }
+  ],
+  "factions": {
+    "zhu_yuanzhang": { "name": "Chu Nguyên Chương", "short": "Minh", "glyph": "明", "color": "#b3262e" },
+    "cao_cao": { "name": "Tào Tháo", "short": "Tào", "glyph": "魏", "color": "#4d6a3a" },
+    "sun_quan": { "name": "Tôn Quyền", "short": "Ngô", "glyph": "吳", "color": "#d9772a" },
+    "local": { "name": "Hào tộc", "short": "Hào tộc", "glyph": "豪", "color": "#8a7a55" }
+  },
+  "generals": {
+    "zhu": { "name": "Chu Nguyên Chương", "fid": "zhu_yuanzhang", "seal": "朱", "cls": "Thống soái", "uy": 9, "tai": 7, "muu": 7, "dung": 6, "kien": 8, "loyal": 100, "lord": true, "trait": "Xuất thân bần nông", "traitText": "Bộ và cung +7 sĩ khí.", "traits": ["commoner"] },
+    "zhu_huan": { "name": "Chu Hoàn", "fid": "zhu_yuanzhang", "seal": "桓", "cls": "Tiên phong", "uy": 5, "tai": 4, "muu": 3, "dung": 8, "kien": 6, "loyal": 72, "trait": "Thủy chiến", "traitText": "Thuyền +20%.", "traits": ["navy"] },
+    "zhang_liao": { "name": "Trương Liêu", "fid": "cao_cao", "seal": "遼", "cls": "Tiên phong", "uy": 8, "tai": 6, "muu": 6, "dung": 10, "kien": 8, "loyal": 90, "trait": "Uy chấn Tiêu Dao", "traitText": "Kỵ xung phong +25%.", "traits": ["charge"] },
+    "man_chong": { "name": "Mãn Sủng", "fid": "cao_cao", "seal": "寵", "cls": "Thủ tướng", "uy": 6, "tai": 8, "muu": 8, "dung": 4, "kien": 8, "loyal": 95, "trait": "Giữ thành", "traitText": "Lũy tính thêm một bậc.", "traits": ["walls"] },
+    "zhou_tai": { "name": "Chu Thái", "fid": "sun_quan", "seal": "泰", "cls": "Mãnh tướng", "uy": 5, "tai": 5, "muu": 4, "dung": 9, "kien": 10, "loyal": 95, "trait": "Mình đầy thương tích", "traitText": "Cánh của ông không tan trước lượt 4.", "traits": ["stubborn"] },
+    "tran": { "name": "Trần Kiểu", "fid": "local", "seal": "矯", "cls": "Hào trưởng", "uy": 4, "tai": 6, "muu": 5, "dung": 3, "kien": 5, "loyal": 60, "trait": "Hào tộc Hu Dị", "traitText": "Dân Hu Dị theo ông.", "traits": [] }
+  },
+  "start": {
+    "res": { "luong": 1200, "tien": 900, "uy": 50 },
+    "towns": {
+      "chung_ly": { "owner": "zhu_yuanzhang", "gar": { "bo": 800 }, "walls": 2, "dan": 24000, "gov": null },
+      "am_lang": { "owner": "zhu_yuanzhang", "gar": { "bo": 500 }, "walls": 1, "dan": 12000, "gov": null },
+      "tho_xuan": { "owner": "cao_cao", "gar": { "bo": 2000, "cung": 600 }, "walls": 3, "dan": 30000, "gov": "man_chong" },
+      "hu_di": { "owner": "local", "gar": { "bo": 1200 }, "walls": 1, "dan": 14000, "gov": "tran" },
+      "lich_duong": { "owner": "local", "gar": { "bo": 700 }, "walls": 1, "dan": 10000, "gov": null }
+    },
+    "armies": [
+      { "id": "a1", "fid": "zhu_yuanzhang", "gen": "zhu", "arm": "land", "at": "chung_ly", "units": { "bo": 3200, "cung": 1000, "ky": 800 } },
+      { "id": "a2", "fid": "zhu_yuanzhang", "gen": "zhu_huan", "arm": "fleet", "at": "chung_ly", "units": { "thuy": 1800, "bo": 600 } },
+      { "id": "e1", "fid": "cao_cao", "gen": "zhang_liao", "arm": "land", "at": "tho_xuan", "units": { "bo": 2000, "cung": 500, "ky": 3500 } },
+      { "id": "e2", "fid": "sun_quan", "gen": "zhou_tai", "arm": "fleet", "at": "lich_duong", "units": { "thuy": 3000, "bo": 1000 } }
+    ],
+    "chronicle": "Chu Nguyên Chương tỉnh dậy ở Chung Ly, Hoài Nam, với hai đạo quân và hai thành."
+  },
+  "ai": {
+    "cao_cao": { "style": "strike", "strike": 0.6, "growth": 150, "recall": { "gen": "zhang_liao", "season": 1, "text": "Tào Tháo gọi Trương Liêu về cứu Phàn Thành. Kỵ binh Tào rời Thọ Xuân lên bắc.", "chronicle": "Trương Liêu rời Hoài Nam." } },
+    "sun_quan": { "style": "river", "target": "lich_duong", "chance": 0.35, "leave": { "season": 2, "text": "Thuyền Chu Thái ngược sông về tây: Ngô đánh Kinh Châu." } },
+    "local": { "style": "hold", "growth": 50 }
+  },
+  "rebels": "local",
+  "texts": {
+    "win": "Năm thành Hoài Nam về một mối.",
+    "lostAll": "Mất cả Hoài Nam.",
+    "lordFell": "{name} tử trận ở {site}.",
+    "famine": "Hai mùa liền hết lương: quân làm binh biến, trói ta nộp cho Tào.",
+    "revolt": "Uy về 0 hai mùa: dân Hoài Nam nổi dậy, ta mất ngôi.",
+    "famineWarn": "Kho lương âm: quân đói, 10% bỏ trốn. Mùa sau còn âm là binh biến.",
+    "revoltWarn": "Uy về 0: dân bất phục. Mùa sau còn 0 là nổi loạn."
+  },
+  "tasks": {
+    "ruong": { "name": "Khai ruộng", "seasons": 2, "cost": { "tien": 300 }, "text": "Lương thu ở thành này +25%", "done": { "farm": true } },
+    "luy": { "name": "Đắp lũy", "seasons": 2, "cost": { "tien": 400 }, "text": "Lũy +1: thủ thành +20%", "done": { "walls": 1 } },
+    "cho": { "name": "Dựng chợ", "seasons": 2, "cost": { "tien": 300 }, "text": "Tiền +200 mỗi mùa", "done": { "market": true } },
+    "mo_bo": { "name": "Mộ bộ binh", "seasons": 1, "cost": { "tien": 250, "luong": 150 }, "text": "+1.000 bộ vào đồn", "done": { "add": { "bo": 1000 }, "dan": 1000 } },
+    "mo_cung": { "name": "Mộ cung thủ", "seasons": 1, "cost": { "tien": 300, "luong": 100 }, "text": "+600 cung vào đồn", "done": { "add": { "cung": 600 }, "dan": 600 } },
+    "mo_ky": { "name": "Mua ngựa, mộ kỵ", "seasons": 1, "cost": { "tien": 500, "luong": 150 }, "text": "+400 kỵ vào đồn", "done": { "add": { "ky": 400 }, "dan": 400 } },
+    "mo_thuy": { "name": "Đóng thuyền", "seasons": 1, "cost": { "tien": 400, "luong": 100 }, "text": "+600 thủy binh (thành ven sông)", "river": true, "done": { "add": { "thuy": 600 }, "dan": 600 } }
+  },
+  "cards": [
+    {
+      "id": "history_fan", "kind": "history", "when": { "season": 1 },
+      "who": "Ký ức người xuyên không",
+      "title": "Quan Vũ sắp dìm bảy quân ở Phàn Thành",
+      "text": "Tháng 8 năm 219. Ta nhớ: Tào Tháo sẽ gọi quân Hoài Nam về cứu Tương Dương. Trương Liêu có thể rời Thọ Xuân ngay mùa này, hoặc không.",
+      "yes": { "label": "Tung tin Hoài Nam yếu", "fx": "Tào rút Trương Liêu: 85% · Uy −5" },
+      "no": { "label": "Im lặng chờ", "fx": "Tào rút Trương Liêu: 50%" },
+      "effect": "rumor", "params": { "yes": 0.85, "no": 0.5, "uy": -5 },
+      "chronicle": { "yes": "Tung tin Hoài Nam suy yếu để Tào rút Trương Liêu.", "no": "Im lặng chờ Tào tự rút quân." }
+    },
+    {
+      "id": "envoy_wu", "kind": "envoy", "when": { "season": 1 }, "gen": "zhou_tai",
+      "who": "Sứ Ngô",
+      "title": "Tôn Quyền xin kết minh đánh Tào",
+      "text": "Ngô không động tới đất ta. Đổi lại Ngô lấy Lịch Dương. Thuyền Ngô giúp ta khi ta đánh ven sông.",
+      "yes": { "label": "Kết minh", "fx": "Ngô lấy Lịch Dương · +1.200 thủy Ngô khi ta đánh ven sông" },
+      "no": { "label": "Từ chối", "fx": "Ngô tự do · Lịch Dương còn bỏ ngỏ" },
+      "effect": "alliance", "params": { "fid": "sun_quan", "boats": 1200 },
+      "chronicle": { "yes": "Kết minh với Tôn Quyền, nhường Lịch Dương." }
+    },
+    {
+      "id": "local_hudi", "kind": "envoy", "when": { "season": 1 }, "gen": "tran",
+      "who": "Hào tộc Hu Dị",
+      "title": "Trần Kiểu xin quy thuận",
+      "text": "Ông mở cổng Hu Dị nếu ta tha thuế hai mùa và giữ ông làm huyện lệnh.",
+      "yes": { "label": "Nhận", "fx": "Hu Dị về ta · Lương −300 · miễn thuế 2 mùa" },
+      "no": { "label": "Đòi hàng vô điều kiện", "fx": "Uy +3 · muốn Hu Dị thì phải đánh" },
+      "effect": "submit", "params": { "town": "hu_di", "luong": -300, "taxFree": 2, "loyal": 65, "uyNo": 3, "flash": "Hu Dị mở cổng." },
+      "chronicle": { "yes": "Trần Kiểu dâng Hu Dị." }
+    },
+    {
+      "id": "gen_zhuhuan", "kind": "general", "when": { "season": 1 }, "gen": "zhu_huan",
+      "who": "Tướng dưới trướng",
+      "title": "Chu Hoàn xin làm tiên phong",
+      "text": "Tướng thủy trẻ, gan (Dũng 8) nhưng ít mưu (Mưu 3), đang cầm đạo thủy 1.800 thuyền binh và 600 bộ. Ông xin đánh trước để lập công.",
+      "yes": { "label": "Cho làm tiên phong", "fx": "Trung 72 → 82: quân ông +3 sĩ khí. Nhưng mùa này đạo thủy phải Đánh hoặc Vây, không thì Trung −15." },
+      "no": { "label": "Bắt chờ lệnh", "fx": "Trung 72 → 60: quân ông −3 sĩ khí khi ra trận." },
+      "effect": "vanguard", "params": { "yes": 10, "no": -12, "broken": -15 }
+    },
+    {
+      "id": "history_lu", "kind": "history", "when": { "season": 2 },
+      "who": "Ký ức người xuyên không",
+      "title": "Lã Mông áo trắng qua sông",
+      "text": "Đông 219. Ngô sắp đánh úp Kinh Châu. Thuyền Chu Thái sẽ bị gọi về tây, Lịch Dương bỏ ngỏ.",
+      "yes": { "label": "Đòi Lịch Dương hàng", "fx": "Uy ≥ 45: Lịch Dương hàng ta · Ngô thù ta" },
+      "no": { "label": "Đứng ngoài", "fx": "Không gì đổi" },
+      "effect": "demand", "params": { "town": "lich_duong", "from": "local", "uy": 45, "angers": "sun_quan", "flash": "Lịch Dương mở cổng.", "fail": "Lịch Dương không nghe." },
+      "chronicle": { "yes": "Lịch Dương hàng ta khi thuyền Ngô đi vắng." }
+    },
+    {
+      "id": "gen_zhuhuan_unhappy", "kind": "general", "when": { "from": 2, "gen": "zhu_huan", "loyalBelow": 55 }, "repeat": true, "gen": "zhu_huan",
+      "who": "Tướng dưới trướng",
+      "title": "Chu Hoàn bất mãn",
+      "text": "Lòng trung còn {loyal}. Ông đòi được giữ một thành.",
+      "yes": { "label": "Giao Âm Lăng", "fx": "Trung +20; ông làm trấn thủ Âm Lăng." },
+      "no": { "label": "Mắng", "fx": "Trung −10. Dưới 30 thì ông bỏ đi, mang cả đạo thủy." },
+      "effect": "appease", "params": { "town": "am_lang", "yes": 20, "no": -10 }
+    },
+    {
+      "id": "captive", "kind": "captive", "when": { "captive": true },
+      "who": "Tù binh",
+      "title": "Bắt sống {name}",
+      "text": "{name} ({cls}, Mưu {muu}, Dũng {dung}) bị trói trước trướng. Trung với chủ cũ {loyal}.",
+      "yes": { "label": "Chiêu hàng", "fx": "{pct}% theo ta; không thì chém" },
+      "no": { "label": "Thả về", "fx": "Uy +6" },
+      "effect": "captive", "params": { "loyalHigh": 85, "pHigh": 0.25, "pLow": 0.6, "loyalNew": 55, "uyFree": 6 }
+    }
+  ]
+}
