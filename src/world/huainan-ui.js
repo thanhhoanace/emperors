@@ -16,13 +16,13 @@
 //   ui.askIntent(target)         enemy town: "Đánh ngay" / "Vây"   ·   ui.forecast(f, act?, { partners?, preview? })
 //   ui.cards(list?)              queue + badge; opens when the badge is tapped, or by itself for an urgent card
 //   ui.battle(state)             state = V2.battle(g) (+ outcome when b.over); ui.battle.selectWing(id); ui.battle(null)
-//   ui.report(r) · ui.goal(info?) · ui.over(o) · ui.close()
+//   ui.report(r) · ui.beat({ town, from, to, siege }) a town changing hands, over the map · ui.goal(info?) · ui.over(o) · ui.close()
 //   ui.labels([{ kind, id, x, y }])  map chips (town / army) at screen px, drawn centred above (x, y)
 //   ui.tap({ kind, id }|null)    what a tap on the map does (chip taps call it): pick a target, or select
 //   handlers: onEndSeason() onSelect(sel|null) onTarget({ army, kind, id, intent }) onForecast({ armies, kind, id, intent })
 //     onPartner(armyId) onConfirmOrder(act) onCancel(what) onClearOrder(armyId) onTask(townId, key|null) onAnswer(cardId, yes)
 //     onBattleOrder(wingId, order) onWingSelect(wingId) onBattleTurn(overrides) onAutoBattle() onBattleDone()
-//     onReportDone() onGoalDone() onAgain() onOverview()
+//     onReportDone() onBeatDone() onGoalDone() onAgain() onOverview()
 (function () {
   'use strict';
 
@@ -212,6 +212,9 @@
 .hn-full .go{min-height:46px;border-radius:11px;border:1px solid var(--rl);background:var(--rd);font:700 15px var(--ser);color:#fbf1dc;text-align:center;display:flex;align-items:center;justify-content:center}
 .hn-full .fp.ov{width:min(640px,100%);align-items:flex-start}.hn-full .ov .h1{font-size:30px}.hn-full .ov .why{font-size:15px;line-height:1.5;color:#f6eedb}
 .hn-full .fp .go{align-self:stretch}
+/* a town changing hands: a card at the bottom, the map (camera on the town) left in view */
+.hn-full.beat{background:none;place-items:end center;pointer-events:none;padding-bottom:16px}.hn-full.beat .fp{pointer-events:auto;width:min(440px,100%);gap:6px;padding:12px 16px 14px}
+.hn-full.beat .h1{font-size:19px;color:var(--c)}.hn-full.beat .why{font-size:13.5px;line-height:1.45;color:#e6dbc3}
 `;
 
   // ------------------------------------------------------------------------------ helpers
@@ -543,12 +546,20 @@
         (r.fought || []).forEach((f) => { const meS = f.me || 'A', draw = f.win === 'draw', won = f.win === meS, lo = meS === 'A' ? f.la : f.ld, lf = meS === 'A' ? f.ld : f.la; h += '<div class="fb" style="--c:' + (draw ? TONE.gold : won ? TONE.good : TONE.bad) + '"><span><b>' + (draw ? 'Hòa' : won ? 'Thắng' : 'Thua') + '</b> · ' + esc(townName(f.site)) + '</span><span class="num">ta mất ' + num(lo) + ' · địch mất ' + num(lf) + '</span></div>'; });
         if (inc && !(r.lines || []).some((l) => /nuôi quân/i.test(l))) h += '<div class="in"><div><span>Thu lương</span><b class="good">' + sgn(inc.luong) + '</b></div><div><span>Nuôi quân</span><b class="bad">−' + num(inc.up) + '</b></div><div><span>Thu tiền</span><b class="good">' + sgn(inc.tien) + '</b></div></div>';
         h += '<button type="button" class="go" data-a="rep-ok">' + (v.calendar && v.calendar !== r.season ? 'Sang ' + esc(v.calendar) : 'Tiếp tục') + '</button></div>';
+      } else if (s.t === 'beat') {
+        const b = s.beat, v = V(), t = town(b.town) || {}, nm = townName(b.town), ours = b.to === v.me, lost = b.from === v.me;
+        const head = ours ? nm + ' về tay ta' : lost ? nm + ' mất vào tay ' + F(b.to).short : nm + ': ' + F(b.from).short + ' → ' + F(b.to).short;
+        const why = b.siege ? (ours ? 'Bị vây, đồn đói, mở cổng hàng.' : 'Bị vây, đồn đói, mở cổng.') : ours ? 'Hạ thành sau trận.' : 'Thất thủ sau trận.';
+        const gar = t.gar ? total(t.gar) : null;
+        h = '<div class="fp" style="--c:' + (ours ? TONE.good : lost ? TONE.bad : TONE.gold) + '"><div class="h1">' + esc(head) + '</div><div class="why">' + esc(why) + (gar != null ? ' Đồn ' + (t.garApprox ? '~' : '') + num(gar) + ' · lũy ' + num(t.walls) + '.' : '') + '</div>' +
+          '<button type="button" class="go" data-a="beat-ok">Tiếp</button></div>';
       } else if (s.t === 'over') {
         const o = s.over, v = V(), own = v.towns.filter((t) => t.owner === v.me).length;
         h = '<div class="fp ov"><div class="h1" style="color:' + (o.win ? TONE.good : TONE.bad) + '">' + (o.win ? 'Hoài Nam về một mối' : 'Thất bại') + '</div><div class="why">' + esc(o.why || '') + '</div>' +
           (S.view ? '<div class="in" style="align-self:stretch"><div><span>Mùa</span><b>' + v.season + '</b></div><div><span>Thành</span><b>' + own + '/' + v.towns.length + '</b></div><div><span>Lương</span><b>' + num(v.res.luong) + '</b></div><div><span>Tiền</span><b>' + num(v.res.tien) + '</b></div><div><span>Uy</span><b>' + num(v.res.uy) + '</b></div></div>' : '') +
           '<button type="button" class="go" data-a="again">Chơi lại</button></div>';
       }
+      el.full.classList.toggle('beat', s.t === 'beat');
       set(el.full, h, s.t);
     }
 
@@ -609,6 +620,7 @@
       bdone: () => H('onBattleDone'),
       'goal-ok': () => { S.screen = null; draw(); H('onGoalDone'); },
       'rep-ok': () => { S.screen = null; draw(); H('onReportDone'); },
+      'beat-ok': () => { S.screen = null; draw(); H('onBeatDone'); },
       again: () => H('onAgain'),
     };
     layer.addEventListener('click', (e) => { const n = e.target.closest && e.target.closest('[data-a]'); if (!n || !layer.contains(n) || n.disabled) return; const f = act[n.dataset.a]; if (f) f(n.dataset); });
@@ -663,6 +675,7 @@
         S.battle = st; S.sel = null; draw();
       },
       report(r) { S.screen = { t: 'report', report: r || {} }; draw(); },
+      beat(b) { S.screen = { t: 'beat', beat: b }; S.sel = null; draw(); },
       goal(info) { S.screen = { t: 'goal', info }; draw(); },
       over(o) { S.screen = { t: 'over', over: o || {} }; draw(); },
       close() { S.screen = null; draw(); },

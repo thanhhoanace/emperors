@@ -57,7 +57,8 @@ V2.autoBattle(g) → g                           đánh hết trận bằng đ�
              seen: 'own' | 'near' | 'far', order: null | { intent, target: { kind, id } } }],   // order: chỉ quân ta
   cards: [{ id, kind: 'history'|'envoy'|'general'|'captive', who, gen, title, text, yes: { label, fx }, no: { label, fx }, urgent }],
   gens: { [id]: GenCard },                      // tướng ta, đủ chỉ số; tướng địch chỉ { id, name, fid, seal }
-  report: null | { season, lines: [string], fought: [{ site, win, me, la, ld }], income, towns }
+  report: null | { season, lines: [string], fought: [{ site, win, me, la, ld }], income, towns,
+            taken: [{ town, from, to, siege }] }   thành đổi chủ trong mùa, theo thứ tự mất (vây mở cổng: siege true)
 }
 GenCard = { id, name, fid, seal, cls?, uy?, tai?, muu?, dung?, kien?, loyal?, trait?, traitText? }
 ```
@@ -98,6 +99,7 @@ ui.forecast(f)                                 nhãn, sức hai bên, thương v
 ui.cards(view.cards)                           hàng chờ; mở khi người chơi chạm huy hiệu (hoặc thẻ `urgent`)
 ui.battle(state)                               lượt n / 5, đề xuất của tướng từng cánh; chạm cánh đổi lệnh (chỉ lệnh hợp lệ); "Đánh" chạy lượt; "Tự đánh" hết trận; log lượt (Battle.say)
 ui.report(report) · ui.goal() · ui.over(over)  tóm tắt mùa (một màn), màn mục tiêu đầu ván, màn kết
+ui.beat({ town, from, to, siege })             một thành đổi chủ: thẻ dưới đáy, bản đồ (máy quay ở thành đó) vẫn thấy
 handlers = { onEndSeason, onSelect, onConfirmOrder, onClearOrder, onTask, onAnswer, onBattleOrder, onBattleTurn, onAutoBattle, onForecast, … }
 ```
 
@@ -110,6 +112,7 @@ handlers = { onEndSeason, onSelect, onConfirmOrder, onClearOrder, onTask, onAnsw
 | S. Cảnh 3D | agent S (Sonnet) | xong (`abafcc6`, `32d28c6`, `ae6742d`): hình demo 1 trên runtime thật, 11 test hàm thuần; toàn cảnh 1,87 / 1,83 / 0,97 triệu tam giác (cao / vừa / thấp) |
 | U. Giao diện | agent U (Sonnet) | xong (`5fabbb1`): DOM, harness 20 trạng thái |
 | Ghép `v2.html`, `huainan-play.js`, e2e | Claude | xong 29/9: `tests/e2e/v2-loop.mjs` 17/17 (thấp), 16/16 (cao) |
+| Sửa sau lượt chơi đầu của chủ dự án (thành vây, bước đổi chủ) | Claude | xong 29/9: e2e 18/18 (thấp) |
 | Chủ dự án chơi trên máy thật; đo 7 tiêu chí nhận của freeze | chủ dự án | chờ |
 
 Chạy: `npm start`, mở `http://localhost:3000/v2.html` (`&seed=N`, `&tier=high|mid|low`, `&hud=1`). QA: `BASE_URL=http://127.0.0.1:3000/ xvfb-run -a node tests/e2e/v2-loop.mjs low 3`.
@@ -120,6 +123,9 @@ Chạy: `npm start`, mở `http://localhost:3000/v2.html` (`&seed=N`, `&tier=hig
 - Cảnh: runtime tạo với `hamlets: false`; `sc.bind(canvas, { onTap })` lo cử chỉ camera; `pick` trả thêm `seat` (thành ngoài lát demo, coi như chạm đất); nhãn tên và số quân là sprite trong cảnh (chip DOM của UI tắt); đất gần chỉ dựng quanh Hoài Nam (dựng cảnh 6,3 → 2,4 giây, dựa vào thứ tự con của runtime: sửa `world-runtime.js` thì xem lại).
 - Giao diện: tự xử lý chạm bản đồ (`ui.tap`) và tự hỏi "đánh ngay / vây"; dự đoán có hợp binh (`partners`).
 - Ghép: khung toàn cảnh chừa chỗ cho thanh trên và nút Hết mùa; hai lỗi thời gian khung hình của cảnh (tiến độ hành quân và bay máy âm khi thời điểm khung hình sớm hơn lúc ra lệnh) đã sửa.
+- Lượt chơi đầu của chủ dự án (29/9):
+  - Trận vây từng dựng một bức tường thẳng thay cho thành vuông. Nay dựng chính mô hình thành (`HM.town({ open: true })`), phóng to cho mặt trước phủ ba làn; mặt đó là ba đoạn tường, mỗi làn phá riêng. Giữ thành thì máy quay nhìn từ trên tường, cờ thành tắt.
+  - Vây làm thành mở cổng (hoặc thành đổi chủ vì bất cứ lý do gì) chỉ hiện một dòng trong tóm tắt mùa. Nay mỗi thành đổi chủ là một bước: máy quay bay tới, thẻ "X về tay ta" / "X mất vào tay Y" (`report.taken`, `ui.beat`, `onBeatDone`), rồi mới tới tóm tắt.
 
 ## Nợ và câu hỏi cho chủ dự án
 

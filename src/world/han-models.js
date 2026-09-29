@@ -6,7 +6,7 @@
 // (docs/phases/v2-gameplay/demo1/src/hn-models.js, which stays as it was for that phase) under the game's global name;
 // the battle scene (src/world/battle.js, docs/design/visual-build.md §3) builds at 1 unit = 1 m with kit units × 30.
 //   const HM = HanModels.create({ recv, colors, renderer })
-//   HM.army({ fid, bo, cung, ky, thuy, fleet, seal }) → Group (faces +x) · HM.town({ level, seed, size }) → Group
+//   HM.army({ fid, bo, cung, ky, thuy, fleet, seal }) → Group (faces +x) · HM.town({ level, seed, size, open }) → Group
 //   HM.figure(arm, fid) → geometry · HM.siegeWall(len, level) · HM.siegeTower(level) · HM.tree(kind) → geometry
 //   HM.parts (kit, xf, paint, shade, rbox, roof, pavilion, house, granary, que, wallPrism, C …) · HM.mat · HM.look · HM.hamlet
 (function () {
@@ -288,15 +288,16 @@
     // ---------------------------------------------------------------- the town: platform, walls by level (lũy 0–4), a Han city inside
     const townCache = {};
     HM.town = function (t) {
-      const L = t.size || 4.6, lv = Math.max(0, Math.min(4, t.level ?? 1)), R = L / 2, key = L + ':' + lv + ':' + (t.seed || 1);
-      if (!townCache[key]) townCache[key] = buildTown(L, lv, R, t.seed || 1);
+      const L = t.size || 4.6, lv = Math.max(0, Math.min(4, t.level ?? 1)), R = L / 2, key = L + ':' + lv + ':' + (t.seed || 1) + (t.open ? ':open' : '');
+      if (!townCache[key]) townCache[key] = buildTown(L, lv, R, t.seed || 1, !!t.open);
       const c = townCache[key], g = new T.Group();
       const m = new T.Mesh(c.geo, mat); m.castShadow = true; m.receiveShadow = true; g.add(m);
       if (c.water) { const w = new T.Mesh(c.water, waterMat); w.receiveShadow = true; g.add(w); }
       g.userData = { L, H: LV(lv).H, flagAt: c.flagAt, shared: true };
       return g;
     };
-    const buildTown = (L, lv, R, seed) => {
+    // open: the +z face without its wall and gate (a siege lays its own breachable runs there, HM.siegeWall)
+    const buildTown = (L, lv, R, seed, open) => {
       const k = kit(), { H, wb } = LV(lv), moat = lv >= 3, pad = moat ? 0.95 : 0.6, gw = 0.6 + lv * 0.05;
       let s = seed; const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
       // ground: the platform (deep enough for a slope), the ground inside, streets
@@ -308,10 +309,10 @@
       // walls: four sides, each two runs either side of its gate, corner towers
       const cw = lv === 0 ? 0.28 : wb * 1.9;
       for (let side = 0; side < 4; side++) {
-        const w = kit();
-        wallRun(w, -R + cw / 2 - 0.02, -gw / 2, R, lv); wallRun(w, gw / 2, R - cw / 2 + 0.02, R, lv);
-        if (lv >= 3) for (const x of [-(R + gw / 2) / 2, (R + gw / 2) / 2]) { w.add(rbox(0.26, H + 0.3, 0.32, 0.1), shade(LV(lv).col, -0.04), [x, (H - 0.3) / 2, R + wb / 2 - 0.02]); for (let i = 0; i < 2; i++) w.add(rbox(0.07, 0.05, 0.045, 0), shade(LV(lv).col, -0.06), [x - 0.06 + i * 0.12, H + 0.025, R + wb / 2 + 0.115]); }
-        gate(w, R, lv, gw);
+        const w = kit(), bare = open && side === 0;
+        if (!bare) { wallRun(w, -R + cw / 2 - 0.02, -gw / 2, R, lv); wallRun(w, gw / 2, R - cw / 2 + 0.02, R, lv); }
+        if (lv >= 3 && !bare) for (const x of [-(R + gw / 2) / 2, (R + gw / 2) / 2]) { w.add(rbox(0.26, H + 0.3, 0.32, 0.1), shade(LV(lv).col, -0.04), [x, (H - 0.3) / 2, R + wb / 2 - 0.02]); for (let i = 0; i < 2; i++) w.add(rbox(0.07, 0.05, 0.045, 0), shade(LV(lv).col, -0.06), [x - 0.06 + i * 0.12, H + 0.025, R + wb / 2 + 0.115]); }
+        if (!bare) gate(w, R, lv, gw);
         if (moat) { w.add(rbox(0.34, 0.03, 0.62, 0.3), C.wood, [0, 0.045, R + wb / 2 + 0.42]); }
         k.push(xf(w.geo(), [0, 0, 0], [0, (side * Math.PI) / 2, 0]));
       }

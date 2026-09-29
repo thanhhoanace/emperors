@@ -636,7 +636,7 @@
     if (winA) {
       if (town) {
         const gov = town.gov;
-        g.taken.push({ town: tn, from: town.owner });
+        g.taken.push({ town: tn, from: town.owner, to: plan.attacker.fid });
         town.owner = plan.attacker.fid; town.walls = Math.max(0, town.walls - 1); town.task = null; town.gov = null; town.taxFree = 0;
         town.gar = { bo: r100(total(A) * TAKE.gar) };
         for (const i of plan.attacker.armies) {
@@ -787,7 +787,7 @@
       const men = ids.reduce((s, i) => s + total(g.armies[i].units), 0);
       if (defenders(g, tid) < men * SIEGE.open) {
         const gov = t.gov, was = t.owner;
-        g.taken.push({ town: tid, from: was });
+        g.taken.push({ town: tid, from: was, to: me, siege: true });
         t.owner = me; t.gar = { bo: r100(men * SIEGE.keep) }; t.gov = null; t.task = null; t.taxFree = 0;
         for (const i of ids) g.armies[i].besieging = null;
         g.res.uy += UY.opened;
@@ -882,7 +882,9 @@
     if (!g.over && own.length === g.data.towns.length) g.over = { win: true, why: T.win };
     if (!g.over && !own.length) g.over = { win: false, why: T.lostAll };
     if (g.over) chron(g, g.over.why);
-    g.report = { season: cal(g, g.season), lines: g.log.slice(), fought: clone(g.fought), income: clone(inc), towns: own.length };
+    // taken: every town that changed hands this season (the owners are on the map for all to see), in the order it fell
+    const taken = g.taken.map((x) => ({ town: x.town, from: x.from, to: x.to, siege: !!x.siege }));
+    g.report = { season: cal(g, g.season), lines: g.log.slice(), fought: clone(g.fought), income: clone(inc), towns: own.length, taken };
     g.season += 1;
     for (const a of Object.values(g.armies)) a.order = null;
     g.vanguard = null;

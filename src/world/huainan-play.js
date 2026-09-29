@@ -2,7 +2,7 @@
 // and the UI (HuaiNanUI) draw only what the player may see and report taps. A season: an army → a target (the UI asks
 // "đánh ngay / vây" for an enemy town) → the preview or the general's forecast → confirm; a town → its 2–3 tasks (or
 // all) → the preview → confirm; cards from the queue; "Hết mùa" at any time → the player's battles turn by turn (the
-// general's proposal, the player's changes) → the season's recap. Nothing here reads the game state for display: only
+// general's proposal, the player's changes) → each town that changed hands, on the map → the season's recap. Nothing here reads the game state for display: only
 // V2.view, V2.targets, V2.tasks, V2.preview, V2.forecast, V2.battle and V2.lastBattle.
 //   await HuaiNanPlay.boot({ params }) → window.__v2 = { V2, rt, sc, ui, H, game(), view(), seed, ready }
 (function () {
@@ -31,6 +31,7 @@
     let sel = null; // { kind: 'army'|'town', id } | null, the UI's selection
     let fc = null; // the forecast on screen: { armies, target }
     let fighting = null; // id of the battle on screen
+    let beats = null; // the towns that changed hands this season, shown one at a time on the map before the recap (null: not read yet)
     const view = () => V2.view(g);
     const refresh = () => {
       const v = view();
@@ -60,6 +61,8 @@
         return 'battle';
       }
       const v = refresh();
+      if (beats === null) beats = ((v.report && v.report.taken) || []).slice();
+      if (beats.length) { const t = beats.shift(); sc.focus(t.town); ui.beat(t); return 'beat'; }
       if (v.over) ui.over(v.over); else if (v.report) ui.report(v.report);
       return v.over ? 'over' : 'season';
     };
@@ -73,7 +76,7 @@
     };
 
     const Hs = {
-      onEndSeason: safe(() => { sel = null; fc = null; sc.select(null); sc.targets(null); g = V2.endSeason(g); return next(); }),
+      onEndSeason: safe(() => { sel = null; fc = null; sc.select(null); sc.targets(null); g = V2.endSeason(g); beats = null; return next(); }),
       onSelect: (s) => { sel = s; fc = null; sc.select(s); refresh(); },
       onTarget: safe((t) => { const act = { type: 'order', army: t.army, target: { kind: t.kind, id: t.id }, intent: t.intent }; ui.preview(V2.preview(g, act), act); }),
       onForecast: safe((t) => { fc = { armies: t.armies.slice(), target: { kind: t.kind, id: t.id } }; showForecast(); }),
@@ -95,9 +98,10 @@
       onBattleTurn: safe((overrides) => { g = V2.battleTurn(g, overrides || {}); return afterTurn(); }),
       onAutoBattle: safe(() => { g = V2.autoBattle(g); return afterTurn(); }),
       onBattleDone: () => { ui.battle(null); sc.battle.end(); fighting = null; return next(); },
+      onBeatDone: () => next(),
       onReportDone: () => { refresh(); },
       onGoalDone: () => {},
-      onAgain: () => { g = V2.newGame(data, g.seed + 1); sel = null; fc = null; fighting = null; refresh(); ui.goal(); },
+      onAgain: () => { g = V2.newGame(data, g.seed + 1); sel = null; fc = null; fighting = null; beats = null; refresh(); ui.goal(); },
       onOverview: () => sc.overview(),
     };
     const portraits = 'docs/phases/v2-gameplay/demo1/portraits/';

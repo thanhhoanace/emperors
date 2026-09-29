@@ -405,7 +405,13 @@
     const scaleMarkers = () => {
       const s = markerScale(), ts = townScale();
       for (const m of Object.values(armies)) m.g.scale.setScalar(s);
-      for (const t of Object.values(towns)) { if (t.model) t.model.scale.setScalar(ts); if (t.std) { const f = (t.model && t.model.userData.flagAt) || [0, 0.05, 0]; t.std.position.set(f[0] * ts, f[1] * ts, f[2] * ts); t.std.scale.setScalar(ts); } }
+      for (const [id, t] of Object.entries(towns)) {
+        if (t.model) t.model.scale.setScalar(ts);
+        if (!t.std) continue;
+        const f = (t.model && t.model.userData.flagAt) || [0, 0.05, 0], sg = BT.on && BT.flag && BT.flag.site === id ? BT.flag.at : null; // under siege: over the grown town's hall
+        if (sg) t.std.position.set(sg[0], sg[1], sg[2]); else t.std.position.set(f[0] * ts, f[1] * ts, f[2] * ts);
+        t.std.scale.setScalar(ts);
+      }
       placeArmies(false); placeSel(); relayRibbons();
       for (const r of tgtRings) r.scale.setScalar(r.userData.r * (r.userData.army ? s : 1));
     };
@@ -648,8 +654,8 @@
       BT.g.traverse((x) => { if (x.isInstancedMesh) x.dispose(); else if (x.isMesh && x.userData.own) x.geometry.dispose(); });
       for (const Wg of Object.values(BT.wings)) { Wg.label.free(); freeStd(Wg.st); }
       for (const L of BT.labels) L.free();
-      root.remove(BT.g); BT.g = null; BT.on = false; BT.wings = {}; BT.fx = []; BT.walls = []; BT.labels = []; BT.sel = null;
-      for (const t of Object.values(towns)) if (t.model) t.model.visible = true;
+      root.remove(BT.g); BT.g = null; BT.on = false; BT.wings = {}; BT.fx = []; BT.walls = []; BT.labels = []; BT.sel = null; BT.flag = null;
+      for (const t of Object.values(towns)) { if (t.model) t.model.visible = true; if (t.std) t.std.visible = true; }
       for (const m of Object.values(armies)) m.g.visible = true;
       if (reachG) reachG.visible = true;
       if (orderG) orderG.visible = true;
@@ -659,23 +665,30 @@
       battleEnd();
       const site = b.site, { P, u, v } = axisOf(site, b.from !== undefined && b.from !== null ? b.from : ownSeat(site));
       BT.u = u; BT.v = v; BT.me = b.me || 'A'; BT.siege = !!b.siege; BT.site = site;
-      BT.center = b.siege ? [P.x + u[0] * 0.2, P.z + u[1] * 0.2] : [P.x - u[0] * 3.2, P.z - u[1] * 3.2];
-      BT.g = new T.Group(); root.add(BT.g); BT.on = true; BT.wings = {}; BT.fx = []; BT.walls = []; BT.labels = [];
-      // a siege draws its own wall line across the lanes, so the town's model steps aside for it
+      // a siege: the town itself, grown so its face toward the attacker spans the three lanes (its walls, the lane runs and the
+      // men on them share that scale); that face is laid as three runs, one a lane, each breached on its own
+      const L = (place[site] && place[site].size) || 4.4, sk = b.siege ? (3 * LANE) / L : SIEGE, front = sk * (L / 2);
+      BT.center = b.siege ? [P.x + u[0] * (ROW * 0.9 - front), P.z + u[1] * (ROW * 0.9 - front)] : [P.x - u[0] * 3.2, P.z - u[1] * 3.2]; // row 3.6, the wall line, on the town's face
+      BT.g = new T.Group(); root.add(BT.g); BT.on = true; BT.wings = {}; BT.fx = []; BT.walls = []; BT.labels = []; BT.flag = null;
       if (BT.siege && towns[site] && towns[site].model) towns[site].model.visible = false;
+      if (BT.siege && BT.me !== 'A' && towns[site] && towns[site].std) towns[site].std.visible = false; // defending: the wings on the wall carry the flags
       if (BT.siege) {
-        const lv = clamp(b.walls ?? 3, 0, 4); BT.wallTop = WALL_H[lv] * SIEGE - 0.05;
-        const wallGeo = HM.siegeWall((LANE * 0.93) / SIEGE, lv), gateGeo = HM.siegeWall((LANE * 0.93) / SIEGE, lv, true), towerGeo = HM.siegeTower(lv), ang = Math.atan2(-v[1], v[0]);
-        for (let l = 0; l < 3; l++) { const p = gridPos(l, 3.6), wall = new T.Mesh(l === 1 ? gateGeo : wallGeo, HM.mat); wall.position.set(p[0], p[1] - 0.05, p[2]); wall.rotation.y = ang; wall.scale.setScalar(SIEGE); wall.castShadow = true; wall.receiveShadow = true; BT.g.add(wall); BT.walls.push(wall); }
-        for (let k = 0; k < 4; k++) { const p = gridPos(k - 0.5, 3.6), t = new T.Mesh(towerGeo, HM.mat); t.position.set(p[0], p[1] - 0.05, p[2]); t.rotation.y = ang; t.scale.setScalar(SIEGE); t.castShadow = true; BT.g.add(t); }
+        const lv = clamp(b.walls ?? 3, 0, 4), ang = Math.atan2(-v[1], v[0]), face = Math.atan2(-u[0], -u[1]); BT.wallTop = WALL_H[lv] * sk - 0.05; BT.wallY = P.y;
+        const town = HM.town({ level: lv, seed: [...site].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 2147483647, 7) || 1, size: L, open: true });
+        town.position.set(P.x, P.y, P.z); town.rotation.y = face; town.scale.setScalar(sk); BT.g.add(town); // cached geometry: battleEnd leaves it
+        const fa = town.userData.flagAt; if (fa && BT.me === 'A') BT.flag = { site, at: [(fa[0] * Math.cos(face) + fa[2] * Math.sin(face)) * sk, fa[1] * sk, (-fa[0] * Math.sin(face) + fa[2] * Math.cos(face)) * sk] }; // the owner's standard over the hall
+        const wallGeo = HM.siegeWall((LANE * 0.93) / sk, lv), gateGeo = HM.siegeWall((LANE * 0.93) / sk, lv, true), towerGeo = HM.siegeTower(lv);
+        for (let l = 0; l < 3; l++) { const p = gridPos(l, 3.6), wall = new T.Mesh(l === 1 ? gateGeo : wallGeo, HM.mat); wall.position.set(p[0], P.y, p[2]); wall.rotation.y = ang; wall.scale.setScalar(sk); wall.castShadow = true; wall.receiveShadow = true; BT.g.add(wall); BT.walls.push(wall); }
+        for (let k = 1; k < 3; k++) { const p = gridPos(k - 0.5, 3.6), t = new T.Mesh(towerGeo, HM.mat); t.position.set(p[0], P.y, p[2]); t.rotation.y = ang; t.scale.setScalar(sk); t.castShadow = true; BT.g.add(t); } // the corners are the town's own towers
       }
-      for (let l = 0; l < 3; l++) { const L = newLabel(() => { const p = gridPos(l, BT.me === 'A' ? -0.2 : 5.6); return [p[0], p[1] + 0.1, p[2]]; }, 'battle', 3); BT.labels.push(L); }
+      if (BT.flag) scaleMarkers();
+      for (let l = 0; l < 3; l++) { const L = newLabel(() => { const p = gridPos(l, BT.me === 'A' ? -0.2 : BT.siege ? 3.1 : 5.6); return [p[0], p[1] + 0.1, p[2]]; }, 'battle', 3); BT.labels.push(L); }
       for (const m of Object.values(armies)) m.g.visible = false;
       if (reachG) reachG.visible = false;
       if (orderG) orderG.visible = false;
       selRing.visible = false;
-      const md = gridPos(1, 2.9), back = BT.me === 'A' ? [-u[0], -u[1]] : u;
-      anim = { from: JSON.parse(JSON.stringify(cam)), to: { t: [md[0], md[2]], dist: 15, az: Math.atan2(back[0], back[1]) + 0.3, el: 0.55 }, t0: performance.now(), ms: 1100 };
+      const md = gridPos(1, 2.9), back = BT.me === 'A' ? [-u[0], -u[1]] : u, over = BT.siege && BT.me === 'D'; // defending a town: from above its wall
+      anim = { from: JSON.parse(JSON.stringify(cam)), to: { t: [md[0], md[2]], dist: over ? 17 : 15, az: Math.atan2(back[0], back[1]) + 0.3, el: over ? 0.85 : 0.55 }, t0: performance.now(), ms: 1100 };
       dirty = true;
     };
     // the seat an attack on `site` most likely comes from: the nearest town that is ours in the last View
@@ -702,7 +715,7 @@
         const onWall = BT.siege && w.side === 'D' && w.row >= 4, key = onWall ? 'W' + w.lane : w.side + w.lane + ':' + w.row, slot = (cells[key] = (cells[key] ?? -1) + 1);
         const fwd = w.side === 'A' ? BT.u : [-BT.u[0], -BT.u[1]];
         let to = onWall ? gridPos(w.lane, 3.75 + (w.row - 4) * 0.3, S.wingSlot(slot) * 1.1) : gridPos(w.lane, w.row, S.wingSlot(slot));
-        if (onWall && !w.gone) to[1] += BT.wallTop;
+        if (onWall && !w.gone) to[1] = BT.wallY + BT.wallTop;
         if (w.gone) { const r = w.left ? 2.2 : 1.6; const x = to[0] - fwd[0] * r * ROW, z = to[2] - fwd[1] * r * ROW; to = [x, terr.h(x, z), z]; }
         const wet = w.arm === 'thuy' && inWater(to[0], to[2]);
         if (wet) to[1] = waterY(to[0], to[2]) + 0.02;

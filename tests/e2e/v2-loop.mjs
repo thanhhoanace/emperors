@@ -89,15 +89,23 @@ try {
   await shot('town');
   await run(() => window.__v2.H.onSelect(null));
 
-  // two seasons with nothing ordered and no card answered: each battle of ours on the proposal alone
+  // season 1: our main army besieges Hu Dị (weak: its gates open at the season's end, no battle), no card answered;
+  // season 2: nothing ordered. Each battle of ours on the proposal alone; each town that changes hands shown on the map
+  await run(() => window.__v2.H.onConfirmOrder({ type: 'order', army: 'a1', target: { kind: 'town', id: 'hu_di' }, intent: 'siege' }));
   for (let s = 1; s <= 2; s++) {
     let state = await run(() => window.__v2.H.onEndSeason());
-    let battles = 0, turns = 0;
-    while ((state === 'battle' || state === 'result') && turns < 40) {
+    let battles = 0, turns = 0, beats = [];
+    while ((state === 'battle' || state === 'result' || state === 'beat') && turns < 40) {
       if (state === 'battle') { if (!turns) await shot(`s${s}-battle`); state = await run(() => window.__v2.H.onBattleTurn({})); turns++; }
       if (state === 'result') { battles++; await shot(`s${s}-result-${battles}`); state = await run(() => window.__v2.H.onBattleDone()); }
+      if (state === 'beat') {
+        const b = await run(() => ({ text: document.querySelector('.hn-full.beat') ? document.querySelector('.hn-full.beat').innerText : '' }));
+        beats.push(b.text.split('\n')[0]); await shot(`s${s}-beat-${beats.length}`);
+        state = await run(() => window.__v2.H.onBeatDone());
+      }
     }
-    report.steps.push({ season: s, battles, turns, end: state });
+    report.steps.push({ season: s, battles, turns, beats, end: state });
+    if (s === 1) check(beats.some((t) => /Hu Dị về tay ta/.test(t)), 'season 1: Hu Dị opening its gates is shown on the map, not only in the recap', beats);
     check(state === 'season' || state === 'over', `season ${s}: ends (battles on the proposal alone)`, { battles, turns, state });
     if (battles) check(turns / battles <= 5, `season ${s}: a battle lasts at most 5 turns`, turns / battles);
     const v = await run(() => window.__v2.view());

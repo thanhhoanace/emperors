@@ -510,6 +510,7 @@ test('after a battle: the town changes hands, the governor is taken, the losers 
   g = V2.order(V2.order(g, 'a1', T('tho_xuan'), 'attack'), 'a2', T('tho_xuan'), 'attack');
   g = fight(V2.endSeason(g));
   assert.equal(g.towns.tho_xuan.owner, g.me);
+  assert.deepEqual(g.report.taken, [{ town: 'tho_xuan', from: 'cao_cao', to: g.me, siege: false }]);
   assert.equal(g.towns.tho_xuan.walls, 2);
   assert.equal(g.towns.tho_xuan.gov, null);
   assert.deepEqual(g.captives, ['man_chong']);
@@ -590,6 +591,9 @@ test('sieges: the garrison starves and the walls fall each season; below 30 % th
   assert.equal(h.armies.a1.besieging, null);
   assert.deepEqual(h.captives, ['tran']);
   assert.equal(h.towns.hu_di.gar.bo, 800);
+  // the recap says which towns changed hands, so the page can show each one on the map
+  assert.deepEqual(h.report.taken, [{ town: 'hu_di', from: 'local', to: h.me, siege: true }]);
+  assert.deepEqual(V2.view(h).report.taken, h.report.taken);
 });
 
 // ---------------------------------------------------------------- towns, generals, the end
