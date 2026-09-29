@@ -558,9 +558,10 @@
   // after <color_fragment>: diffuseColor is the surface's own colour (linear). uWxScale: world units → about one tree
   WX.GLSL_COLOR = `
     #ifdef WX_FOLIAGE
-    { // leaves: the kit paints them summer green; the season recolours green-dominant colours, the darkest (pines) stay
+    { // leaves: the kit paints them summer green; the season recolours the colours where green leads and is saturated
+      // (a crown's dark and pale blobs alike); the darkest greens (pines) keep theirs, as do the greyed pine tiers
       vec3 c = diffuseColor.rgb;
-      float leaf = smoothstep(1.45, 1.9, c.g / max(max(c.r, c.b), 1e-4)) * (1. - smoothstep(.32, .5, c.b / max(c.g, 1e-4)));
+      float leaf = smoothstep(1.02, 1.12, c.g / max(max(c.r, c.b), 1e-4)) * smoothstep(.12, .2, (c.g - min(c.r, c.b)) / max(c.g, 1e-4));
       if (leaf > .001) {
         float con = 1. - smoothstep(.012, .02, c.g);
         // one colour a tree: its instance, or (a merged model) a smooth noise over the ground
@@ -630,7 +631,7 @@
   // kinds: rain (streaks along the fall), snow (soft flakes), leaves (tumbling, autumn colours), petals (spring).
   const WX_KINDS = {
     rain: { fall: [0.06, -1.25, 0.03], size: 0.0016, len: 0.045, color: 0xc6d2dc, opacity: 0.3, define: 'WX_RAIN' },
-    snow: { fall: [0.02, -0.11, 0.012], size: 0.0065, color: 0xffffff, opacity: 0.9, define: 'WX_SNOW', sway: 0.018 },
+    snow: { fall: [0.02, -0.11, 0.012], size: 0.0042, color: 0xffffff, opacity: 0.9, define: 'WX_SNOW', sway: 0.018 },
     leaves: { fall: [0.07, -0.06, 0.025], size: 0.0065, color: 0xffffff, opacity: 0.95, define: 'WX_LEAF', sway: 0.03 },
     petals: { fall: [0.05, -0.04, 0.02], size: 0.006, color: 0xffffff, opacity: 0.9, define: 'WX_PETAL', sway: 0.025 },
   };
@@ -660,7 +661,7 @@
           u.xz += uSway * vec2(sin(uTime * 1.3 + aSeed.x * 40.), cos(uTime * 1.1 + aSeed.y * 40.));
           vec3 rel = (fract(u) - .5) * uBox, wp = uCenter + rel;
           float edge = max(max(abs(rel.x), abs(rel.y)), abs(rel.z)) / (.5 * uBox);
-          vA = on * (1. - smoothstep(.7, 1., edge)) * smoothstep(.06, .2, length(wp - cameraPosition) / uBox); // none right at the lens
+          vA = on * (1. - smoothstep(.7, 1., edge)) * smoothstep(.1, .28, length(wp - cameraPosition) / uBox); // none right at the lens
           vec3 camR = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]), camU = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
           vTint = vec3(1.);
         #ifdef WX_RAIN

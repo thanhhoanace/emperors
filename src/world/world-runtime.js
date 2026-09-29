@@ -308,9 +308,9 @@
     // which game.html keeps). Nature (the 1 m scenes), when loaded, is told the same season.
     const SEASONS = [
       // Xuân: a soft morning, fresh greens, mist lying in the valleys
-      { sky: [0x78a0cb, 0xe6e9e1, 0xfff3dc], sun: [0xfff1dc, 2.4], hemi: [0xd4e3ef, 0x5f6242, 0.78], atmos: [0xcdd8da, 0xf6e2c0, 1.15], grade: { mul: [0.98, 1.02, 1.0], lift: [0.002, 0.004, 0.005], sat: 1.08, con: 1.0, mist: 1.5, mistH: 0.16, mistBase: 0.12, mistCol: 0xe6ebe7, mistScale: 0.045, mistDrift: [3.1, 7.7] } },
+      { sky: [0x78a0cb, 0xe6e9e1, 0xfff3dc], sun: [0xfff1dc, 2.4], hemi: [0xd4e3ef, 0x5f6242, 0.78], atmos: [0xcdd8da, 0xf6e2c0, 1.15], grade: { mul: [0.98, 1.02, 1.0], lift: [0.002, 0.004, 0.005], sat: 1.08, con: 1.02, mist: 0.9, mistH: 0.14, mistBase: 0.12, mistCol: 0xe6ebe7, mistScale: 0.045, mistDrift: [3.1, 7.7] } },
       // Hạ: a high clear sun, deep saturated greens
-      { sky: [0x4a80c6, 0xd4e0e4, 0xfff4de], sun: [0xfff6e8, 2.75], hemi: [0xc2d7ee, 0x4a5632, 0.72], atmos: [0xb4c6d2, 0xf4e0b4, 1.0], grade: { mul: [1.0, 1.0, 0.98], sat: 1.08, con: 1.03 } },
+      { sky: [0x4a80c6, 0xd4e0e4, 0xfff4de], sun: [0xfff6e8, 2.75], hemi: [0xc2d7ee, 0x4a5632, 0.72], atmos: [0xb4c6d2, 0xf4e0b4, 1.0], grade: { mul: [1.0, 1.0, 0.98], sat: 1.03, con: 1.03 } },
       // Thu: the warm late light of the approved look, gold in the fields and the woods
       { sky: [0x5f86b5, 0xddd6c4, 0xffd9a8], sun: [0xffdfb4, 2.5], hemi: [0xcad3e0, 0x5f5134, 0.72], atmos: [0xc5c4bb, 0xf6d49a, 1.0], grade: { mul: [1.02, 1.0, 0.96], lift: [0.003, 0.001, 0], sat: 1.02, con: 1.03 } },
       // Đông: a low cold sun, pale sky, snow, a blue-grey grade and a thin cold haze
