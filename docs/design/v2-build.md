@@ -131,6 +131,7 @@ handlers = { onEndSeason, onSelect, onConfirmOrder, onClearOrder, onTask, onAnsw
 | U. Giao diện | agent U (Sonnet) | xong (`5fabbb1`): DOM, harness 20 trạng thái |
 | Ghép `v2.html`, `huainan-play.js`, e2e | Claude | xong 29/9: `tests/e2e/v2-loop.mjs` 17/17 (thấp), 16/16 (cao) |
 | Sửa sau lượt chơi đầu của chủ dự án (thành vây, bước đổi chủ) | Claude | xong 29/9: e2e 18/18 (thấp) |
+| Bản hoàn thiện, 10 agent (`docs/design/v2-polish.md`), ghép | 9 opus + 1 sonnet, Claude ghép | 30/9: đủ 10 nhánh đã gộp; agent bị dừng giữa chừng (giới hạn dùng, máy khởi động lại), phần dở được giữ. Luật, giao diện, mở đầu/kết/chế độ Xem xong; cảnh trận, trận đồng, đám đông, bốn mùa, bản đồ sống, mô hình, âm thanh ở mức lượt đầu. `npm test` 235/235, `v2-loop` 18/18 thấp, `v2-watch` 10/10 thấp (4 mùa tự chơi), `v2-cinema` 7/8 thấp (bộ nhớ sau trận chưa trả hết) |
 | Chủ dự án chơi trên máy thật; đo 7 tiêu chí nhận của freeze | chủ dự án | chờ |
 
 Chạy: `npm start`, mở `http://localhost:3000/v2.html` (`&seed=N`, `&tier=high|mid|low`, `&hud=1`). QA: `BASE_URL=http://127.0.0.1:3000/ xvfb-run -a node tests/e2e/v2-loop.mjs low 3`.

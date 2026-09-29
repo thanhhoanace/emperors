@@ -334,7 +334,8 @@
       if (kind === 'charge' && w && tg && !atWall) {
         const track = (t) => { const g = st.offsetOf(w.id); return [w.c[0] + g[0], w.c[1] + g[1], w.c[2] + g[2]]; };
         const s = w.side === 'A' ? 1 : -1;
-        return [seg(0, d * 0.55, (t) => off(track(t), 34 * rs, 6 * s, 4), (t) => off(track(t), 30 * rs, -4 * s, 4), (t) => lift(track(t), 1.5), (t) => lift(track(t), 1.5), 44, 44),
+        // a crane beside the charge, high enough to read the riders against the ground and clear the boats of a ford
+        return [seg(0, d * 0.55, (t) => off(track(t), 52 * rs, 14 * s, 16), (t) => off(track(t), 44 * rs, -2 * s, 13), (t) => lift(track(t), 1.5), (t) => lift(track(t), 1.5), 44, 42),
           seg(d * 0.55, d, off(tg.c, 16 * rs, -s * (tg.d / 2 + 18), 3.2), off(tg.c, 10 * rs, -s * (tg.d / 2 + 14), 3), lift(tg.front, 1.5), lift(tg.front, 1.2), 42, 40)];
       }
       if ((kind === 'melee' || kind === 'breach' || kind === 'charge') && (atWall || (siegeOn && !w))) {
@@ -343,7 +344,7 @@
           const g = A.gate;
           const v1 = (F.moat ? F.moat[1] : 30) + 44; // clear of the khuyết and the moat
           return kind === 'breach' ? [seg(0, d * 0.5, P(30 * rs, v1 + 16, 9), P(20 * rs, v1, 7), lift(g, 5), lift(g, 4), 42, 40), seg(d * 0.5, d, P(16 * rs, -F.WB / 2 - 60, 10), P(10 * rs, -F.WB / 2 - 44, 8), lift(g, 5), lift(g, 4), 44, 42)]
-            : [seg(0, d * 0.5, P(34 * rs, v1 + 12, 8), P(24 * rs, v1, 6.5), lift(g, 4), lift(g, 3), 42, 40), seg(d * 0.5, d, off(A.gateTop, 16 * rs, -10, 3, true), off(A.gateTop, 10 * rs, -10, 3, true), P(0, 26, 0), P(0, 20, 0), 50, 48)];
+            : [seg(0, d * 0.5, P(34 * rs, v1 + 12, 8), P(24 * rs, v1, 6.5), lift(g, 4), lift(g, 3), 42, 40), seg(d * 0.5, d, P(-46 * rs, v1 + 34, 24), P(-36 * rs, v1 + 26, 20), lift(g, 5), lift(g, 4), 44, 42)]; // then high outside the gate: the fight at the gate and the wall above it
         }
         const wall = Lx.wall, foot = Lx.foot;
         return kind === 'breach' ? [seg(0, d * 0.5, off(foot, 22 * ss, 42, 3, false), off(foot, 14 * ss, 34, 2.5), lift(wall, 3), lift(wall, 4), 42, 42), seg(d * 0.5, d, off(wall, 34 * ss, -4, 5, true), off(wall, 24 * ss, -4, 4.5, true), lift(wall, 1), lift(wall, 1), 46, 44)]
@@ -373,13 +374,50 @@
       return [seg(0, d, eye, off(eye, -14 * rs, me === 'A' ? -8 : 8, -0.5), look, look, 42, 40)];
     };
     const at = (p, t) => (typeof p === 'function' ? p(t) : p);
+    // what can stand between the camera and its aim: the site's solid, single meshes (walls, towers, buildings); not the
+    // ground (the eye keeps above it), the water, the crowds or the trees (instanced), nor anything see-through
+    const ray = new T.Raycaster(), rA = new T.Vector3(), rD = new T.Vector3();
+    const blockers = () => {
+      if (site.blockers) return site.blockers;
+      const out = []; site.obj.group.traverse((m) => { if (m.isMesh && !m.isInstancedMesh && m.visible && !(m.material && m.material.transparent) && m.geometry && m.geometry.attributes.position) out.push(m); });
+      return (site.blockers = out);
+    };
+    const cut = (eye, aim) => {
+      rA.set(aim[0], aim[1], aim[2]); rD.set(eye[0] - aim[0], eye[1] - aim[1], eye[2] - aim[2]);
+      const d = rD.length(); if (d < 2) return null;
+      ray.set(rA, rD.normalize()); ray.near = 1.5; ray.far = d;
+      const hit = ray.intersectObjects(blockers(), false)[0];
+      return hit && hit.distance < d - 1 ? { at: hit.distance, d } : null;
+    };
+    // blocked: the camera rises (a crane keeps the framing) until it sees over; only when no height clears does it come in
+    const pull = (eye, aim) => {
+      const c = cut(eye, aim); if (!c) return { k: 1, dy: 0 };
+      for (const dy of [8, 16, 30, 55]) if (!cut([eye[0], eye[1] + dy, eye[2]], aim)) return { k: 1, dy };
+      return { k: Math.max(0.2, (c.at - 3) / c.d), dy: 0 };
+    };
     const place = (shot, t) => {
       const cams = shot.cams, s = cams.find((c) => t >= c.t0 && t < c.t1) || cams[cams.length - 1], e = ease((t - s.t0) / Math.max(0.01, s.t1 - s.t0));
       const cam = lerp3(at(s.cam0, t), at(s.cam1, t), e), aim = lerp3(at(s.aim0, t), at(s.aim1, t), e), fov = s.fov0 + (s.fov1 - s.fov0) * e;
       // a hand on the camera: a slow drift, never a shake
       const wob = 0.18 * Math.sin(t * 1.3 + shot.seed) + 0.1 * Math.sin(t * 2.9 + shot.seed * 2);
-      const C = rig.camera, g = site.L.h(cam[0], cam[2]);
-      C.fov = fov; C.aspect = W / Hh; C.position.set(cam[0] + wob * 0.4, Math.max(cam[1], g + 1.4), cam[2] - wob * 0.3); C.lookAt(aim[0], aim[1] + wob * 0.2, aim[2]); C.updateProjectionMatrix(); C.updateMatrixWorld();
+      const C = rig.camera, Ld = site.L, g = Ld.h(cam[0], cam[2]);
+      // never under the water (the moat, a river: the plane lies at L.WATER everywhere) nor inside the walls: an eye at the
+      // attacked face or just behind it, below its walk, goes up onto the walk
+      let y = Math.max(cam[1], g + 1.4, Number.isFinite(Ld.WATER) ? Ld.WATER + 1.6 : -Infinity);
+      const F = stage && stage.frame;
+      if (F && F.siege) {
+        const dx = cam[0] - F.gx, dz = cam[2] - F.gz, u = dx * F.tan[0] + dz * F.tan[1], v = dx * F.out[0] + dz * F.out[1];
+        const u0 = Math.min(F.sec[0][0], F.sec[2][0]) - 30, u1 = Math.max(F.sec[0][1], F.sec[2][1]) + 30;
+        if (v < F.WB / 2 + 3 && v > -(F.WB / 2 + 90) && u > u0 && u < u1 && y < F.wallY + 5) y = F.wallY + 7;
+      }
+      // and never behind a wall or a roof: the line from the aim to the eye, if the town cuts it, brings the eye in front of the
+      // cut (a third-person camera's rule); checked every few frames, the pull kept between checks
+      const eye = [cam[0], y, cam[2]], n = (shot.fixN = (shot.fixN || 0) + 1);
+      if (n % 5 === 1 || !shot.fix) shot.fix = pull(eye, aim);
+      const k = shot.fix.k;
+      shot.lift = (shot.lift || 0) + ((shot.fix.dy || 0) - (shot.lift || 0)) * 0.25; eye[1] += shot.lift; // eased, so a rise is a move, not a jump
+      if (k < 1) { eye[0] = aim[0] + (eye[0] - aim[0]) * k; eye[1] = Math.max(aim[1] + (eye[1] - aim[1]) * k + 1.5, Ld.h(eye[0], eye[2]) + 1.4); eye[2] = aim[2] + (eye[2] - aim[2]) * k; }
+      C.fov = fov; C.aspect = W / Hh; C.position.set(eye[0] + wob * 0.4, eye[1], eye[2] - wob * 0.3); C.lookAt(aim[0], aim[1] + wob * 0.2, aim[2]); C.updateProjectionMatrix(); C.updateMatrixWorld();
       const dist = C.position.distanceTo(new T.Vector3(...aim)), ext = clamp(dist * 1.1, 90, 420), sun = rig.sun;
       sun.position.set(aim[0], 0, aim[2]).addScaledVector(rig.sunDir, 3000); sun.target.position.set(aim[0], 0, aim[2]); sun.target.updateMatrixWorld();
       Object.assign(sun.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext, near: 100, far: 6000 }); sun.shadow.camera.updateProjectionMatrix();
