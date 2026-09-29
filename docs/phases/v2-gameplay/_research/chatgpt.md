@@ -653,3 +653,287 @@ Em đề xuất làm **một vertical slice 3–5 giây**: một địa hình, h
 **Mình có thể tự xây chân dung Quan Vũ, Tào Tháo, Gia Cát Lượng** từ tư liệu lịch sử và một art direction riêng: cùng ngôn ngữ ánh sáng, trang phục, bảng màu, khung chân dung; tránh sao chép khuôn mặt, giáp và bố cục đặc trưng của bản TW3K. Bản quyền bảo vệ cách thể hiện cụ thể, không bảo hộ bản thân ý tưởng lịch sử; :chatgpt-content-reference{index="6"}[tài liệu nhân vật trong repo](sandbox:/workspace/scratch/7315840af024/emperors/docs/product/characters.md) cũng đã ghi rõ dùng roster/tư liệu sử nhưng không copy portrait hay mesh. :chatgpt-content-reference{index="1"}
 
 Nếu là tiền của anh, em sẽ đầu tư trước vào **một bộ tướng và một trận mẫu có bản sắc Emperors**. Chất lượng của mẫu đó sẽ cho mình biết mục tiêu “như Civ VI” cần thêm bao nhiêu công, trước khi đặt hàng cả roster.
+
+
+---
+
+## D. GPT challenge — GAMEPLAY-FREEZE-v2 (29/09/2026)
+
+> Tool: ChatGPT · Phase: `v2-gameplay`
+> Câu hỏi được giao trong `ASSIGN.md`: **“Chỗ nào chặt chẽ nhưng không vui? Chỗ nào người chơi phải nghĩ nhiều hơn một lần quẹt/chạm?”**
+> Owner chốt scope trước khi review: **Freeze v2 = Core Rules + Demo Hoài Nam Rules + Open scale 20 châu**. Không coi phần scale 20 châu là luật đã khóa.
+> Đọc chéo: `DECISION.md`, `GAMEPLAY-FREEZE-v2.md`, `rules.md`, `runtime-event.md`, `perception.md`, `src/engine/battle.js`.
+> Đây là CHALLENGE của draft freeze; không tự sửa DECISION và không tự khóa luật mới.
+
+### D1. Kết luận
+
+Draft hiện tại **chặt về mô phỏng nhưng chưa chặt về trải nghiệm người chơi**. Nó đã mô tả rất kỹ movement, upkeep, trận, tướng, loyalty, hậu quả sau trận và perception; nhưng lại chưa khóa thứ quyết định việc v2 có còn “vào là chơi” hay không: **interaction budget**.
+
+Nếu khóa nguyên văn hiện tại, rủi ro lớn nhất không phải engine sai mà là sản phẩm quay lại đúng triệu chứng đã bị owner bác ở spike trước: **nhiều lựa chọn đúng về logic nhưng người chơi phải thao tác và giữ quá nhiều trạng thái trong đầu**.
+
+Khuyến nghị: **chưa đổi tên draft thành `GAMEPLAY-FREEZE.md` ở trạng thái hiện tại**. Trước khi khóa chỉ cần sửa contract sản phẩm; không cần viết lại battle engine.
+
+### D2. P0 — “không menu” đang mâu thuẫn với số lựa chọn đã khóa
+
+Freeze nói:
+
+- “Không menu lệnh, không tab”.
+- Đạo quân có 4 lệnh: Đi / Đánh / Vây / Giữ.
+- Thành có 6 việc: ruộng / lũy / chợ / mộ bộ / cung / kỵ / thủy (thủy theo điều kiện).
+- Một cánh trong trận có tới 7 lệnh: tiến / xung phong / giữ / bắn / vòng sườn / rút / hỏa công.
+
+Đây là mâu thuẫn ở **product layer**, không phải engine layer. Có thể hỗ trợ 4/6/7 hành vi trong engine mà không được bắt người chơi mở 4/6/7 lựa chọn mỗi lần.
+
+**Cần khóa lại interaction semantics thay vì danh sách menu:**
+
+- Đạo quân: `chạm quân → chạm đích`. Đích thân thiện = đi; địch ngoài đồng = đánh; thành địch = tiếp cận/vây. Không ra lệnh = giữ. Nếu “đánh ngay hay vây” thật sự cần chọn, chỉ hỏi **khi chạm thành địch**, không mở menu lệnh trước.
+- Thành: “mỗi thành **tối đa** một việc”, không phải “mỗi thành **phải** có một việc”. Không chọn = không làm.
+- Trận: cánh không được người chơi đụng tới dùng lệnh tự động; người chơi chỉ override nơi muốn can thiệp.
+
+Điểm cuối **đã được engine hỗ trợ**: `Battle.resolve` gọi `autoPick` cho cánh không có order. Vì vậy giảm thao tác không đòi đổi API trận.
+
+### D3. P0 — battle hiện có thể trở thành game micro riêng bên trong game ngắn
+
+Theo câu chữ hiện tại: “mỗi lượt người chơi ra lệnh từng cánh”; mỗi bên có 1–6 cánh; trận tối đa 5 lượt.
+
+Nếu UI yêu cầu chọn cánh rồi chọn lệnh, một trận 3–6 cánh × 5 lượt cho phép khoảng **30–60 tap chỉ để ra lệnh**, chưa tính camera, forecast và xem kết quả. Đây là ước lượng từ interaction model viết trong freeze, không phải số đo UI.
+
+Điều này xung đột trực tiếp với:
+
+- ván 15–25 phút khi quen;
+- vào là chơi;
+- ưu tiên điện thoại ngang;
+- bài học spike 1/2: quyền quyết định phải tăng nhưng không quay lại nhiều nút.
+
+**Nên giữ grid 3×6 và 7 tactical orders trong engine, nhưng đổi product contract thành:**
+
+> Mỗi lượt trận, tướng đưa sẵn kế hoạch cho toàn bộ cánh. Người chơi có thể chạm cánh để đổi lệnh; cánh không đổi giữ đề xuất. Một thao tác “Đánh” cho chạy lượt.
+
+Như vậy người mới có thể chơi bằng **1 quyết định lớn**; người muốn sâu vẫn can thiệp. Đây là nén UI, không bỏ chiều sâu engine.
+
+Không nên khóa “người chơi ra lệnh từng cánh” theo nghĩa bắt buộc.
+
+### D4. P0 — Freeze đang trộn Core / Demo / Open nên nhìn như tất cả đều là luật sản phẩm
+
+Theo lựa chọn owner, file nên chia ba tầng rõ:
+
+#### Core Rules — ổn để khóa
+
+- Ván tranh bá ngắn; map 3D là bề mặt điều khiển chính.
+- Truth ≠ Perception ≠ Presentation.
+- Một đạo quân **tối đa** một intent / mùa; bỏ qua = giữ.
+- Thành có thể làm việc; không bắt buộc ra việc cho mọi thành.
+- Thẻ chỉ cho quyết định con người / ngoại giao / lịch sử.
+- Tướng có khác biệt thật; dự đoán trận phụ thuộc Mưu.
+- Trận có địa hình, binh chủng, morale, tướng và có thể can thiệp theo lượt.
+- Lương / tiền / Uy có hậu quả rõ; chạm đáy có một mùa cảnh báo.
+- Không bonus hard-code theo id châu.
+
+#### Demo Hoài Nam — khóa riêng cho vertical slice
+
+- Chu Nguyên Chương, 5 thành, Tào / Ngô / hào tộc.
+- Điều kiện thắng 5 thành; thua nếu mất hết thành / Chu chết / đáy hai mùa.
+- Tầm 108 / 135 / 180 km, cost/upkeep hiện tại.
+- Grid trận 3 làn × 6 hàng, tối đa 5 lượt.
+- Các con số loyalty, uy sau trận, garrison 20/80 %, công thức forecast hiện tại.
+- Bộ task thành và roster/tình huống của demo.
+
+Các số này tốt để chạy và test, nhưng **không nên được hiểu là DNA bất biến của toàn game**.
+
+#### Open — scale thành → 20 châu
+
+Phải để mục 5 giải quyết:
+
+- delegation / automation khi sở hữu nhiều thành;
+- đơn vị quản lý là thành, châu hay “active fronts” khi map lớn;
+- đường đi nhiều mùa và hậu cần;
+- scout / tình báo nhiều tầng;
+- alliance obligation;
+- quan hệ / XP / level tướng;
+- xưng thần / phục quốc / kế vị;
+- vùng rìa;
+- thắng khi scale 20 châu.
+
+Đặc biệt: **“mỗi thành một việc mỗi mùa” không được khóa làm Core cho 20 châu**. Nó có thể chơi được ở 2 thành nhưng biến thành spreadsheet khi có 10–20 địa điểm.
+
+### D5. P1 — forecast đúng logic nhưng đang đưa quá nhiều thứ cho người chơi đọc
+
+Engine forecast trả:
+
+- nhãn trận;
+- sức hai bên;
+- thương vong ước;
+- tối đa 6 reasons ±%;
+- lane;
+- sai số theo Mưu.
+
+Đây là API tốt cho engine / test nhưng UI không nên in hết. “Số, không chữ” trong DECISION có ý là tránh band mơ hồ, không có nghĩa người chơi phải đọc nhiều số.
+
+**Player-facing nên khóa tối đa:**
+
+1. nhãn của tướng;
+2. hai sức mạnh;
+3. thương vong ước;
+4. **2 lý do quan trọng nhất**.
+
+Chi tiết còn lại mở khi chạm “?” nếu cần. `estWin`, band sai số và toàn bộ 6 reasons vẫn là internal/API.
+
+Nếu không, forecast tự nó trở thành một màn phân tích cần học trước mỗi trận — trái với vai trò “tướng phân tích hộ”.
+
+### D6. P1 — kinh tế đang yêu cầu mental arithmetic dù giao diện nói “số ít và rõ”
+
+Freeze có:
+
+- 4 loại upkeep;
+- thu theo dân;
+- ruộng +25%;
+- chợ +200;
+- giá mộ nhiều loại;
+- chi phí trả trước;
+- việc kéo 1–2 mùa;
+- lương âm gây đào ngũ.
+
+Các luật này có thể ở engine, nhưng người chơi không nên tự cộng trừ.
+
+Trước khi xác nhận việc / hành quân, UI cần cho thấy **hệ quả sau mùa** ngay tại nơi chọn, ví dụ:
+
+> Lương 12.400 → 9.800 sau mùa · tới nơi sau 2 mùa
+
+Không cần bắt người chơi mở bảng economy để tự tính.
+
+Freeze nên khóa nguyên tắc “show consequence, not formula”; exact formula để `rules.md`.
+
+### D7. P1 — “một mùa chia theo đơn vị” phải là capacity, không phải checklist
+
+Câu “mỗi đạo quân một lệnh, mỗi thành một việc” rất dễ được implement thành checklist phải xử lý hết mới bấm Hết mùa.
+
+Nếu vậy, mỗi lần chiếm thêm đất thì friction tăng tuyến tính — người chơi bị phạt vì đang thắng.
+
+Cần viết rõ:
+
+- mỗi đạo quân **có thể nhận tối đa một lệnh**;
+- mỗi thành **có thể có tối đa một việc**;
+- bỏ qua luôn hợp lệ;
+- Hết mùa không yêu cầu xử lý đủ mọi entity;
+- entity bỏ qua dùng default an toàn: quân giữ, thành không khởi việc mới.
+
+Điều này cũng làm đường scale sau này dễ hơn.
+
+### D8. P1 — thẻ “bất kỳ lúc nào” không được phép phá nhịp map
+
+“Thẻ chỉ cho người” là quyết định tốt và nên giữ. Nhưng “bất kỳ lúc nào trong mùa” nếu hiểu là popup chen ngang sẽ lại biến map thành nền cho modal.
+
+Nên khóa:
+
+- thẻ có thể **xử lý bất kỳ lúc nào**, nhưng không tự giật focus giữa thao tác map;
+- có badge/queue;
+- chỉ thẻ thật sự khẩn cấp mới interrupt;
+- cuối mùa unanswered = “không” như draft.
+
+Như vậy thẻ là layer con người, không trở lại làm core interaction.
+
+### D9. P1 — chạm đáy chỉ vui nếu cảnh báo tạo được một nước cứu thật
+
+Draft: lương âm → 10% quân bỏ ngay; mùa sau còn đáy → thua. Logic rõ nhưng có thể thành “warning sau khi đã chết” nếu người chơi không còn hành động đủ mạnh để cứu.
+
+Freeze nên thêm invariant:
+
+> Khi hiện cảnh báo chạm đáy, game phải chỉ ra ít nhất một recovery path đang hợp lệ nếu state còn cứu được.
+
+Ví dụ giảm quân, dừng việc, lấy lương từ quyết định người/ngoại giao, hoặc nguồn khác tùy luật sau này. Nếu không còn đường cứu thì phải nói rõ là tình thế sụp, không giả thành một cảnh báo có agency.
+
+### D10. P2 — năm stat + trait + Trung có nguy cơ thành information wall
+
+Hệ thống tướng có bản sắc và nên giữ. Vấn đề là nếu mỗi lần chọn tướng người chơi phải đọc:
+
+- Uy / Tài / Mưu / Dũng / Kiên;
+- trait;
+- Trung;
+- effect theo threshold;
+
+thì “tướng giúp người chơi hiểu trận” biến thành “người chơi phải học character sheet”.
+
+Nên giữ 5 stat trong model, nhưng mỗi context chỉ highlight stat liên quan:
+
+- forecast → Mưu;
+- công → Dũng;
+- thủ → Kiên;
+- morale / leadership → Uy;
+- xây → Tài khi feature có thật.
+
+Trung hiển thị bar có các mốc consequence; không bắt nhớ 30/70/85 bằng chữ.
+
+### D11. P2 — hậu quả sau trận nên tự diễn ra, không tạo thêm màn quyết định
+
+Các rule như:
+
+- thành đổi chủ;
+- lũy −1;
+- việc đang làm mất;
+- đồn 20%;
+- đạo quân còn 80%;
+- quân thua rút / nhập đồn / tan;
+- Uy ±;
+
+là simulation hậu quả tốt. Không cần biến chúng thành từng confirmation. Player chỉ cần thấy **1 recap ngắn + thay đổi trực tiếp trên map**.
+
+Ngoại lệ đúng với product DNA: tù binh / tướng / ngoại giao → thành thẻ người vì đó là decision có câu chuyện.
+
+### D12. Hai câu trong draft nên sửa nghĩa trước khi khóa
+
+**“Số, không chữ.”**
+
+Nên đổi thành:
+
+> **Trạng thái định lượng, không band mơ hồ.** Số dùng cho quân/lương/tiền/Uy; chữ dùng để giải thích nguyên nhân và quyết định con người. Dự đoán trận có nhãn của tướng nhưng không lộ xác suất thật.
+
+Vì chính freeze vẫn cần “Thắng / Ngang / Thua”, reasons và thẻ người.
+
+**“Mỗi lượt người chơi ra lệnh từng cánh.”**
+
+Nên đổi thành:
+
+> Mỗi lượt trận có lệnh cho mọi cánh; hệ thống/tướng đề xuất lệnh mặc định, người chơi có thể override từng cánh trước khi cho chạy lượt.
+
+Câu mới khớp engine hiện tại và giảm friction lớn nhất mà không mất tactical depth.
+
+### D13. Acceptance criteria còn thiếu trong Freeze
+
+DECISION có metric đúng nhưng Freeze chưa biến chúng thành contract build. Trước khi owner khóa, nên thêm test trải nghiệm:
+
+1. Người mới làm được **một map intent có hậu quả** trong <60 giây mà không cần đọc manual.
+2. Một mùa bình thường có thể kết thúc mà **không phải mở menu và không phải chạm mọi quân/thành**.
+3. Một lượt battle có thể chạy bằng cách **accept plan mặc định**, tactical override là optional.
+4. Người chơi nhìn forecast biết **hai lý do chính** vì sao nên/không nên đánh, không cần hiểu công thức.
+5. Khi ra lệnh hành quân/xây, UI cho thấy **ETA + delta tài nguyên** trước confirm.
+6. Sau trận chỉ một màn recap ngắn; thay đổi chính nhìn thấy trên map.
+7. Sau một mùa Demo Hoài Nam, owner kể được ít nhất **một quyết định của mình làm đổi thế cờ**, không chỉ kể RNG/cutscene.
+
+Các test engine hiện có kiểm tra tính đúng. Bộ trên kiểm tra **interaction contract** — chính phần draft đang thiếu.
+
+### D14. Những phần không cần phá lại
+
+Không nên vì challenge này mà mở lại mọi thứ:
+
+- Truth / Perception / Presentation: giữ.
+- BattleDescriptor + TurnObservation làm mờ: giữ.
+- Battle API thuần: giữ.
+- Grid 3×6: giữ cho Demo Hoài Nam.
+- Forecast phụ thuộc Mưu: giữ.
+- Binh chủng × địa hình: giữ.
+- Cards chỉ cho người: giữ.
+- Map 3D là interaction surface chính: giữ.
+- Short-run trước, scale sau: giữ.
+
+Gap nằm ở **cách người chơi chạm vào các hệ thống**, không nằm ở việc engine thiếu thêm hệ thống.
+
+### D15. Owner decisions cần trước khi lock
+
+Không cần research rộng thêm. Chỉ cần owner chốt 4 điểm product contract:
+
+1. **Battle:** accept-plan + optional override, hay bắt ra lệnh mọi cánh?
+2. **Entity orders:** “mỗi quân/thành tối đa một việc” hay bắt phải xử lý từng entity trước Hết mùa?
+3. **City UI Demo:** hiện toàn bộ 5–6 việc hay chỉ 2–3 việc hợp context rồi mở “thêm”?
+4. **Freeze structure:** chuyển các exact numbers / Demo Hoài Nam sang section Demo, để Core chỉ giữ behavior; scale 20 châu nằm Open như owner đã chọn.
+
+Nếu chốt theo hướng giảm bắt buộc thao tác, Freeze v2 có thể khóa mà không cần đổi kiến trúc engine hiện tại.
