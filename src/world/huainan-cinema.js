@@ -437,11 +437,12 @@
       for (const [name, s] of shot.cues) later(() => cue(name), s);
       later(() => say(shot.line), shot.kind === 'open' ? 0.9 : 0.35);
       if (shot.res && ui) later(() => ui.result(shot.res.good ? 'Thắng' : shot.res.win === 'draw' ? 'Hoà' : 'Thua', shot.res.good), 0.6);
+      let frames = 0;
       const step = (now) => {
         if (t0 === null) t0 = now;
         const t = (now - t0) / 1000;
-        if (skipping || t >= shot.dur) { clearTimers(); if (ui) { ui.caption(null); ui.result(null); } resolve(); return; }
-        try { frame(shot, t); } catch (e) { console.warn('cinema frame', e); skipping = true; }
+        if (skipping || t >= shot.dur) { clearTimers(); if (ui) { ui.caption(null); ui.result(null); } shot.frames = frames; shot.skipped = skipping; cin.playing = null; resolve(); return; }
+        try { frame(shot, t); frames++; cin.playing = { kind: shot.kind, shot: shot.shotKind, t: +t.toFixed(2), dur: shot.dur }; if (o.measure && !shot.measure && t > shot.dur * 0.45) shot.measure = cin.measure(); } catch (e) { console.warn('cinema frame', e); skipping = true; }
         requestAnimationFrame(step);
       };
       requestAnimationFrame(step);
@@ -477,14 +478,19 @@
     const run = async (kind, ctx, env, tag, title) => {
       await HC.load();
       if (env) season = o.season || HC.season(env.view && env.view().calendar);
+      skipping = false; // a tap from here on skips this shot, even while it is being built
       await enter(env, title);
       if (ui) ui.tag(tag);
-      let shot = null;
+      let shot = null; const t0 = performance.now();
       try { shot = await prepare(kind, ctx, stepYield); } catch (e) { console.warn('cinema: no shot', e); }
+      const entry = { kind, shot: shot && shot.shotKind, line: shot && shot.line, readyMs: Math.round(performance.now() - t0), siteMs: site && site.buildMs, stage: stage && stage.stats() };
+      cin.log.push(entry);
       if (shot && !skipping) await show(shot, env);
+      if (shot) Object.assign(entry, { frames: shot.frames, skipped: !!shot.skipped, measure: shot.measure || null, memory: Object.assign({}, renderer.info.memory) });
       return shot;
     };
     const cin = {
+      log: [], playing: null, // what played (the e2e reads it) and what is playing now
       get active() { return !!held; },
       open: async (bt, env) => { const s = await run('open', { bt }, env, 'Trận ' + (names[bt.plan.site] || ''), titleOf(bt)); await resumeMap(env); return s; },
       turn: async (before, after, over, env) => {
@@ -513,7 +519,7 @@
     if (!citiesJson) citiesJson = await fetch(BASE + 'data/scenario/huainan-cities.json').then((r) => r.json());
     if (!cin) {
       const view = () => env.view();
-      cin = HC.create({ renderer: env.rt.renderer, W: env.W, H: env.H, quality: env.quality, data: env.data, cities: citiesJson, Battle: window.EmperorsBattle,
+      cin = HC.create({ renderer: env.rt.renderer, W: env.W, H: env.H, quality: env.quality, data: env.data, cities: citiesJson, Battle: window.EmperorsBattle, measure: env.params.has('cinemeasure'),
         wallsOf: (id) => { const t = view().towns.find((x) => x.id === id); return t ? t.walls : null; },
         // an attack with no march (the army was already there): from the attacker's nearest town, as the map's board
         fromOf: (plan) => { const v = view(), towns = env.data.towns, at = towns.find((t) => t.id === plan.site); let best = null; for (const t of v.towns) { if (t.owner !== plan.attacker.fid || t.id === plan.site) continue; const p = towns.find((x) => x.id === t.id); if (!p || !at) continue; const d = Math.hypot(p.xz[0] - at.xz[0], p.xz[1] - at.xz[1]); if (!best || d < best.d) best = { d, id: t.id }; } return best && best.id; } });
