@@ -14,6 +14,7 @@ const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:3000/';
 const OUT = path.join(ROOT, 'test-results', 'polish-show');
 fs.mkdirSync(OUT, { recursive: true });
 const CDN_THREE = /^https:\/\/cdn\.jsdelivr\.net\/npm\/three@[^/]+\/(.+)$/;
+const BUDGET = { high: { tris: 3.3e6, calls: 400 }, mid: { tris: 2.1e6, calls: 300 }, low: { tris: 1.05e6, calls: 150 } };
 const tier = process.argv[2] || 'low', seed = process.argv[3] || '3', fast = process.argv[4] === 'fast';
 const SEASONS = 4, [W, H] = [844, 390];
 const LIMIT = (fast ? 6 : 30) * 60000, QUIET = (fast ? 90 : 300) * 1000; // the whole run; the longest time with nothing moving
@@ -101,6 +102,9 @@ try {
   const s3 = await (async () => { await sleep(fast ? 1500 : 6000); return run(() => window.HuaiNanShow.state()); })();
   check(s3.steps === s2.steps, 'and it plays no further step', { before: s1.steps, after: s3.steps });
   await shot('stopped');
+  const m = await run(() => window.__v2.sc.measure());
+  report.measure = { calls: m.calls, triangles: m.triangles };
+  check(m.triangles <= BUDGET[tier].tris && m.calls <= BUDGET[tier].calls, `${tier}: the map frame after the watch is in the 0005 budget`, report.measure);
   const ch = await run(() => window.HuaiNanShow.chronicle());
   report.chronicle = ch;
   check(ch.length >= 2, 'the chronicle collected the game from the events', ch.slice(-4));

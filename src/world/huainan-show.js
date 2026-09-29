@@ -98,8 +98,9 @@
 .hs-chron li.good span{color:#c4e6bb}.hs-chron li.bad span{color:#f6b19f}
 .hs-tint{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity 3.2s ease}
 .hs-tint.on{opacity:1}
-.hs-tint.dusk{background:linear-gradient(180deg,rgba(52,30,78,.66) 0%,rgba(132,62,44,.38) 50%,rgba(24,12,10,.66) 100%);mix-blend-mode:multiply}
-.hs-tint.glow{background:radial-gradient(70% 45% at 72% 26%,rgba(255,138,58,.26),rgba(255,138,58,0) 70%);mix-blend-mode:screen}
+.hs-tint.dusk{background:linear-gradient(180deg,rgba(58,34,92,.82) 0%,rgba(150,72,48,.6) 46%,rgba(26,13,11,.8) 100%);mix-blend-mode:multiply}
+.hs-tint.glow{background:radial-gradient(75% 50% at 74% 18%,rgba(255,132,52,.34),rgba(255,132,52,0) 70%);mix-blend-mode:screen}
+.hs-tint.ash{background:#6b625a;mix-blend-mode:saturation;opacity:0}.hs-tint.ash.on{opacity:.55}
 .hs-tint.gold{background:radial-gradient(120% 95% at 50% 38%,rgba(255,216,140,.5),rgba(255,196,112,.22) 55%,rgba(70,36,12,.3));mix-blend-mode:soft-light}
 .hs-watch{position:fixed;inset:0;z-index:35;pointer-events:none}
 .hs-catch{position:absolute;inset:0;pointer-events:auto}
@@ -316,9 +317,10 @@
   const townData = (id) => E.data.towns.find((t) => t.id === id) || {};
 
   // ---------------------------------------------------------------- the intro (hook 'intro')
-  // ~14 s: from high over the Huai down onto the home town, west along the river to the rival on land, south to the rival on
-  // the Yangtze, and back up to the whole region, where the goal screen takes over. A timeline of absolute times, so slow frames
-  // keep its rhythm; a tap cuts it and the camera goes straight to the overview.
+  // ~15 s: from high over the Huai down onto the home town, west along the river to the rival on land, south to the rival on
+  // the Yangtze, and back up to the whole region, where the goal screen takes over. Each beat waits for the one before: a
+  // flight lands before the next begins, a line stays up long enough to read, so a slow page stretches the intro but the words
+  // stay with their pictures. A tap cuts it and the camera goes straight to the overview.
   async function intro(view) {
     const me = view.me, fac = E.data.factions || {}, lord = (fac[me] && fac[me].name) || 'Chu Nguyên Chương';
     const home = view.towns.find((t) => t.owner === me) || view.towns[0], H = Cam.xz(home.id), hd = townData(home.id);
@@ -328,9 +330,9 @@
     rivals.sort((x, y) => x.xz[0] - y.xz[0]);
     const look = (tid, o) => { const P = Cam.xz(tid), az = Math.atan2(H[0] - P[0], H[1] - P[1]) + (o.turn || 0); return { t: P, dist: o.dist, az, el: o.el }; };
     const shots = [];
-    const P0 = { t: [H[0] - 6, H[1] + 5], dist: 165, az: 1.35, el: 1.22 }; // high east of home, looking inland: land fills the frame, not the sea's haze
+    const P0 = { t: [H[0] - 5, H[1] + 4], dist: 112, az: 1.25, el: 1.05 }; // high east of home, looking inland: the region's fine ground fills the frame, not the sea's haze
     let az = 0.55;
-    shots.push({ p: { t: H, dist: 46, az, el: 0.58 }, ms: 4000, kick: home.name + (hd.river && RIVER[hd.river] ? ' · ' + RIVER[hd.river] : ''),
+    shots.push({ p: { t: H, dist: 46, az, el: 0.58 }, ms: 4800, kick: home.name + (hd.river && RIVER[hd.river] ? ' · ' + RIVER[hd.river] : ''),
       line: lord + ' tỉnh giấc ' + (home.id === 'chung_ly' ? 'ở quê nhà' : 'ở ' + home.name) + ', sớm hơn nghìn năm.' });
     for (const r of rivals.slice(0, 2)) {
       const f = fac[r.a.fid] || {}, tn = townName(r.tid), td = townData(r.tid), dir = compass(H, r.xz), fleet = r.a.arm === 'fleet';
@@ -338,7 +340,7 @@
       p.az = Cam.near(p.az, az); az = p.az;
       const line = fleet ? 'Phía ' + dir + ', thuyền ' + (f.short || '') + ' chờ gió trên ' + (RIVER[td.river] || 'sông') + '.'
         : gen ? 'Phía ' + dir + ', ' + gen + ' giữ ' + tn + ' cho ' + (f.name || f.short || '') + '.' : 'Phía ' + dir + ', quân ' + (f.short || '') + ' đóng ở ' + tn + '.';
-      shots.push({ p, ms: 3300, kick: tn + ' · ' + (fleet && RIVER[td.river] ? RIVER[td.river] : 'cờ ' + (f.short || '')), line });
+      shots.push({ p, ms: 3400, kick: tn + ' · ' + (fleet && RIVER[td.river] ? RIVER[td.river] : 'cờ ' + (f.short || '')), line });
     }
     const end = Cam.over(0.3, 0.88); end.az = Cam.near(end.az, az);
     const n = view.towns.length, cal = view.calendar || 'Thu 219', year = Number((/\d+/.exec(cal) || [219])[0]);
@@ -348,27 +350,26 @@
     Cam.jump(P0);
     LD.dissolve(1400);
     cue('intro');
-    const at = async (ms) => { await cut.wait(ms - (now() - t0)); return !cut.done; };
+    // the next beat: at `until` (a time), and not before the line on screen has been up for `min` ms
+    let shown = 0;
+    const hold = async (until, min = 0) => { await cut.wait(Math.max(until - now(), shown + min - now())); return !cut.done; };
     try {
-      if (!(await at(350))) return;
-      Stage.mid({ kick: year === 219 ? 'Kiến An năm thứ hai mươi tư' : '', big: cal.replace(/^(\S+)\s+/, (m, s) => s + ' năm ') });
-      let t = 300;
+      if (!(await hold(t0 + 350))) return;
+      Stage.mid({ kick: year === 219 ? 'Kiến An năm thứ hai mươi tư' : '', big: cal.replace(/^(\S+)\s+/, (m, s) => s + ' năm ') }); shown = now();
       for (let i = 0; i < shots.length; i++) {
-        const s = shots[i];
-        if (!(await at(t))) return;
+        const s = shots[i], f0 = now();
         Cam.fly(s.p, s.ms, cut);
-        if (!(await at(t + (i ? 1100 : 2500)))) return;
-        if (!i) Stage.mid(null);
-        if (!(await at(t + (i ? 1150 : 2950)))) return;
-        Stage.low({ kick: s.kick, line: s.line });
-        t += s.ms;
+        if (!i) { if (!(await hold(f0 + s.ms * 0.45, 2300))) return; Stage.mid(null); }
+        if (!(await hold(f0 + s.ms * (i ? 0.3 : 0.58)))) return;
+        Stage.low({ kick: s.kick, line: s.line }); shown = now();
+        if (!(await hold(f0 + s.ms, 2500))) return;
       }
-      if (!(await at(t))) return;
-      Cam.fly(end, 2500, cut);
-      if (!(await at(t + 800))) return;
+      const f0 = now();
+      Cam.fly(end, 2600, cut);
+      if (!(await hold(f0 + 700))) return;
       Stage.low(null);
-      Stage.mid({ seal: true, big: (NUM[n] || n) + ' thành Hoài Nam', sub: 'chưa về một mối.' });
-      if (!(await at(t + 3300))) return;
+      Stage.mid({ seal: true, big: (NUM[n] || n) + ' thành Hoài Nam', sub: 'chưa về một mối.' }); shown = now();
+      if (!(await hold(f0 + 2600, 3000))) return;
     } finally {
       if (cut.done) Cam.fly(end, 450);
       await Stage.close(cut.done ? 350 : 800); hideUI(false);
@@ -386,9 +387,10 @@
     const head = win ? { kick: view.calendar + ' · ' + seasons + ' mùa', big: 'Cờ 明 trên ' + (NUM[view.towns.length] || view.towns.length).toLowerCase() + ' thành', sub: over.why || '' }
       : { kick: view.calendar, big: 'Cờ 明 đã hạ', sub: over.why || '' };
     Stage.open({ place: 'Hoài Nam' }); hideUI(true);
-    tint(win ? ['gold'] : ['dusk', 'glow']);
+    tint(win ? ['gold'] : ['ash', 'dusk', 'glow']); // the fall: the colour drains, the light goes down
     cue(win ? 'victory' : 'defeat');
-    const at = async (ms) => { await cut.wait(ms - (now() - t0)); return !cut.done; };
+    let shown = 0;
+    const at = async (ms, min = 0) => { await cut.wait(Math.max(ms - (now() - t0), shown + min - now())); return !cut.done; };
     try {
       if (win) {
         // once round the region, low enough for the flags, the chronicle on the left third
@@ -396,19 +398,19 @@
         const p0 = { t: [m[0] + 6, m[1]], dist: d, az: az0, el };
         Cam.fly(p0, 1600, cut);
         if (!(await at(900))) return;
-        Stage.chron(head, lines, 700);
+        Stage.chron(head, lines, 700); shown = now();
         if (!(await at(1600))) return;
         Cam.sweep(Object.assign({}, p0, { az: az0 + Math.PI * 1.1, dist: d * 0.92 }), 12500, cut);
-        if (!(await at(1600 + 1300 + lines.length * 700 + 4200))) return;
+        if (!(await at(1600 + 1300 + lines.length * 700 + 4200, 1300 + lines.length * 700 + 3800))) return;
       } else {
         const fell = CH.lost || (view.towns.find((t) => t.owner !== view.me) || view.towns[0]).id, P = Cam.xz(fell);
         const az0 = E.sc.cam.az, p0 = { t: P, dist: 26, az: az0, el: 0.5 };
         Cam.fly(p0, 1500, cut);
         if (!(await at(900))) return;
-        Stage.chron(head, lines, 750);
+        Stage.chron(head, lines, 750); shown = now();
         if (!(await at(1500))) return;
-        Cam.fly({ t: [P[0] + 4, P[1] - 6], dist: 150, az: az0 + 0.6, el: 1.12 }, 9500, cut);
-        if (!(await at(1500 + 1300 + lines.length * 750 + 3800))) return;
+        Cam.fly({ t: [P[0] + 3, P[1] - 4], dist: 96, az: az0 + 0.55, el: 0.98 }, 9500, cut);
+        if (!(await at(1500 + 1300 + lines.length * 750 + 3800, 1300 + lines.length * 750 + 3400))) return;
       }
     } finally {
       await Stage.close(cut.done ? 350 : 900); hideUI(false);
@@ -500,7 +502,7 @@
     ['history_fan', () => true], // the rumour: Trương Liêu likelier to march away
     ['history_lu', (c, adv, v) => v.res.uy >= 45], // demand Lịch Dương only with the Uy to carry it
     ['envoy_wu', () => false], // an alliance gives Wu Lịch Dương, one of the five towns
-    ['local_hudi', () => true],
+    ['local_hudi', () => false], // demand an unconditional surrender (Uy +3) and take Hu Dị by the sword: a battle the forecast calls a rout
     ['captive', () => true],
   ];
   const decide = (c, adv, v) => {
@@ -632,9 +634,10 @@
   Play.on('act', (a) => {
     if (BUSY[a.name]) setPhase('busy');
     if (a.name === 'onAgain') { chReset(); untint(); setPhase('goal'); }
-    if (a.name === 'onAnswer' && E) { // a card answered: the chronicle keeps it (the card is still in the View here)
-      const v = E.view(), c = v.cards.find((x) => x.id === a.args[0]);
-      if (c) chAdd(v.calendar, c.title + ': ' + (a.args[1] ? c.yes.label : c.no.label), { w: 1, ord: 0, key: 'cd|' + c.id });
+    if (a.name === 'onAnswer' && E) { // a card answered: the chronicle keeps it in the scenario's words (the card is still in the View here)
+      const v = E.view(), c = v.cards.find((x) => x.id === a.args[0]), d = c && (E.data.cards || []).filter((x) => c.id.indexOf(x.id) === 0).sort((x, y) => y.id.length - x.id.length)[0];
+      const t = d && d.chronicle ? d.chronicle[a.args[1] ? 'yes' : 'no'] : c && c.title + ': ' + (a.args[1] ? c.yes.label : c.no.label);
+      if (t) chAdd(v.calendar, t.replace(/\.$/, ''), { w: 1, ord: 0, key: 'cd|' + c.id });
     }
   });
   Play.on('battle', () => setPhase('battle'));
@@ -677,6 +680,7 @@
   Show._intro = 'pending';
   Show.state = () => ({ phase: W.phase, watching: W.on, seasons: W.seasons, steps: W.steps, stuck: W.stuck, intro: Show._intro, load: Object.assign({}, LD.marks), chronicle: CH.list.length });
   Show.chronicle = () => chPick(99).map((l) => ({ season: l.season, text: l.text, tone: l.tone }));
+  Show.stage = Stage; // the stage alone (a harness page draws its titles without a game)
   Show.watch = (on) => E && E.H.onWatch(!!on);
   // a scene of the show on demand, over the game as it stands (the console, a clip, the e2e): 'intro', 'win' or 'lose'
   Show.play = async (name) => {
