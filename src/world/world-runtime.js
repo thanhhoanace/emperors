@@ -227,13 +227,14 @@
     };
 
     // ---------------------------------------------------------------- light, lens
-    scene.add(new THREE.HemisphereLight(0xc6d6e8, 0x5a5238, 0.72));
+    const hemi = new THREE.HemisphereLight(0xc6d6e8, 0x5a5238, 0.72); scene.add(hemi);
     const sun = new THREE.DirectionalLight(0xffe4bf, 2.5);
     const shadowMap = o.shadowMap || (q && q.shadow) || 4096;
     sun.shadow.mapSize.set(shadowMap, shadowMap); sun.shadow.bias = -0.0002;
     scene.add(sun, sun.target);
     const lens = K.lens(renderer, scene, camera, { focus: 100, range: 30, maxBlur: 3.5, ao: 1.0, aoRadius: 0.12, atmos: { density: 0.012, falloff: 0.3, color: 0xbac8cf, sunColor: 0xf6d7a0, sunDir }, quality: q });
     const LU = lens.uniforms, blurK = renderer.getDrawingBufferSize(new THREE.Vector2()).y / 900;
+    let atmosK = 1; // the season's haze on top of each camera mode's
 
     // ---------------------------------------------------------------- views
     const orbit = (t, D, az, el) => [t[0] + D * Math.cos(el) * Math.sin(az), t[1] + D * Math.sin(el), t[2] + D * Math.cos(el) * Math.cos(az)];
@@ -298,6 +299,69 @@
       return { name: e < 1 ? 'between' : b.name, target: t.toArray(), cam: cam.toArray(), fov: a.fov + (b.fov - a.fov) * e, mode, lod: src.lod, key: src.key, trees: src.trees, city: src.city, D: src.D, clouds: (e < 0.5 ? a : b).clouds };
     };
 
+    // ---------------------------------------------------------------- seasons (docs/design/v2-polish.md, job 4)
+    // rt.setSeason(name, { ms, onFrame }) → Promise: Xuân | Hạ | Thu | Đông (or a calendar line, 'Đông 219'). The ground,
+    // the forests, the rivers and the snow on every model (K.wx, terrain.js) follow it, and so do the sky, the sun, the
+    // haze and the lens's grade; ms > 0 blends there (the snow grows and melts in patches), else it is instant.
+    // onFrame(u) after each step (a page that draws on demand redraws). rt.setRain(k, wet): a shower 0..1 greys the sky
+    // and dims the sun, wet 0..1 darkens and glosses the ground. rt.season: the name, null until set (the round-8 look,
+    // which game.html keeps). Nature (the 1 m scenes), when loaded, is told the same season.
+    const SEASONS = [
+      // Xuân: a soft morning, fresh greens, mist lying in the valleys
+      { sky: [0x78a0cb, 0xe6e9e1, 0xfff3dc], sun: [0xfff1dc, 2.4], hemi: [0xd4e3ef, 0x5f6242, 0.78], atmos: [0xcdd8da, 0xf6e2c0, 1.15], grade: { mul: [0.98, 1.02, 1.0], lift: [0.002, 0.004, 0.005], sat: 1.08, con: 1.0, mist: 1.5, mistH: 0.16, mistBase: 0.12, mistCol: 0xe6ebe7, mistScale: 0.045, mistDrift: [3.1, 7.7] } },
+      // Hạ: a high clear sun, deep saturated greens
+      { sky: [0x4a80c6, 0xd4e0e4, 0xfff4de], sun: [0xfff6e8, 2.75], hemi: [0xc2d7ee, 0x4a5632, 0.72], atmos: [0xb4c6d2, 0xf4e0b4, 1.0], grade: { mul: [1.0, 1.0, 0.98], sat: 1.08, con: 1.03 } },
+      // Thu: the warm late light of the approved look, gold in the fields and the woods
+      { sky: [0x5f86b5, 0xddd6c4, 0xffd9a8], sun: [0xffdfb4, 2.5], hemi: [0xcad3e0, 0x5f5134, 0.72], atmos: [0xc5c4bb, 0xf6d49a, 1.0], grade: { mul: [1.02, 1.0, 0.96], lift: [0.003, 0.001, 0], sat: 1.02, con: 1.03 } },
+      // Đông: a low cold sun, pale sky, snow, a blue-grey grade and a thin cold haze
+      { sky: [0x8ea4bb, 0xe3e7ea, 0xfff4e8], sun: [0xf3f1fb, 2.35], hemi: [0xd2def0, 0x8a8f96, 0.78], atmos: [0xd6dde4, 0xf2ead8, 1.3], grade: { mul: [0.96, 0.99, 1.05], lift: [0.003, 0.005, 0.011], sat: 0.9, con: 1.07, mist: 0.6, mistH: 0.2, mistBase: 0.1, mistCol: 0xdde4ea, mistScale: 0.035, mistDrift: [9.3, 1.7] } },
+    ];
+    const C3 = (hex) => { const c = new THREE.Color(hex); return [c.r, c.g, c.b]; };
+    const lookOf = (i) => {
+      const S = SEASONS[i], g = S.grade;
+      return { zen: C3(S.sky[0]), hor: C3(S.sky[1]), glow: C3(S.sky[2]), sun: C3(S.sun[0]), sunI: S.sun[1], hemiS: C3(S.hemi[0]), hemiG: C3(S.hemi[1]), hemiI: S.hemi[2],
+        atmosCol: C3(S.atmos[0]), atmosSun: C3(S.atmos[1]), atmosK: S.atmos[2], mul: g.mul || [1, 1, 1], lift: g.lift || [0, 0, 0], sat: g.sat ?? 1, con: g.con ?? 1,
+        mist: g.mist || 0, mistH: g.mistH || 0.25, mistBase: g.mistBase || 0.1, mistCol: C3(g.mistCol ?? 0xe0e6e6), mistScale: g.mistScale || 0.04, mistDrift: g.mistDrift || [0, 0], w: K.wx.weights(i), snow: i === 3 ? 1 : 0 };
+    };
+    const lerpLook = (a, b, e) => { const o = {}; for (const k of Object.keys(a)) o[k] = Array.isArray(a[k]) ? a[k].map((v, j) => v + (b[k][j] - v) * e) : a[k] + (b[k] - a[k]) * e; return o; };
+    // a shower over any season: a grey sky, a dim sun, more haze, fewer colours
+    const rainy = (L) => Object.assign({}, L, { zen: C3(0x7c8894), hor: C3(0xb9bfc3), glow: C3(0xd8d8d0), sun: C3(0xdde2ea), sunI: L.sunI * 0.42, hemiS: C3(0xc3ccd6), hemiI: L.hemiI * 1.12,
+      atmosCol: C3(0xa9b3ba), atmosK: L.atmosK * 1.9, sat: L.sat * 0.82, con: L.con * 0.96, mul: [L.mul[0] * 0.93, L.mul[1] * 0.96, L.mul[2]] });
+    const seasonMats = [gu, cu, sea.material.userData.uniforms, waterFar.rivers.material.userData.uniforms, waterNear.rivers.material.userData.uniforms].filter((u) => u && u.uSeasonOn);
+    let seasonLook = null, rainK = 0, seasonAnim = null;
+    const applyLook = () => {
+      if (!seasonLook) return;
+      const L = rainK > 0 ? lerpLook(seasonLook, rainy(seasonLook), rainK) : seasonLook;
+      skyMat.uniforms.zen.value.setRGB(...L.zen); skyMat.uniforms.hor.value.setRGB(...L.hor); skyMat.uniforms.glow.value.setRGB(...L.glow);
+      sun.color.setRGB(...L.sun); sun.intensity = L.sunI; hemi.color.setRGB(...L.hemiS); hemi.groundColor.setRGB(...L.hemiG); hemi.intensity = L.hemiI;
+      LU.atmosCol.value.setRGB(...L.atmosCol); LU.atmosSun.value.setRGB(...L.atmosSun); atmosK = L.atmosK;
+      if (current) LU.atmos.value = MODES[current.mode].lens.atmos * atmosK;
+      K.wx.grade(lens, { mul: L.mul, lift: L.lift, sat: L.sat, con: L.con, mist: L.mist, mistH: L.mistH, mistBase: L.mistBase, mistScale: L.mistScale, mistDrift: L.mistDrift }); LU.mistCol.value.setRGB(...L.mistCol);
+      K.wx.U.uSeasonW.value.set(...L.w); K.wx.U.uSnow.value = L.snow;
+    };
+    rt.season = null;
+    rt.setSeason = (name, op = {}) => {
+      const i = K.wx.index(name);
+      if (i < 0) return Promise.resolve(rt.season);
+      const to = lookOf(i), from = seasonLook, ms = op.ms || 0;
+      for (const u of seasonMats) u.uSeasonOn.value = 1;
+      rt.season = K.wx.NAMES[i];
+      if (window.Nature && Nature.setSeason) Nature.setSeason(i); // the 1 m scenes of this page
+      if (!from || !(ms > 0)) { seasonAnim = null; seasonLook = to; applyLook(); if (op.onFrame) op.onFrame(1); return Promise.resolve(rt.season); }
+      return new Promise((done) => {
+        const t0 = performance.now(), me = (seasonAnim = {});
+        const step = (now) => {
+          if (seasonAnim !== me) return done(rt.season); // a newer change took over (from wherever this one had got to)
+          const u = Math.min(1, Math.max(0, (now - t0) / ms)), e = u * u * (3 - 2 * u);
+          seasonLook = lerpLook(from, to, e); applyLook(); if (op.onFrame) op.onFrame(u);
+          if (u < 1) requestAnimationFrame(step); else { seasonAnim = null; done(rt.season); }
+        };
+        requestAnimationFrame(step);
+      });
+    };
+    rt.setRain = (k, wet = k) => { rainK = Math.max(0, Math.min(1, k || 0)); K.wx.U.uWet.value = Math.max(0, Math.min(1, wet || 0)); applyLook(); };
+    rt.seasonLook = () => seasonLook && Object.assign({}, seasonLook);
+
     // ---------------------------------------------------------------- level of detail and the current view
     // Built on demand, kept while recently used: near ground sets, tree sets, full cities. The caps keep the GPU
     // buffers under decisions/0005 (≤ 150 MB); whatever the current view shows is never dropped.
@@ -355,7 +419,7 @@
       const L = mode.lens;
       LU.focus.value = dist; LU.range.value = v.mode === 'city' ? dist * 1.6 : L.range; LU.maxBlur.value = (q && !q.dof ? 0 : L.maxBlur) * blurK; LU.band.value.set(...L.band);
       LU.vignette.value = L.vignette; LU.contrast.value = L.contrast; LU.saturation.value = L.saturation; LU.aoStrength.value = q && !q.ssao ? 0 : L.ao; LU.aoRadius.value = L.aoR || 0.4;
-      LU.atmos.value = L.atmos; LU.atmosFall.value = L.fall; LU.near.value = camera.near; LU.far.value = camera.far;
+      LU.atmos.value = L.atmos * atmosK; LU.atmosFall.value = L.fall; LU.near.value = camera.near; LU.far.value = camera.far;
       LU.projScale.value = renderer.getDrawingBufferSize(new THREE.Vector2()).y / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
       current = v;
     };
