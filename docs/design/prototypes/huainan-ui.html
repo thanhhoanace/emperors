@@ -1,12 +1,19 @@
-<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HuaiNanUI harness</title>
-<!-- Dev harness for src/world/huainan-ui.js (docs/design/v2-build.md §U): the UI over a plain dark background, no 3D, no engine.
-     Serve the repo root and open /docs/design/prototypes/huainan-ui.html?state=start|army|target|preview|ask|town|town-more|forecast|
-     forecast-more|cards|battle1|battle3|battle-over|report|goal|over|over-lose (extra: enemy|warn|urgent)   (shoot it with tools/shoot.mjs at 844×390 and 1280×720).
-     State comes from docs/design/v2-fixtures/*.json; the handlers append to window.__log and act like a tiny controller
-     (order, task, answer, battle turns step through the three battle fixtures), so the flows can be clicked through. -->
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HuaiNanUI harness</title><link rel="icon" href="data:,">
+<!-- Dev harness for src/world/huainan-ui.js (docs/design/v2-build.md §U, docs/design/v2-polish.md job 7): the UI over a plain
+     dark background, no 3D, no engine. Serve the repo root and open /docs/design/prototypes/huainan-ui.html?state=…
+       season   start (first-season steps, step 1) coach2 coach3 army target preview ask town town-more forecast forecast-more
+                cards urgent enemy warn advise advise-done tween (resources count and float) muted
+       battle   battle1 battle3 (a wing changed, its orders open) battle-over (the recap) battle-lost
+       screens  goal report beat beat-lost over over-lose
+       hooks    lock (a map hook playing: tap to skip) lock-bars (letterbox + a general's caption) caption (narrator line)
+                caption-battle (the battle cinema: letterbox, the enemy general speaks) watch (watch mode) watch-lock
+     (shoot it with tools/shoot.mjs at 844×390 and 1440×900). State comes from docs/design/v2-fixtures/*.json; the handlers
+     append to window.__log and act like a tiny controller (order, task, answer, battle turns step through the three battle
+     fixtures, the general's plan), so the flows can be clicked through. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Noto+Serif:wght@600;700&family=Noto+Serif+TC:wght@700&display=swap" rel="stylesheet">
-<style>html,body{margin:0;height:100%;background:#2b2a24;overflow:hidden}#root{position:fixed;inset:0;background:radial-gradient(ellipse at 55% 55%,#3a382e,#25241d 70%)}</style></head><body>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&family=Noto+Serif+TC:wght@700&display=swap" rel="stylesheet">
+<style>html,body{margin:0;height:100%;background:#2b2a24;overflow:hidden}#root{position:fixed;inset:0;background:radial-gradient(ellipse at 55% 55%,#4a4636,#2c2a21 70%)}
+#root::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.018) 0 2px,transparent 2px 22px)}</style></head><body>
 <div id="root"></div>
 <script src="../../../src/engine/battle.js"></script>
 <script src="../../../src/world/huainan-ui.js"></script>
@@ -18,28 +25,35 @@
   const J = (n) => fetch('../v2-fixtures/' + n + '.json').then((r) => r.json());
   const [vs, v2, b1, b3, bo, fc, dt] = await Promise.all(['view-start', 'view-season2', 'battle-turn1', 'battle-turn3', 'battle-over', 'forecast', 'data-towns'].map(J));
   const clone = (x) => JSON.parse(JSON.stringify(x));
-  let view = clone(vs), sel = null, bi = state === 'battle3' ? 1 : state === 'battle-over' ? 2 : 0;
+  let view = clone(vs), sel = null, bi = state === 'battle3' ? 1 : state === 'battle-over' || state === 'battle-lost' ? 2 : 0;
   const BS = [b1, b3, bo];
   const root = document.getElementById('root');
+  // the season's recap as the engine gives it now: the towns that changed hands (report.taken)
+  const withTaken = (v) => { v = clone(v); v.towns.find((t) => t.id === 'hu_di').owner = v.me; v.report.taken = [{ town: 'hu_di', from: 'local', to: v.me, siege: true }, { town: 'am_lang', from: v.me, to: 'cao_cao', siege: false }]; v.report.lines.splice(1, 0, 'Hu Dị mở cổng hàng sau khi bị vây.'); return v; };
 
-  // stand-ins for V2.targets / V2.tasks / V2.preview (the real ones come from the engine)
+  // stand-ins for V2.targets / V2.tasks / V2.preview / V2.advise (the real ones come from the engine)
   const TARGETS = {
-    a1: [{ kind: 'town', id: 'am_lang', intent: 'move', d: 1 }, { kind: 'town', id: 'tho_xuan', intent: 'ask', d: 3 }, { kind: 'army', id: 'e1', intent: 'attack', d: 3 }, { kind: 'town', id: 'hu_di', intent: 'ask', d: 4 }],
+    a1: [{ kind: 'town', id: 'am_lang', intent: 'move', d: 1, km: 62 }, { kind: 'town', id: 'tho_xuan', intent: 'ask', d: 3, km: 104 }, { kind: 'army', id: 'e1', intent: 'attack', d: 3, km: 98 }, { kind: 'town', id: 'hu_di', intent: 'ask', d: 4, km: 96 }],
     a2: [{ kind: 'town', id: 'lich_duong', intent: 'ask', d: 2 }, { kind: 'town', id: 'hu_di', intent: 'ask', d: 3 }, { kind: 'town', id: 'chung_ly', intent: 'move', d: 0 }],
   };
   const TK = {
     ruong: ['Khai ruộng', 2, { tien: 300 }, 'Lương của thành này +25%.'], luy: ['Đắp lũy', 2, { tien: 400, luong: 200 }, 'Lũy +1 (tối đa 4).'], cho: ['Dựng chợ', 2, { tien: 500 }, 'Tiền +200 mỗi mùa.'],
-    bo: ['Mộ bộ', 1, { luong: 300 }, '+1.000 bộ vào đồn, lấy từ dân.'], cung: ['Mộ cung', 1, { luong: 300, tien: 100 }, '+600 cung vào đồn.'], ky: ['Mộ kỵ', 1, { tien: 1500 }, '+400 kỵ vào đồn.'], thuy: ['Đóng thuyền', 1, { luong: 300, tien: 200 }, '+600 thủy vào đồn; chỉ thành ven sông.'],
+    mo_bo: ['Mộ bộ binh', 1, { luong: 300 }, '+1.000 bộ vào đồn, lấy từ dân.'], mo_cung: ['Mộ cung thủ', 1, { luong: 300, tien: 100 }, '+600 cung vào đồn.'], mo_ky: ['Mộ kỵ', 1, { tien: 1500 }, '+400 kỵ vào đồn.'], mo_thuy: ['Đóng thuyền', 1, { luong: 300, tien: 200 }, '+600 thủy vào đồn; chỉ thành ven sông.'],
   };
   const tasksFor = (t) => ({
-    suggested: t.id === 'chung_ly' ? ['luy', 'bo', 'thuy'] : ['ruong', 'cho'],
-    all: Object.keys(TK).map((k) => ({ key: k, name: TK[k][0], seasons: TK[k][1], cost: TK[k][2], text: TK[k][3], ok: !(k === 'ky') && !(k === 'thuy' && !t.river), why: k === 'ky' ? 'Thiếu tiền: cần 1.500, còn 900' : k === 'thuy' && !t.river ? 'Thành không ven sông' : '' })),
+    suggested: t.id === 'chung_ly' ? ['luy', 'mo_bo', 'mo_thuy'] : ['ruong', 'cho'],
+    all: Object.keys(TK).map((k) => ({ key: k, name: TK[k][0], seasons: TK[k][1], cost: TK[k][2], text: TK[k][3], ok: !(k === 'mo_ky') && !(k === 'mo_thuy' && !t.river), why: k === 'mo_ky' ? 'Thiếu tiền: cần 1.500, còn 900' : k === 'mo_thuy' && !t.river ? 'Thành không ven sông' : '' })),
   });
   const previewFor = (a) => {
     if (a.type === 'task') { const k = TK[a.key]; return { seasons: k[1], res: { luong: [1200, 1200 - (k[2].luong || 0)], tien: [900, 900 - (k[2].tien || 0)], uy: [50, 50] }, lines: [k[3]] }; }
     if (a.intent === 'siege') return { seasons: 2, res: { luong: [1200, 700], tien: [900, 900], uy: [50, 50] }, lines: ['Vây từ mùa sau: đồn −20%, lũy −1 mỗi mùa, dân −8%.', 'Đạo quân đứng ngoài thành, vẫn tốn lương nuôi.'] };
     return { seasons: 1, res: { luong: [1200, 940], tien: [900, 900], uy: [50, 50] }, lines: ['Đi một mùa; nuôi quân trên đường 260 lương.'] };
   };
+  const ADVICE = [
+    { type: 'order', army: 'a1', target: { kind: 'town', id: 'hu_di' }, intent: 'siege', why: 'Đồn Hu Dị chỉ ~1.300: vây một hai mùa là mở cổng, không mất quân.' },
+    { type: 'order', army: 'a2', target: { kind: 'town', id: 'am_lang' }, intent: 'move', why: 'Trương Liêu đứng sát Âm Lăng: thêm thuyền Chu Hoàn giữ thành.' },
+    { type: 'task', town: 'chung_ly', key: 'luy', why: 'Chung Ly giáp Tào: thêm một lũy trước mùa đông.' },
+  ];
 
   // where the 3D scene would put each thing on screen (a stand-in projection, as fractions of the root)
   const POS = { tho_xuan: [.50, .36], am_lang: [.60, .58], chung_ly: [.47, .68], hu_di: [.79, .50], lich_duong: [.86, .62], a1: [.62, .85], a2: [.40, .85], e1: [.66, .28], e2: [.84, .78] };
@@ -52,14 +66,14 @@
   };
 
   const H = {
-    onEndSeason: () => { log('onEndSeason'); view = clone(v2); sel = null; refresh(); ui.report(v2.report); },
+    onEndSeason: () => { log('onEndSeason'); view = withTaken(v2); sel = null; refresh(); ui.report(view.report); },
     onSelect: (s) => { log('onSelect', s); sel = s; refresh(); },
     onTarget: (t) => { log('onTarget', t); ui.preview(previewFor({ type: 'order', ...t }), { type: 'order', army: t.army, target: { kind: t.kind, id: t.id }, intent: t.intent }); },
     onForecast: (t) => { log('onForecast', t); ui.forecast(fc, { armies: t.armies, target: { kind: t.kind, id: t.id } }, { partners: [{ army: 'a2', label: 'Chu Hoàn (thủy)', on: t.armies.indexOf('a2') >= 0 }] }); },
     onPartner: (id) => log('onPartner', id),
     onConfirmOrder: (a) => {
       log('onConfirmOrder', a);
-      if (a.type === 'task') { const t = view.towns.find((x) => x.id === a.town); t.task = { key: a.key, name: TK[a.key][0], left: TK[a.key][1], fresh: true }; }
+      if (a.type === 'task') { const t = view.towns.find((x) => x.id === a.town); t.task = { key: a.key, name: TK[a.key][0], left: TK[a.key][1], fresh: true }; view.res.tien -= TK[a.key][2].tien || 0; view.res.luong -= TK[a.key][2].luong || 0; }
       else (a.armies || [a.army]).forEach((id) => { view.armies.find((x) => x.id === id).order = { intent: a.intent, target: a.target }; });
       refresh();
     },
@@ -74,34 +88,55 @@
     onWingSelect: (w) => log('onWingSelect', w),
     onBattleTurn: (ov) => { log('onBattleTurn', ov); bi = Math.min(BS.length - 1, bi + 1); ui.battle(BS[bi]); },
     onAutoBattle: () => { log('onAutoBattle'); bi = BS.length - 1; ui.battle(BS[bi]); },
-    onBattleDone: () => { log('onBattleDone'); ui.battle(null); view = clone(v2); sel = null; refresh(); ui.report(v2.report); },
+    onBattleDone: () => { log('onBattleDone'); ui.battle(null); view = withTaken(v2); sel = null; refresh(); ui.beat(view.report.taken[0]); },
+    onBeatDone: () => { log('onBeatDone'); ui.report(view.report); },
     onReportDone: () => log('onReportDone'),
     onGoalDone: () => log('onGoalDone'),
     onAgain: () => { log('onAgain'); view = clone(vs); sel = null; refresh(); },
     onOverview: () => log('onOverview'),
+    onSkip: () => { log('onSkip'); ui.lock(false); ui.caption(null); },
+    onWatch: (on) => log('onWatch', on),
+    onMute: (on) => log('onMute', on),
+    onAdvise: () => { log('onAdvise'); ui.advise(ADVICE); },
   };
-  const ui = HuaiNanUI.create(root, H, { portraits: '../../phases/v2-gameplay/demo1/portraits/', towns: dt.towns, battle: window.EmperorsBattle });
+  const coach = state === 'start' || state.indexOf('coach') === 0;
+  if (coach) try { localStorage.removeItem('tq.coach'); } catch (e) { /* ok */ }
+  if (state === 'muted') try { localStorage.setItem('tq.mute', '1'); } catch (e) { /* ok */ } else try { localStorage.removeItem('tq.mute'); } catch (e) { /* ok */ }
+  const ui = HuaiNanUI.create(root, H, { portraits: '../../phases/v2-gameplay/demo1/portraits/', towns: dt.towns, battle: window.EmperorsBattle, coach });
   window.__ui = ui;
   new ResizeObserver(() => labels()).observe(root);
   const click = (s) => { const n = ui.el.querySelector(s); if (n) n.click(); else console.warn('no node', s); };
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
   refresh();
-  if (state === 'army' || state === 'target' || state === 'preview' || state === 'ask' || state === 'forecast' || state === 'forecast-more') { sel = { kind: 'army', id: 'a1' }; refresh(); }
+  if (['army', 'target', 'preview', 'ask', 'forecast', 'forecast-more', 'coach2'].indexOf(state) >= 0) { sel = { kind: 'army', id: 'a1' }; refresh(); }
   if (state === 'target') ui.el.querySelector('.hn-side').scrollTop = 1e4;
   if (state === 'preview') ui.tap({ kind: 'town', id: 'am_lang' });
   if (state === 'ask') ui.tap({ kind: 'town', id: 'tho_xuan' });
   if (state === 'forecast' || state === 'forecast-more') ui.tap({ kind: 'town', id: 'tho_xuan' }), click('[data-a=ask-attack]');
   if (state === 'forecast-more') click('[data-a=fc-more]');
+  if (state === 'coach3') { view.armies.find((a) => a.id === 'a1').order = { intent: 'siege', target: { kind: 'town', id: 'hu_di' } }; refresh(); }
   if (state === 'town' || state === 'town-more') { sel = { kind: 'town', id: 'chung_ly' }; refresh(); }
   if (state === 'town-more') click('[data-a=more]');
   if (state === 'cards') ui.openCards();
   if (state === 'enemy') { sel = { kind: 'army', id: 'e1' }; refresh(); }
   if (state === 'warn') { view.warn = { luong: true, uy: false }; view.res.luong = -120; view.income = { luong: 300, tien: 100, up: 640 }; refresh(); }
   if (state === 'urgent') { view.cards[1].urgent = true; refresh(); }
-  if (state.indexOf('battle') === 0) { ui.battle(BS[bi]); if (state === 'battle3') { ui.battle.selectWing('A3'); click('[data-a=ord][data-o=giu]'); } }
-  if (state === 'report') { view = clone(v2); refresh(); ui.report(v2.report); }
+  if (state === 'advise' || state === 'advise-done') { click('[data-a=advise]'); if (state === 'advise-done') click('[data-a=adv-ok][data-i="0"]'); }
+  if (state.indexOf('battle') === 0) {
+    if (state === 'battle-lost') { const L = clone(bo); L.b.over.win = 'D'; L.outcome = { win: 'D', turns: 5, losses: { A: 3120, D: 940 }, routed: null }; BS[2] = L; }
+    ui.battle(BS[bi]); if (state === 'battle3') { ui.battle.selectWing('A3'); click('[data-a=ord][data-o=giu]'); }
+  }
+  if (state === 'report') { view = withTaken(v2); refresh(); ui.report(view.report); }
+  if (state === 'beat' || state === 'beat-lost') { view = withTaken(v2); refresh(); ui.beat(view.report.taken[state === 'beat' ? 0 : 1]); }
   if (state === 'goal') ui.goal();
   if (state === 'over' || state === 'over-lose') { view = clone(v2); if (state === 'over') view.towns.forEach((t) => { t.owner = view.me; }); refresh(); ui.over(state === 'over' ? { win: true, why: 'Ta nắm đủ 5 thành Hoài Nam trong mùa Đông 219. Tào phải lui về bắc sông Hoài, Ngô không còn bến nào ở Hoài Nam.' } : { win: false, why: 'Chu Nguyên Chương tử trận ở Âm Lăng. Hoài Nam không còn cờ Minh.' }); }
+  if (state === 'lock') ui.lock(true);
+  if (state === 'lock-bars') { ui.lock(true, { bars: true }); ui.caption('Trương Liêu dẫn tám trăm kỵ vượt sông Phì, nhắm thẳng Âm Lăng.', { who: 'zhang_liao', ms: 0 }); }
+  if (state === 'caption') ui.caption('Mùa thu năm 219. Hoài Nam nằm giữa hai gọng kìm Tào và Ngô.', { ms: 0 });
+  if (state === 'caption-battle') { ui.battle(BS[1]); ui.lock(true, { bars: true }); ui.caption('Leo tường! Ai lên trước, thưởng trăm lạng vàng.', { who: 'zhu', ms: 0 }); }
+  if (state === 'watch' || state === 'watch-lock') { click('[data-a=watch]'); if (state === 'watch-lock') { ui.lock(true); ui.caption('Minh vây Hu Dị: đồn đói, cổng sắp mở.', { who: 'zhu_yuanzhang', ms: 0 }); } }
+  if (state === 'tween') { await wait(300); view = clone(v2); view.res.tien += 555; refresh(); }
   try { await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]); } catch (e) { /* fonts are a nicety */ }
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
   window.__done = true;
