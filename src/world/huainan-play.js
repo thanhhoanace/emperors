@@ -159,6 +159,8 @@
       onSkip: () => emit('skip'),
       onWatch: (on) => { env.watching = !!on; emit('watch', !!on); },
       onMute: (on) => emit('mute', !!on),
+      // the general's plan for the season (V2.advise): the UI lists it, each line confirmed through onConfirmOrder
+      onAdvise: () => { if (V2.advise && ui.advise) ui.advise(V2.advise(g)); },
     };
     // every handler call is an event (sound, captions); the handler itself is unchanged
     for (const k of Object.keys(Hs)) { const f = Hs[k]; Hs[k] = (...a) => { emit('act', { name: k, args: a }); return f(...a); }; }
