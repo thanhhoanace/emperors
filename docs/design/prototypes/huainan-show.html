@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hoài Nam · màn của show</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&family=Noto+Serif+TC:wght@700&display=swap" rel="stylesheet">
+<style>html,body{margin:0;height:100%;overflow:hidden;background:linear-gradient(165deg,#cbb97c 0%,#a7ab6a 38%,#7f9a5d 64%,#5d7f8c 100%)}
+body::before{content:"";position:fixed;inset:0;background:repeating-radial-gradient(circle at 30% 60%,rgba(40,60,20,.08) 0 14px,transparent 14px 38px)}</style>
+</head><body>
+<!-- Harness for the titles of src/world/huainan-show.js without a game or WebGL (a painted stand-in for the map):
+     ?s=title | low | seal | win | lose. The real thing: v2.html?intro=1 (the intro), v2.html?show=win|lose (an ending),
+     v2.html?watch=1 (the watch mode). -->
+<script>
+// a stand-in for the page's controller: enough for huainan-show.js to load
+window.HuaiNanPlay = { hook() {}, on() {}, emit() {} };
+</script>
+<script src="../../../src/world/huainan-show.js"></script>
+<script>
+const S = HuaiNanShow.stage, what = new URLSearchParams(location.search).get('s') || 'seal';
+S.open({ place: 'Hoài Nam' });
+if (what === 'seal') S.mid({ seal: true, big: 'Năm thành Hoài Nam', sub: 'chưa về một mối.' });
+if (what === 'title') S.mid({ kick: 'Kiến An năm thứ hai mươi tư', big: 'Thu năm 219' });
+if (what === 'low') S.low({ kick: 'Chung Ly · sông Hoài', line: 'Chu Nguyên Chương tỉnh giấc ở quê nhà, sớm hơn nghìn năm.' });
+if (what === 'win' || what === 'lose') S.chron(what === 'win' ? { kick: 'Hạ 221 · 8 mùa', big: 'Cờ 明 trên năm thành', sub: 'Năm thành Hoài Nam về một mối.' } : { kick: 'Hạ 221', big: 'Cờ 明 đã hạ', sub: 'Mất cả Hoài Nam.' }, [
+  { season: 'Thu 219', text: 'Chu Nguyên Chương tỉnh giấc ở Chung Ly' },
+  { season: 'Thu 219', text: 'Thắng ở Hu Dị · ta mất 367, địch 930', tone: 'good' },
+  { season: 'Thu 219', text: 'Hạ thành Hu Dị', tone: 'good' },
+  { season: 'Đông 219', text: 'Lịch Dương hàng ta khi thuyền Ngô đi vắng' },
+  { season: 'Xuân 220', text: 'Thua ở Âm Lăng · ta mất 1.240, địch 610', tone: 'bad' },
+  { season: 'Xuân 220', text: 'Mất Âm Lăng vào tay Tào', tone: 'bad' },
+  { season: 'Hạ 221', text: 'Hạ thành Thọ Xuân', tone: 'good' },
+], 200);
+</script>
+</body></html>
