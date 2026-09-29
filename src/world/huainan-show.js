@@ -5,10 +5,12 @@
 // advice (V2.advise), season after season, while a director moves the camera. Presentation only: it reads the View and the
 // page's events, and plays only through the page's own handlers (env.H), as a player's taps would.
 //   &intro=1 plays the intro again (&intro=0 never) · &watch=1 watches from the start · &pace=0.5 halves the watch pauses
+//   &show=intro|win|lose plays that scene once the page is ready (HuaiNanShow.play(name) from the console)
 //   HuaiNanShow.state() → { phase, watching, seasons, steps, stuck, intro, load } · HuaiNanShow.chronicle() → [{ season, text, tone }]
 // Loads after huainan-play.js (v2.html, "v2 polish") and registers its hooks then. Uses what the other jobs add when it is
-// there: sc.fly / sc.orbit (job 5), ui.caption / ui.watch (job 7), V2.advise (job 9), HuaiNanAudio.cue (job 8); without them
-// it falls back to the scene's flyTo, its own captions and watch bar, and a plain advisor on the general's forecast.
+// there: sc.fly (job 5), ui.caption / ui.watch (job 7), V2.advise (job 9), HuaiNanAudio.cue('intro' | 'seal' | 'victory' |
+// 'defeat') (job 8); without them it falls back to the scene's flyTo, its own captions and watch bar, and a plain advisor on
+// the general's forecast. The victory lap turns with the scene's flyTo (one ease over the whole turn), not sc.orbit.
 (function () {
   'use strict';
   const Play = window.HuaiNanPlay;
