@@ -602,6 +602,10 @@ test('sieges: the garrison starves and the walls fall each season; below 30 % th
   // no new order: the siege goes on (no order = hold where it stands)
   g = V2.endSeason(g);
   assert.equal(g.towns.tho_xuan.walls, 1);
+  // the other sides refill a garrison only up to what it held when the game began (29/9)
+  let q = calm();
+  for (let s = 0; s < 3; s++) q = V2.endSeason(q);
+  for (const tid of ['tho_xuan', 'hu_di', 'lich_duong']) assert.equal(Object.values(q.towns[tid].gar).reduce((a, b) => a + b, 0), Object.values(DATA.start.towns[tid].gar).reduce((a, b) => a + b, 0), tid);
   let h = calm();
   h = V2.order(h, 'a1', T('hu_di'), 'siege');
   h = V2.endSeason(h);

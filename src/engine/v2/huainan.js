@@ -994,7 +994,10 @@
       if (t.owner !== g.me) {
         t.task = null;
         const ai = g.data.ai && g.data.ai[t.owner];
-        if (ai && ai.growth) t.gar.bo = (t.gar.bo || 0) + ai.growth;
+        // the other sides refill a garrison, up to what the town held when the game began (29/9: Thọ Xuân grew without
+        // end and a slow player met a fortress no army could take)
+        const cap = total((g.data.start.towns[d.id] || {}).gar);
+        if (ai && ai.growth) t.gar.bo = (t.gar.bo || 0) + Math.max(0, Math.min(ai.growth, cap - total(t.gar)));
         continue;
       }
       if (!t.task) continue;
