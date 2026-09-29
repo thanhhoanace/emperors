@@ -150,7 +150,7 @@
 .hnc-black{position:absolute;inset:0;background:#07060a;opacity:0;transition:opacity .3s ease;will-change:opacity}
 .hnc-black.on{opacity:1}
 .hnc-tag{position:absolute;left:clamp(12px,3vw,28px);top:50%;transform:translateY(-50%);font:600 12px/1 "Be Vietnam Pro","Noto Sans",sans-serif;letter-spacing:.18em;text-transform:uppercase;color:#cdb98c;opacity:.9;white-space:nowrap}
-.hnc-cap{position:absolute;left:50%;bottom:calc(clamp(18px,8.5vh,70px) + 10px);transform:translate(-50%,6px);max-width:min(86vw,760px);text-align:center;font-size:clamp(13px,2.1vw,18px);line-height:1.35;letter-spacing:.02em;
+.hnc-cap{position:absolute;left:50%;bottom:calc(clamp(18px,8.5vh,70px) + 10px);transform:translate(-50%,6px);width:max-content;max-width:min(92vw,820px);text-align:center;font-size:clamp(13px,2.1vw,18px);line-height:1.35;letter-spacing:.02em;
   text-shadow:0 1px 2px #000,0 0 12px rgba(0,0,0,.85);opacity:0;transition:opacity .35s ease,transform .35s ease}
 .hnc-cap.on{opacity:1;transform:translate(-50%,0)}
 .hnc-title{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;opacity:0;transition:opacity .4s ease}
@@ -310,12 +310,12 @@
       const Wg = (id) => A.wings[id], lane = (l) => A.lanes[clamp(l ?? 1, 0, 2)], rs = F.rs;
       const sideSign = (l) => (l === 0 ? -1 : l === 2 ? 1 : 1) * rs; // toward the lane's own outer side
       if (kind === 'open') {
-        const back = siegeOn ? F.rowV(0) + 240 : F.rowV(0) + 150, gateAim = siegeOn ? P(0, -40, F.H * 0.6) : P(0, F.rowV(3), 2);
-        const ours = me === 'A' ? A.standards.A : A.standards.D;
-        const s1 = seg(0, d * 0.5, P(-70 * rs, back + 40, 120), P(-40 * rs, back - 30, 78), gateAim, lerp3(gateAim, P(0, F.rowV(2), 0), 0.15), 42, 38);
+        const back = F.rowV(0), gateAim = siegeOn ? P(0, -60, F.H * 0.5) : P(0, F.rowV(3.5), 2);
+        const s1 = seg(0, d * 0.5, P(-70 * rs, back + 170, 78), P(-44 * rs, back + 110, 52), gateAim, lerp3(gateAim, P(0, F.rowV(2), 0), 0.2), 42, 40);
         if (me === 'D' && siegeOn) { const w = lane(1).wall; return [s1, seg(d * 0.5, d, off(w, 34 * rs, -9, 6), off(w, 12 * rs, -9, 5.5), P(0, F.rowV(1), 2), P(-10 * rs, F.rowV(1), 2), 44, 40)]; }
-        const std = ours || P(0, F.rowV(0) + 40, 0), line = P(F.laneU(1), F.rowV(1), 2);
-        return [s1, seg(d * 0.5, d, off(std, 26 * rs, 22, 5), off(std, 8 * rs, 6, 4.2), mid(line, P(0, 0, F.H), 0.3), mid(line, P(0, 0, F.H), 0.5), 44, 40)];
+        // behind the centre's front block, its banners before the lens, the walls (or the enemy line) beyond
+        const lu = F.laneU(1), lv = F.rowV(1), aim = siegeOn ? P(lu - 12 * rs, 0, F.H * 0.9) : P(lu, F.rowV(4), 3);
+        return [s1, seg(d * 0.5, d, P(lu + 26 * rs, lv + 34, 5.5), P(lu + 12 * rs, lv + 24, 4.4), aim, aim, 42, 40)];
       }
       if (kind === 'result') {
         const r = HC.resultOf(sb, names);
@@ -324,24 +324,26 @@
         const wn = r.win === 'D' ? 'D' : 'A', std = A.standards[wn] || P(0, F.rowV(wn === 'A' ? 0 : 5), 0), foe = P(0, F.rowV(wn === 'A' ? 4 : 1), 2);
         return [seg(0, d * 0.55, off(std, 20 * rs, wn === 'A' ? 16 : -16, 5), off(std, 6 * rs, wn === 'A' ? 10 : -10, 4.5), foe, foe, 42, 40), seg(d * 0.55, d, P(-160 * rs, F.rowV(2.5), 70), P(-120 * rs, F.rowV(2.5), 60), P(0, F.rowV(2.5), 0), P(0, F.rowV(2.5), 0), 40, 40)];
       }
-      const w = Wg(beat.wing), tg = Wg(beat.target), L0 = lane(beat.lane);
+      const w = Wg(beat.wing), tg = Wg(beat.target), WALL = ['foot', 'breach', 'wall', 'inside'];
+      const atWall = siegeOn && ((w && WALL.indexOf(w.type) >= 0) || (tg && WALL.indexOf(tg.type) >= 0)); // a fight at the walls is shot at the walls
       if (kind === 'volley' && w && tg) {
         const up = mid(w.c, tg.c, 0.5); up[1] += 30;
         const fromWall = w.type === 'wall', eye0 = fromWall ? off(w.c, 16 * rs, -10, 6) : off(w.c, 14 * rs, w.side === 'A' ? 26 : -26, 3.2);
         return [seg(0, d * 0.45, eye0, off(eye0, -6 * rs, 0, 0.4), lerp3(w.c, up, 0.5), up, 46, 42), seg(d * 0.45, d, off(tg.c, 34 * rs, tg.side === 'A' ? 30 : -30, 9), off(tg.c, 26 * rs, tg.side === 'A' ? 24 : -24, 7), lift(tg.c, 1), lift(tg.c, 0.5), 42, 40)];
       }
-      if (kind === 'charge' && w && tg) {
+      if (kind === 'charge' && w && tg && !atWall) {
         const track = (t) => { const g = st.offsetOf(w.id); return [w.c[0] + g[0], w.c[1] + g[1], w.c[2] + g[2]]; };
         const s = w.side === 'A' ? 1 : -1;
         return [seg(0, d * 0.55, (t) => off(track(t), 34 * rs, 6 * s, 4), (t) => off(track(t), 30 * rs, -4 * s, 4), (t) => lift(track(t), 1.5), (t) => lift(track(t), 1.5), 44, 44),
           seg(d * 0.55, d, off(tg.c, 16 * rs, -s * (tg.d / 2 + 18), 3.2), off(tg.c, 10 * rs, -s * (tg.d / 2 + 14), 3), lift(tg.front, 1.5), lift(tg.front, 1.2), 42, 40)];
       }
-      if ((kind === 'melee' || kind === 'breach') && siegeOn && (!w || w.type === 'foot' || w.type === 'wall' || w.type === 'breach' || (tg && tg.type === 'wall'))) {
+      if ((kind === 'melee' || kind === 'breach' || kind === 'charge') && (atWall || (siegeOn && !w))) {
         const l = beat.lane ?? 1, Lx = lane(l), ss = sideSign(l);
         if (l === 1 && A.gate) {
           const g = A.gate;
-          return kind === 'breach' ? [seg(0, d * 0.5, P(28 * rs, 70, 8), P(18 * rs, 52, 6), lift(g, 5), lift(g, 4), 42, 40), seg(d * 0.5, d, P(16 * rs, -F.WB / 2 - 60, 10), P(10 * rs, -F.WB / 2 - 44, 8), lift(g, 5), lift(g, 4), 44, 42)]
-            : [seg(0, d * 0.5, P(34 * rs, 62, 7), P(24 * rs, 48, 5.5), lift(g, 5), lift(g, 4), 42, 40), seg(d * 0.5, d, off(A.gateTop, 14 * rs, -8, 2, true), off(A.gateTop, 8 * rs, -8, 2, true), P(0, 26, 0), P(0, 20, 0), 48, 46)];
+          const v1 = (F.moat ? F.moat[1] : 30) + 44; // clear of the khuyết and the moat
+          return kind === 'breach' ? [seg(0, d * 0.5, P(30 * rs, v1 + 16, 9), P(20 * rs, v1, 7), lift(g, 5), lift(g, 4), 42, 40), seg(d * 0.5, d, P(16 * rs, -F.WB / 2 - 60, 10), P(10 * rs, -F.WB / 2 - 44, 8), lift(g, 5), lift(g, 4), 44, 42)]
+            : [seg(0, d * 0.5, P(34 * rs, v1 + 12, 8), P(24 * rs, v1, 6.5), lift(g, 4), lift(g, 3), 42, 40), seg(d * 0.5, d, off(A.gateTop, 16 * rs, -10, 3, true), off(A.gateTop, 10 * rs, -10, 3, true), P(0, 26, 0), P(0, 20, 0), 50, 48)];
         }
         const wall = Lx.wall, foot = Lx.foot;
         return kind === 'breach' ? [seg(0, d * 0.5, off(foot, 22 * ss, 42, 3, false), off(foot, 14 * ss, 34, 2.5), lift(wall, 3), lift(wall, 4), 42, 42), seg(d * 0.5, d, off(wall, 34 * ss, -4, 5, true), off(wall, 24 * ss, -4, 4.5, true), lift(wall, 1), lift(wall, 1), 46, 44)]

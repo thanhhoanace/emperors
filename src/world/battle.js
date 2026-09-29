@@ -1450,7 +1450,12 @@
       } else if (l.type === 'foot') {
         // at the foot of the wall: through the gate the ram and a packed column; elsewhere the ladders, men climbing, the rest bunched below
         const [a0, a1] = F.sec[w.lane], uc = (a0 + a1) / 2, vF = F.WB / 2 + 4;
-        if (w.lane === 1 && F.gate) {
+        if (w.arm === 'ky') {
+          // horse at a wall: no ladders for riders; they mill before the gate (beyond the bridge) or along the foot, charging in
+          const v0 = w.lane === 1 && F.moat ? F.moat[1] + 6 : vF + 6, span = w.lane === 1 ? 30 : a1 - a0 - 16;
+          for (let i = 0; i < n; i++) { const u = (w.lane === 1 ? 0 : uc) + (rnd() - 0.5) * span, v = v0 + rnd() * Math.max(18, n * 0.4), [x, z] = F.W(u, v); if (dry(x, z)) addRow(w.id, 'rider', [x, Y(x, z), z, F.yawA + (rnd() - 0.5) * 0.5, anim('rider', w.charge ? 'charge' : 'trot', 'trot')]); }
+          dust(...F.W(w.lane === 1 ? 0 : uc, v0 + 10), Math.round(6 * fa) + 2, 12, 0.5);
+        } else if (w.lane === 1 && F.gate) {
           engines.ram.push([...at(0, F.WB / 2 + 8.5, -0.2), F.yawA]);
           for (let i = 0; i < n; i++) { const u = (rnd() - 0.5) * 22 * (0.4 + rnd()), v = F.WB / 2 + 14 + rnd() * Math.max(20, n * 0.35), [x, z] = F.W(u, v); const br = F.moat && v > F.moat[0] - 4 && v < F.moat[1] + 4 && Math.abs(u) < 4.3; if (!br && !dry(x, z)) continue; addRow(w.id, rnd() < 0.3 ? 'fight' : 'run', [x, br ? F.gate.bridgeY + 0.35 : Y(x, z), z, F.yawA + (rnd() - 0.5) * 0.5]); }
           dust(...F.W(0, F.WB / 2 + 14), Math.round(5 * fa) + 2, 9);
