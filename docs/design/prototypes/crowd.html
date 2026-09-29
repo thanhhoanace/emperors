@@ -1,24 +1,28 @@
 <!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Crowd harness</title>
-<!-- Harness for src/world/crowd.js (docs/design/visual-build.md §4): blocks of every kind of soldier, riders, a horse
-     line and climbers on a pole, lit like the siege prototype. Serve the repo root (npm start or python3 -m http.server)
-     and open /docs/design/prototypes/crowd.html?shot=close|block|far &tier=high|mid|low &t=<seconds> (fixes the
-     animation time; without it the crowd plays) &w=&h=&dpr= · &cam=x,y,z&tgt=x,y,z · &frames=float|half|static · &measure=1 → window.__extra · &play=1 (orbit). -->
-<style>html,body{margin:0;background:#1a1712;overflow:hidden}canvas{display:block}</style></head><body>
-<canvas id="c"></canvas>
+<!-- Harness for src/world/crowd.js (docs/design/visual-build.md §4), with the game's model kit (src/world/han-models.js).
+     Serve the repo root (npm start) and open /docs/design/prototypes/crowd.html
+       ?demo=charge|volley|clash|rout|cheer   a scripted moment on a simple ground: moves and loops scheduled up front
+                                               with crowd.move / crowd.play, the camera following it (loops forever)
+       ?shot=close|block|far                   the old still harness: blocks of every kind, riders, horses, climbers
+     &tier=high|mid|low &t=<seconds> (fixes the time; without it the scene plays) &w=&h=&dpr= · &cam=x,y,z&tgt=x,y,z
+     &frames=float|half|static · &measure=1 → window.__extra · &play=1 (orbit) · &hud=1 (time and counts).
+     window.__frame(t) renders the scene at time t (docs/design/prototypes/crowd-shots.mjs takes several frames per page). -->
+<style>html,body{margin:0;background:#1a1712;overflow:hidden}canvas{display:block}#hud{position:fixed;left:10px;top:8px;color:#e8dcc4;font:12px/1.4 system-ui,sans-serif;text-shadow:0 1px 2px #000;pointer-events:none;white-space:pre}</style></head><body>
+<canvas id="c"></canvas><div id="hud"></div>
 <script src="../../../node_modules/three/build/three.min.js"></script>
 <script src="../../../node_modules/three/examples/js/utils/BufferGeometryUtils.js"></script>
 <script src="../../../node_modules/three/examples/js/geometries/RoundedBoxGeometry.js"></script>
 <script src="../../../node_modules/three/examples/js/controls/OrbitControls.js"></script>
 <script src="../../../src/world/kit.js"></script>
-<script src="../../phases/v2-gameplay/demo1/src/hn-models.js"></script>
+<script src="../../../src/world/han-models.js"></script>
 <script src="../../../src/world/crowd.js"></script>
 <script>
 (() => {
-  const T = THREE, q = new URLSearchParams(location.search);
+  const T = THREE, q = new URLSearchParams(location.search), PI = Math.PI;
   const TIERS = { high: { dpr: 1.5, shadow: 4096 }, mid: { dpr: 1, shadow: 2048 }, low: { dpr: 1, shadow: 0 } };
   const tier = TIERS[q.get('tier')] ? q.get('tier') : 'high', TQ = TIERS[tier];
   const W = +q.get('w') || innerWidth, H = +q.get('h') || innerHeight, dpr = +q.get('dpr') || TQ.dpr, fixed = q.has('t') ? +q.get('t') : null;
-  const FACTION = { zhu_yuanzhang: 0xb3262e, cao_cao: 0x4d6a3a, sun_quan: 0xd9772a };
+  const RED = 'zhu_yuanzhang', GREEN = 'cao_cao', FACTION = { [RED]: 0xb3262e, [GREEN]: 0x4d6a3a, sun_quan: 0xd9772a };
   const cv = document.getElementById('c'); cv.style.width = W + 'px'; cv.style.height = H + 'px';
   try {
     T.ColorManagement.legacyMode = false;
@@ -38,61 +42,152 @@
     scene.add(new T.Mesh(new T.SphereGeometry(6000, 32, 16), skyMat));
     const es = new T.Scene(); es.add(new T.Mesh(new T.SphereGeometry(100, 32, 16), skyMat));
     const pm = new T.PMREMGenerator(renderer), env = pm.fromScene(es, 0.03).texture; pm.dispose();
-    scene.environment = null;
 
     const sun = new T.DirectionalLight(sunColor, 2.35);
     if (TQ.shadow) { sun.castShadow = true; sun.shadow.mapSize.set(TQ.shadow, TQ.shadow); sun.shadow.bias = -0.0003; sun.shadow.normalBias = 0.04; }
     scene.add(sun, sun.target, new T.HemisphereLight(new T.Color(0.5, 0.6, 0.8), new T.Color(0.3, 0.24, 0.16), 0.42));
 
     // flat trampled ground with a little tonal noise so the shadows read
-    const gc = document.createElement('canvas'); gc.width = gc.height = 256; const g2 = gc.getContext('2d'); g2.fillStyle = '#6b5a3c'; g2.fillRect(0, 0, 256, 256);
     let s = 7; const r = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+    const gc = document.createElement('canvas'); gc.width = gc.height = 256; const g2 = gc.getContext('2d'); g2.fillStyle = '#6b5a3c'; g2.fillRect(0, 0, 256, 256);
     for (let i = 0; i < 1400; i++) { g2.fillStyle = `rgba(${r() < 0.5 ? '40,34,20' : '150,130,90'},${0.05 + 0.08 * r()})`; g2.fillRect(r() * 256, r() * 256, 2 + r() * 10, 2 + r() * 10); }
     const gt = new T.CanvasTexture(gc); gt.wrapS = gt.wrapT = T.RepeatWrapping; gt.repeat.set(120, 120); gt.encoding = T.sRGBEncoding; gt.anisotropy = 4;
-    const ground = new T.Mesh(new T.PlaneGeometry(2400, 2400).rotateX(-Math.PI / 2), new T.MeshStandardMaterial({ map: gt, roughness: 0.95, envMap: env, envMapIntensity: 0.6 }));
+    const ground = new T.Mesh(new T.PlaneGeometry(2400, 2400).rotateX(-PI / 2), new T.MeshStandardMaterial({ map: gt, roughness: 0.95, envMap: env, envMapIntensity: 0.6 }));
     ground.receiveShadow = true; scene.add(ground);
 
-    const HM = HNModels.create({ recv: (m) => m, renderer, colors: FACTION });
+    const HM = (window.HanModels || window.HNModels).create({ recv: (m) => m, renderer, colors: FACTION });
     const crowd = Crowd.create({ HM, colors: FACTION, q: tier, renderer, frames: q.get('frames') });
     scene.add(crowd.group);
 
-    // 9 blocks of 200 (20 wide × 10 deep, 1.3 m apart) facing +x, riders and a horse line in front, climbers on a pole
-    const KINDS = [['spear', 'zhu_yuanzhang'], ['run', 'zhu_yuanzhang'], ['fight', 'zhu_yuanzhang'], ['bow', 'zhu_yuanzhang'], ['idle', 'cao_cao'], ['spear', 'cao_cao'], ['pull', 'sun_quan'], ['bow', 'cao_cao'], ['idle', 'sun_quan']];
-    KINDS.forEach(([kind, fid], k) => {
-      const cx = -30 - Math.floor(k / 3) * 32, cz = (k % 3 - 1) * 36, rows = [];
-      for (let i = 0; i < 10; i++) for (let j = 0; j < 20; j++) rows.push([cx - i * 1.3 + (r() - 0.5) * 0.3, 0, cz + (j - 9.5) * 1.3 + (r() - 0.5) * 0.3, (r() - 0.5) * 0.12, null, null, fid]);
-      crowd.add(kind, rows);
-    });
-    const riders = []; for (let i = 0; i < 4; i++) for (let j = 0; j < 15; j++) riders.push([-4 - i * 3.4, 0, -32 + j * 1.9, 0, null, null, 'zhu_yuanzhang']);
-    crowd.add('rider', riders);
-    const horses = []; for (let j = 0; j < 30; j++) horses.push([6.5, 0, -20 + j * 1.6, Math.PI + (r() - 0.5) * 0.3, j % 4 === 0 ? 'walk' : null]);
-    crowd.add('horse', horses);
-    const pole = new T.Mesh(new T.CylinderGeometry(0.12, 0.14, 14, 8), HM.mat.clone()); pole.material.vertexColors = false; pole.material.color = new T.Color(0x4a3423);
-    pole.position.set(2.6, 7, 6); pole.castShadow = pole.receiveShadow = true; scene.add(pole);
-    const climbers = []; for (let i = 0; i < 6; i++) climbers.push([2.3, i * 2.1, 6, 0, null, i * 0.17, 'zhu_yuanzhang']);
-    crowd.add('climb', climbers);
-    const column = []; for (let i = 0; i < 101; i++) column.push([-14 - (i % 34) * 1.4, 0, 60 + Math.floor(i / 34) * 1.3, 0, null, null, 'sun_quan']); // a running column, to 2,000
-    crowd.add('run', column);
-    crowd.add('spear', [[1, 0, 2, -0.4, 'stand', 0, 'zhu_yuanzhang'], [1, 0, 3.4, 0.3, 'walk', 0.25, 'cao_cao'], [1.2, 0, 9, 2.8, 'fight', 0.1, 'cao_cao']]);
+    // ---------------------------------------------------------------- the demos (1 unit = 1 m; x forward for red, green faces −x)
+    // a block of rows: ranks deep × files wide, facing yaw, its front rank at (x0, z-centre z0); dir: −1 stacks ranks toward −x
+    const block = (ranks, files, x0, z0, yaw, fid, anim, dir = -1, gap = [1.5, 1.25]) => {
+      const rows = [];
+      for (let k = 0; k < ranks; k++) for (let j = 0; j < files; j++) rows.push([x0 + dir * k * gap[0] + (r() - 0.5) * 0.25, 0, z0 + (j - (files - 1) / 2) * gap[1] + (r() - 0.5) * 0.2, yaw + (r() - 0.5) * 0.08, anim, null, fid]);
+      return rows;
+    };
+    const ranksOf = (h, files) => (k) => ({ kind: h.kind, idx: Array.from({ length: files }, (_, j) => h.start + k * files + j) });
+    const DEMOS = {
+      // a cavalry charge into a braced spear line: the riders trot, break into the gallop, hit the line; the front rank
+      // kneels behind its shields, the archers behind loose volleys in step; men and horses go down at the impact
+      charge: () => {
+        const F = 40, def = crowd.add('spear', block(3, F, 0, 0, PI, GREEN, 'idle', 1)), rank = ranksOf(def, F);
+        crowd.play(rank(0), 'brace', { t0: 2.4, stagger: 0.9 }); crowd.play([rank(1), rank(2)], 'stand', { t0: 2.6, stagger: 1 });
+        const arch = crowd.add('bow', block(3, 30, 10, 0, PI, GREEN, 'stand', 1, [1.4, 1.5]));
+        crowd.play(arch, 'volley', { t0: 0.2, phase: 0.05, stagger: 0.25 });
+        const rows = []; for (let k = 0; k < 2; k++) for (let j = 0; j < 22; j++) rows.push([-62 - k * 3.6 + r() * 0.6, 0, (j - 10.5) * 2.0 + (r() - 0.5) * 0.4, 0, 'trot', null, RED]);
+        const cav = crowd.add('rider', rows);
+        crowd.move(cav, { dx: 8, t0: 0, dur: 1.9, ease: 'linear', anim: 'trot', then: false, stagger: 0.35 });
+        crowd.move(cav, { to: rows.map((p, i) => [-2.9 - (i >= 22 ? 3.6 : 0) + r() * 0.8, 0, p[2] + (r() - 0.5) * 1.2]), t0: 1.9, dur: 5.6, ease: 'charge', anim: 'charge', then: 'strike', stagger: 0.35 });
+        crowd.play(crowd.pick(rank(0), 0.35), 'die', { t0: 7.5, stagger: 1.4 }); crowd.play(crowd.pick(rank(1), 0.12), 'die', { t0: 8, stagger: 2 });
+        crowd.play(crowd.pick(cav, 0.2, 3), 'die', { t0: 7.6, stagger: 1.6 });
+        crowd.play(rank(1), 'strike', { t0: 7.9, stagger: 0.8 });
+        return { D: 11, cams: [[0, [16, 3.4, -24], [-40, 1.6, 2], 38], [5, [10, 3, -20], [-18, 1.6, 0], 38], [7.4, [7, 2.6, -15], [-6, 1.6, -1], 40], [11, [5, 3.6, -17], [-5, 1.2, -2], 40]], shots: [1, 4.5, 6.6, 7.7, 8.6, 10.5] };
+      },
+      // archers loosing volleys together (a ripple of a quarter second along the line), spearmen formed before them
+      volley: () => {
+        for (const z of [-24, 0, 24]) { const h = crowd.add('bow', block(5, 14, 0, z, 0, RED, 'stand', -1, [1.5, 1.4])); crowd.play(h, 'volley', { t0: 0.3, phase: 0, stagger: 0.25 }); }
+        crowd.add('spear', block(2, 50, 7, 0, 0, RED, 'idle', -1, [1.4, 1.3]));
+        const L = 1 / 0.3; // one volley: 3.3 s
+        return { D: 0.3 + 2 * L, cams: [[0, [9, 2.1, 20], [-6, 2.4, 2], 40]], shots: [0.3 + 0.03 * L, 0.3 + 0.2 * L, 0.3 + 0.37 * L, 0.3 + 0.47 * L, 0.3 + 0.62 * L, 0.3 + 0.82 * L] };
+      },
+      // two spear lines close: they advance at a walk, break into a run over the last metres, meet, and trade blows; men
+      // fall along the line; riders hit the green flank
+      clash: () => {
+        const F = 26, red = crowd.add('spear', block(3, F, -20, 0, 0, RED, 'idle', -1)), green = crowd.add('spear', block(3, F, 20, 0, PI, GREEN, 'idle', 1));
+        const rr = ranksOf(red, F), gr = ranksOf(green, F);
+        for (const [h, sgn] of [[red, 1], [green, -1]]) {
+          crowd.move(h, { dx: sgn * 6, t0: 0.3, dur: 3.4, ease: 'march', anim: 'walk', then: false, stagger: 0.5 });
+          crowd.move(h, { dx: sgn * 13.2, t0: 3.7, dur: 2.5, ease: 'charge', anim: 'charge', then: 'idle', stagger: 0.5 });
+        }
+        crowd.play([rr(0), gr(0)], 'strike', { t0: 6.1, stagger: 0.5 });
+        crowd.play([rr(1), gr(1)], 'fight', { t0: 6.4, stagger: 0.8 });
+        crowd.play(crowd.pick(gr(0), 0.4), 'die', { t0: 6.8, stagger: 4 }); crowd.play(crowd.pick(rr(0), 0.25), 'die', { t0: 7, stagger: 4 });
+        const cr = []; for (let j = 0; j < 12; j++) cr.push([-34 - (j % 2) * 3.5, 0, 44 + j * 1.9, -0.6, 'trot', null, RED]);
+        const cav = crowd.add('rider', cr);
+        crowd.move(cav, { to: cr.map((p, j) => [8 + (j % 4) * 1.6, 0, 20.5 + Math.floor(j / 4) * 2.2, -1.2]), t0: 2.5, dur: 5, ease: 'charge', anim: 'charge', then: 'strike', stagger: 0.4 });
+        return { D: 11, cams: [[0, [-9, 2.4, -16], [2, 1.3, 3], 40], [5.5, [-6, 2.2, -12], [1, 1.4, 2], 40], [11, [-4, 2.6, -11], [2, 1.2, 3], 40]], shots: [1, 4.5, 6, 6.7, 8, 10.5] };
+      },
+      // a line breaking: the rear ranks turn and run first, then the ranks in front; men are cut down as they turn; the
+      // victors pursue a little, halt and cheer
+      rout: () => {
+        const F = 24, green = crowd.add('spear', block(4, F, 0.9, 0, PI, GREEN, 'idle', 1)), red = crowd.add('spear', block(3, F, -0.9, 0, 0, RED, 'idle', -1));
+        const gr = ranksOf(green, F), rr = ranksOf(red, F);
+        crowd.play([gr(0), rr(0)], 'strike', { t0: 0, stagger: 0.8 }); crowd.play([gr(1), rr(1)], 'fight', { t0: 0, stagger: 0.8 });
+        for (let k = 3; k >= 0; k--) {
+          const rank = gr(k), t0 = 2 + (3 - k) * 0.5;
+          crowd.move(rank, { to: rank.idx.map(() => [0, 0, 0]).map((_, j) => { const p = crowd.where(rank, j); return [p[0] + 48 + r() * 30, 0, p[2] * 1.3 + (r() - 0.5) * 14]; }), t0, dur: 11, ease: 'flee', anim: 'rout', then: false, stagger: 0.8 });
+        }
+        crowd.play(crowd.pick(gr(0), 0.35), 'die', { t0: 3.4, stagger: 0.8 }); crowd.play(crowd.pick(gr(1), 0.15, 2), 'die', { t0: 3.6, stagger: 2.5 });
+        for (let k = 0; k < 3; k++) crowd.move(rr(k), { dx: 20, t0: 3.6 + k * 0.3, dur: 4, ease: 'charge', anim: 'charge', then: 'idle', stagger: 0.6 });
+        crowd.play(red, 'cheer', { t0: 8.6, stagger: 1.2 });
+        return { D: 12, cams: [[0, [-12, 3.2, -16], [4, 1.4, 1], 40], [4, [-8, 4, -20], [12, 1.4, 0], 40], [8, [0, 5, -26], [26, 1.4, 0], 40], [12, [4, 5, -26], [30, 1.4, 0], 40]], shots: [1, 2.8, 4, 5.5, 7.5, 10] };
+      },
+      // victory: spearmen, archers and riders cheering with their weapons up, the fallen of the other side before them
+      cheer: () => {
+        const sp = crowd.add('spear', block(5, 16, 0, 0, 0, RED, 'idle', -1)), bw = crowd.add('bow', block(3, 14, -9, -18, 0, RED, 'idle', -1)), rd = crowd.add('rider', block(2, 7, -3, 18, 0, RED, 'stand', -1, [3.4, 2]));
+        crowd.play([sp, bw, rd], 'cheer', { t0: 0.1, stagger: 0.7 });
+        const dead = []; for (let i = 0; i < 26; i++) dead.push([4 + r() * 16, 0, (r() - 0.5) * 30, r() * 2 * PI, 'die', null, GREEN]);
+        crowd.add('spear', dead);
+        return { D: 4, cams: [[0, [16, 2.3, 7], [-1, 1.9, -1], 40]], shots: [0.3, 0.9, 1.5, 2.2] };
+      },
+    };
+    const demo = DEMOS[q.get('demo')] ? q.get('demo') : null;
+    let plan = null;
+    if (demo) plan = DEMOS[demo]();
+    else { // the old still harness: 9 blocks of 200 facing +x, riders and a horse line in front, climbers on a pole
+      const KINDS = [['spear', RED], ['run', RED], ['fight', RED], ['bow', RED], ['idle', GREEN], ['spear', GREEN], ['pull', 'sun_quan'], ['bow', GREEN], ['idle', 'sun_quan']];
+      KINDS.forEach(([kind, fid], k) => {
+        const cx = -30 - Math.floor(k / 3) * 32, cz = (k % 3 - 1) * 36, rows = [];
+        for (let i = 0; i < 10; i++) for (let j = 0; j < 20; j++) rows.push([cx - i * 1.3 + (r() - 0.5) * 0.3, 0, cz + (j - 9.5) * 1.3 + (r() - 0.5) * 0.3, (r() - 0.5) * 0.12, null, null, fid]);
+        crowd.add(kind, rows);
+      });
+      const riders = []; for (let i = 0; i < 4; i++) for (let j = 0; j < 15; j++) riders.push([-4 - i * 3.4, 0, -32 + j * 1.9, 0, null, null, RED]);
+      crowd.add('rider', riders);
+      const horses = []; for (let j = 0; j < 30; j++) horses.push([6.5, 0, -20 + j * 1.6, PI + (r() - 0.5) * 0.3, j % 4 === 0 ? 'walk' : null]);
+      crowd.add('horse', horses);
+      const pole = new T.Mesh(new T.CylinderGeometry(0.12, 0.14, 14, 8), HM.mat.clone()); pole.material.vertexColors = false; pole.material.color = new T.Color(0x4a3423);
+      pole.position.set(2.6, 7, 6); pole.castShadow = pole.receiveShadow = true; scene.add(pole);
+      const climbers = []; for (let i = 0; i < 6; i++) climbers.push([2.3, i * 2.1, 6, 0, null, i * 0.17, RED]);
+      crowd.add('climb', climbers);
+      const column = []; for (let i = 0; i < 101; i++) column.push([-14 - (i % 34) * 1.4, 0, 60 + Math.floor(i / 34) * 1.3, 0, null, null, 'sun_quan']); // a running column, to 2,000
+      crowd.add('run', column);
+      crowd.add('spear', [[1, 0, 2, -0.4, 'stand', 0, RED], [1, 0, 3.4, 0.3, 'walk', 0.25, GREEN], [1.2, 0, 9, 2.8, 'fight', 0.1, GREEN]]);
+      const VIEWS = { close: { target: [0, 1.4, 4], cam: [-9, 3.4, 16], fov: 40 }, block: { target: [-45, 1, 0], cam: [25, 26, 55], fov: 40 }, far: { target: [-50, 0, 0], cam: [100, 90, 140], fov: 36 } };
+      const V = VIEWS[q.get('shot')] || VIEWS.close;
+      plan = { D: 8, cams: [[0, V.cam, V.target, V.fov]], shots: [0] };
+    }
+    if (q.get('cam')) plan.cams = [[0, q.get('cam').split(',').map(Number), q.get('tgt').split(',').map(Number), 40]]; // &cam=x,y,z&tgt=x,y,z: a look for debugging
 
-    const VIEWS = { close: { target: [0, 1.4, 4], cam: [-9, 3.4, 16], fov: 40, sh: 30 }, block: { target: [-45, 1, 0], cam: [25, 26, 55], fov: 40, sh: 110 }, far: { target: [-50, 0, 0], cam: [100, 90, 140], fov: 36, sh: 150 } };
-    const V = VIEWS[q.get('shot')] || VIEWS.close;
-    if (q.get('cam')) { V.cam = q.get('cam').split(',').map(Number); V.target = q.get('tgt').split(',').map(Number); V.sh = 20; } // &cam=x,y,z&tgt=x,y,z: a look for debugging
-    camera.fov = V.fov; camera.position.set(...V.cam); camera.lookAt(...V.target); camera.updateProjectionMatrix();
-    sun.target.position.set(V.target[0], 0, V.target[2]); sun.position.copy(sun.target.position).addScaledVector(sunDir, 400);
-    Object.assign(sun.shadow.camera, { left: -V.sh, right: V.sh, top: V.sh, bottom: -V.sh, near: 50, far: 900 }); sun.shadow.camera.updateProjectionMatrix();
-
-    const dist = camera.position.distanceTo(new T.Vector3(...V.target));
-    const lens = K.lens(renderer, scene, camera, { focus: dist, range: dist * 0.9, maxBlur: 2, ao: tier === 'high' ? 0.6 : 0, aoRadius: 1, vignette: 0.24, contrast: 1.05, saturation: 1.05 });
-    const controls = q.get('play') ? new T.OrbitControls(camera, cv) : null; if (controls) controls.target.set(...V.target);
-    const frame = (time) => { crowd.focus(camera); crowd.tick(time); lens.render(); };
+    // the camera along the demo's keys (smoothstep between them); the sun's shadow box follows the target
+    const tgt = new T.Vector3(), lens = K.lens(renderer, scene, camera, { focus: 30, range: 27, maxBlur: 2, ao: tier === 'high' ? 0.6 : 0, aoRadius: 1, vignette: 0.24, contrast: 1.05, saturation: 1.05 });
+    const place = (t) => {
+      const C = plan.cams; let n = 0; while (n < C.length - 1 && t >= C[n + 1][0]) n++;
+      const a = C[n], b = C[Math.min(n + 1, C.length - 1)], k = b === a ? 0 : Math.min(1, (t - a[0]) / (b[0] - a[0])), e = k * k * (3 - 2 * k), L = (u, v) => u.map((x, i) => x + (v[i] - x) * e);
+      camera.position.set(...L(a[1], b[1])); tgt.set(...L(a[2], b[2])); camera.fov = a[3] + (b[3] - a[3]) * e; camera.lookAt(tgt); camera.updateProjectionMatrix(); camera.updateMatrixWorld();
+      const dist = camera.position.distanceTo(tgt), sh = Math.max(25, Math.min(160, dist * 1.4));
+      sun.target.position.set(tgt.x, 0, tgt.z); sun.position.copy(sun.target.position).addScaledVector(sunDir, 400);
+      Object.assign(sun.shadow.camera, { left: -sh, right: sh, top: sh, bottom: -sh, near: 50, far: 900 }); sun.shadow.camera.updateProjectionMatrix();
+      lens.uniforms.focus.value = dist; lens.uniforms.range.value = dist * 0.9;
+    };
+    const controls = q.get('play') ? new T.OrbitControls(camera, cv) : null;
+    const hud = q.get('hud') ? document.getElementById('hud') : null;
+    const frame = (time) => {
+      if (!controls) place(time); else controls.update();
+      crowd.focus(camera); crowd.tick(time); lens.render();
+      if (hud) { const st = crowd.stats(); hud.textContent = `${demo || q.get('shot') || 'close'} · ${tier} · t ${time.toFixed(2)} s\n${st.figures} figures · fine ${st.fineFigures} · ${renderer.info.render.calls} calls · ${(renderer.info.render.triangles / 1e6).toFixed(2)} M tris`; }
+    };
+    if (controls) { place(0); controls.target.copy(tgt); }
+    // (the counts cover the whole frame: the shadow pass, the scene, the lens pass)
+    window.__frame = (t) => { renderer.info.autoReset = false; renderer.info.reset(); frame(t); const out = { t, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles }; renderer.info.autoReset = true; return out; };
+    window.__plan = { demo, D: plan.D, shots: plan.shots, tier };
     frame(fixed !== null ? fixed : 0);
     if (q.get('measure')) {
       renderer.info.autoReset = false; renderer.info.reset(); const f0 = performance.now(); lens.render(); renderer.getContext().finish();
       window.__extra = { measure: K.stats(renderer, scene, { frameMs: performance.now() - f0 }), stats: crowd.stats() }; renderer.info.autoReset = true;
     }
     window.__crowd = crowd; window.__done = true;
-    if (fixed === null) { const t0 = performance.now(); const loop = (now) => { if (controls) controls.update(); frame((now - t0) / 1000); requestAnimationFrame(loop); }; requestAnimationFrame(loop); }
+    if (fixed === null) { const t0 = performance.now(); const loop = (now) => { frame(((now - t0) / 1000) % plan.D); requestAnimationFrame(loop); }; requestAnimationFrame(loop); }
   } catch (e) { console.error(e); window.__error = String(e.stack || e); }
 })();
 </script></body></html>

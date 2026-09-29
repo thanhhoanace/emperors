@@ -947,6 +947,12 @@
           const ts = t0 + stg * C.hash(s.order);
           if (!o.dead && dead(s, ts)) continue; // the fallen do not cheer, nor fall twice
           sched(s, anim, { ts, blend: o.blend, hold: o.hold, phase: o.phase, speed: o.speed, sync });
+          if (C.resolve(s.b.body, anim) === 'die') { // a man cut down on the move skids a stride and stays; later moves are cancelled
+            const cur = at(s, ts), was = at(s, ts - 0.1), vx = (cur.p[0] - was.p[0]) / 0.1, vz = (cur.p[2] - was.p[2]) / 0.1, v = Math.hypot(vx, vz);
+            cut(s.M, 't0', ts);
+            s.M.push({ from: [cur.p[0], cur.p[1], cur.p[2], cur.yaw], to: [cur.p[0] + vx * 0.3, cur.p[1], cur.p[2] + vz * 0.3, cur.yaw], t0: ts, dur: v > 0.3 ? 0.6 : 0, code: C.easeCode('out', 'keep'), arc: 0 });
+            moveFrom = Math.min(moveFrom, ts); moveTo = Math.max(moveTo, ts + 0.6);
+          }
           touched.push(s);
         }
         after(touched);
