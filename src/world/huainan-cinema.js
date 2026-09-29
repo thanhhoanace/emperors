@@ -519,7 +519,7 @@
     if (!citiesJson) citiesJson = await fetch(BASE + 'data/scenario/huainan-cities.json').then((r) => r.json());
     if (!cin) {
       const view = () => env.view();
-      cin = HC.create({ renderer: env.rt.renderer, W: env.W, H: env.H, quality: env.quality, data: env.data, cities: citiesJson, Battle: window.EmperorsBattle, measure: env.params.has('cinemeasure'),
+      cin = HC.create({ renderer: env.rt.renderer, W: env.width, H: env.height, quality: env.quality, data: env.data, cities: citiesJson, Battle: window.EmperorsBattle, measure: env.params.has('cinemeasure'),
         wallsOf: (id) => { const t = view().towns.find((x) => x.id === id); return t ? t.walls : null; },
         // an attack with no march (the army was already there): from the attacker's nearest town, as the map's board
         fromOf: (plan) => { const v = view(), towns = env.data.towns, at = towns.find((t) => t.id === plan.site); let best = null; for (const t of v.towns) { if (t.owner !== plan.attacker.fid || t.id === plan.site) continue; const p = towns.find((x) => x.id === t.id); if (!p || !at) continue; const d = Math.hypot(p.xz[0] - at.xz[0], p.xz[1] - at.xz[1]); if (!best || d < best.d) best = { d, id: t.id }; } return best && best.id; } });

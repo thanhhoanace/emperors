@@ -33,7 +33,7 @@ HuaiNanPlay.hook(name, async (ctx, env) => …)   chờ lần lượt; giao di�
   ending       ctx = { over, view }             hết ván, trước màn kết
 HuaiNanPlay.on(type, fn)    chỉ nghe: act { name, args } (mọi lần gọi handler), season { view }, battle { bt }, turn, result { lb },
                             beat, report, over, lock (bool), skip (chạm khi móc đang chạy: xong ngay), watch (bool), mute (bool)
-env = { V2, rt, sc, ui, H, data, world, cities, quality, params, W, H, seed, fast, watching, game(), view(), emit }
+env = { V2, rt, sc, ui, H (the handlers), data, world, cities, quality, params, width, height, seed, fast, watching, game(), view(), emit }
 ```
 
 `env.fast` (`&fast=1`, e2e) thì móc trả về ngay. Handler mới của giao diện: `onSkip()`, `onWatch(on)`, `onMute(on)`.

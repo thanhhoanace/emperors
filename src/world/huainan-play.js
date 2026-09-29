@@ -57,7 +57,7 @@
     let fighting = null; // id of the battle on screen
     let beats = null; // the towns that changed hands this season, shown one at a time on the map before the recap (null: not read yet)
     const view = () => V2.view(g);
-    const env = { V2, rt, sc, ui: null, H: null, data, world, cities, quality, params, W, H, seed, fast: params.has('fast'), game: () => g, view, emit };
+    const env = { V2, rt, sc, ui: null, H: null, data, world, cities, quality, params, width: W, height: H, seed, fast: params.has('fast'), game: () => g, view, emit }; // env.H: the handlers, set below
     // one hook point: each registered step in turn, the input locked while any runs
     let locks = 0;
     const lock = (on) => { locks += on ? 1 : -1; const l = locks > 0; if (env.ui && env.ui.lock) env.ui.lock(l); emit('lock', l); };
