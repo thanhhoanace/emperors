@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,">
+<title>Mô hình Hán</title>
+<!-- Harness of src/world/han-models.js (docs/design/v2-polish.md, job 6): every model of the kit on one board, at the map's
+     scale (an army at the scene's close marker scale, a town at 1) and close up, lit like the world runtime. Serve the repo
+     root (node server/server.js) and open
+       docs/design/prototypes/models.html?view=board|towns|damage|armies|poses|figures|fleet|camp|banner &tier=high|mid|low
+       &fid=zhu_yuanzhang|cao_cao|sun_quan|local  &pose=stand|march|fight  &t=<seconds> (the cloth's time; still frame)
+       &d=&az=&el=&tx=&tz= (camera)  &w=&h=&dpr=  &spin=1 (a turntable)  &lens=0 (no tone lens)
+     Sets window.__done when drawn; window.__extra = { measure, parts: triangles per model } for tools/shoot.mjs. -->
+<style>html,body{margin:0;background:#15120f;overflow:hidden}canvas{display:block}
+#cap{position:fixed;left:10px;bottom:8px;color:#efe6d2;font:12px/1.3 "Noto Sans",system-ui,sans-serif;text-shadow:0 1px 2px #000;pointer-events:none;white-space:pre}</style>
+</head><body>
+<div id="cap"></div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/utils/BufferGeometryUtils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/geometries/RoundedBoxGeometry.js"></script>
+<script src="../../../src/world/kit.js"></script>
+<script src="../../../src/world/quality.js"></script>
+<script src="../../../src/world/han-models.js"></script>
+<script>
+(async () => {
+  const q = new URLSearchParams(location.search), T = THREE;
+  const W = Number(q.get('w')) || innerWidth, H = Number(q.get('h')) || innerHeight;
+  const tier = q.get('tier') || 'high', quality = Quality.pick({ override: tier }), view = q.get('view') || 'board';
+  const num = (k, d) => (q.get(k) != null && q.get(k) !== '' ? Number(q.get(k)) : d);
+  try {
+    const dpr = num('dpr', Math.min(quality.dpr, devicePixelRatio || 1));
+    const { renderer, scene, camera } = K.setup(W, H, { quality, dpr, fov: 34 });
+    camera.near = 0.2; camera.far = 900; camera.updateProjectionMatrix();
+    // the map's light (world-runtime.js): a blue-grey sky, a warm sun from the north-west, soft shadows round the target
+    scene.add(new T.HemisphereLight(0xc6d6e8, 0x5a5238, 0.72));
+    const sunDir = new T.Vector3(-0.5, 0.5, -0.3).normalize(), sun = new T.DirectionalLight(0xffe4bf, 2.5);
+    sun.castShadow = quality.shadow > 0; if (quality.shadow) sun.shadow.mapSize.set(quality.shadow, quality.shadow); sun.shadow.bias = -0.0002; sun.shadow.normalBias = 0.03;
+    scene.add(sun, sun.target);
+    scene.background = K.gradient('#8fb0cf', '#d8d6c6'); scene.fog = new T.Fog(0xcfd2c6, 120, 520);
+    const COLORS = { zhu_yuanzhang: 0xb3262e, cao_cao: 0x4d6a3a, sun_quan: 0xd9772a, local: 0x8a7a55 };
+    const SEAL = { zhu_yuanzhang: '朱', cao_cao: '遼', sun_quan: '周', local: '豪' };
+    const HM = (window.__HM = HanModels.create({ recv: (m) => m, renderer, colors: COLORS, quality }));
+    if (q.get('t') != null && HM.setTime) HM.setTime(num('t', 0));
+
+    // the ground: the map's autumn field colour, a little noise so shadows and bases read against it; water where asked
+    const groundTex = (() => {
+      const cv = document.createElement('canvas'); cv.width = cv.height = 256; const g = cv.getContext('2d');
+      g.fillStyle = '#9d9447'; g.fillRect(0, 0, 256, 256);
+      let s = 7; const r = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+      for (let i = 0; i < 2600; i++) { const v = r(); g.fillStyle = v < 0.5 ? 'rgba(92,98,34,.22)' : 'rgba(196,170,96,.2)'; g.fillRect(r() * 256, r() * 256, 2 + r() * 5, 2 + r() * 5); }
+      const t = new T.CanvasTexture(cv); t.encoding = T.sRGBEncoding; t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(40, 40); t.anisotropy = 4; return t;
+    })();
+    const ground = new T.Mesh(new T.PlaneGeometry(400, 400).rotateX(-Math.PI / 2), new T.MeshStandardMaterial({ map: groundTex, roughness: 0.95 }));
+    ground.receiveShadow = true; scene.add(ground);
+    const water = (x, z, w, d) => { const m = new T.Mesh(new T.PlaneGeometry(w, d).rotateX(-Math.PI / 2), new T.MeshStandardMaterial({ color: 0x2b5663, roughness: 0.15, metalness: 0.1 })); m.position.set(x, 0.02, z); m.receiveShadow = true; scene.add(m); return m; };
+
+    // ------------------------------------------------------------ what goes on the board
+    const parts = {}, labels = [];
+    const tris = (o) => { let n = 0; o.traverse((m) => { if (!m.isMesh || !m.visible) return; const g = m.geometry, c = g.index ? g.index.count : g.attributes.position.count; n += (c / 3) * (m.isInstancedMesh ? m.count : 1); }); return Math.round(n); };
+    const put = (name, o, x, z, ry = 0, s = 1) => { o.position.set(x, 0, z); o.rotation.y = ry; o.scale.setScalar(s); scene.add(o); parts[name] = tris(o); labels.push({ name, p: [x, 0, z] }); return o; };
+    const ARMY = 1.45; // the scene's marker scale close up (huainan-scene.js markerScale at zoomK 1)
+    const fid = q.get('fid') || 'zhu_yuanzhang', pose = q.get('pose') || undefined;
+    const army = (f, u, o = {}) => HM.army(Object.assign({ fid: f, seal: SEAL[f] }, u, o, pose && !o.pose ? { pose } : {}));
+    const FULL = { bo: 3200, cung: 1000, ky: 800, thuy: 0 };
+    let cam = { t: [0, 0], d: 40, az: 0.5, el: 0.6 };
+    if (view === 'board') {
+      [0, 1, 2, 3, 4].forEach((lv) => put('town' + lv, HM.town({ level: lv, seed: 11 + lv, size: 4.4 }), (lv - 2) * 8.5, -9));
+      put('town3-hit', HM.town({ level: 3, seed: 3, size: 4.4, damage: 0.6, burnt: true }), -12, 1.5);
+      if (HM.siegeCamp) { put('town2-camp', HM.town({ level: 2, seed: 5, size: 4.4 }), 3, 1.5); put('camp', HM.siegeCamp({ fid: 'cao_cao', men: 6000, r: 3.3, seed: 5 }), 3, 1.5); }
+      put('army-foot', army(fid, FULL), -12, 10, 0.4, ARMY);
+      put('army-horse', army('cao_cao', { bo: 1200, cung: 500, ky: 3200 }), -4, 10, 2.6, ARMY);
+      put('army-local', army('local', { bo: 1800, cung: 900, ky: 0 }), 4, 10, 0.2, ARMY);
+      water(14, 11, 16, 9); put('fleet', army('sun_quan', { thuy: 2400, bo: 600 }, { fleet: true }), 14, 11, 0.6, ARMY);
+      cam = { t: [0, 1], d: 52, az: 0.45, el: 0.72 };
+    } else if (view === 'towns') {
+      [0, 1, 2, 3, 4].forEach((lv) => put('town' + lv, HM.town({ level: lv, seed: 11 + lv, size: 4.4 }), (lv - 2) * 7, 0));
+      cam = { t: [0, 0], d: 30, az: 0.35, el: 0.62 };
+    } else if (view === 'damage') {
+      [[0, false], [0.33, false], [0.66, false], [1, false], [0.5, true]].forEach(([d, b], i) => put('dmg' + d + (b ? 'b' : ''), HM.town({ level: 3, seed: 3, size: 4.4, damage: d, burnt: b }), (i - 2) * 7, 0));
+      cam = { t: [0, 0], d: 30, az: 0.35, el: 0.62 };
+    } else if (view === 'armies') {
+      const L = [['zhu_yuanzhang', FULL], ['cao_cao', { bo: 2400, cung: 500, ky: 3200 }], ['sun_quan', { bo: 1800, cung: 1200, ky: 0, thuy: 1800 }], ['local', { bo: 1200, cung: 800 }]];
+      L.forEach(([f, u], i) => put('army-' + f, army(f, u), (i - 1.5) * 6.5, 0, 0.35, ARMY));
+      cam = { t: [0, 0.5], d: 22, az: 0.75, el: 0.42 };
+    } else if (view === 'poses') {
+      ['stand', 'march', 'fight'].forEach((p, i) => put('army-' + p, army(fid, FULL, { pose: p }), (i - 1) * 7, 0, 0.35, ARMY));
+      cam = { t: [0, 0.5], d: 20, az: 0.75, el: 0.42 };
+    } else if (view === 'figures') {
+      // one figure of each arm in each pose, the figures of an army close up (a turntable with &spin=1)
+      const arms = ['bo', 'cung', 'ky', 'thuy-foot'], poses = HM.POSES || ['stand'];
+      arms.forEach((a, i) => poses.forEach((p, j) => { const m = new T.Mesh(HM.figure(a, fid, p), HM.mat); m.castShadow = true; put(a + ':' + p, m, (j - (poses.length - 1) / 2) * 1.4, (i - 1.5) * 1.3, 0, ARMY); }));
+      if (HM.general) { const g = HM.general(fid, SEAL[fid], pose); put('general', g, 3.2, 0, 0, ARMY); }
+      cam = { t: [0.6, 0], d: 9.5, az: 1.2, el: 0.32 };
+    } else if (view === 'fleet') {
+      water(0, 0, 40, 20);
+      put('fleet1', army('sun_quan', { thuy: 600 }, { fleet: true }), -8, 0, 0.4, ARMY);
+      put('fleet4', army('zhu_yuanzhang', { thuy: 2400, bo: 600 }, { fleet: true }), 3, 0, 0.4, ARMY);
+      cam = { t: [-1, 0], d: 16, az: 0.8, el: 0.4 };
+    } else if (view === 'camp') {
+      put('town', HM.town({ level: 3, seed: 3, size: 4.4 }), 0, 0);
+      if (HM.siegeCamp) put('camp', HM.siegeCamp({ fid: 'cao_cao', men: num('men', 8000), r: 3.4, seed: 5 }), 0, 0);
+      put('army', army('cao_cao', { bo: 2400, cung: 500, ky: 1600 }, { pose: 'stand' }), 7.2, 0.5, Math.PI, ARMY);
+      cam = { t: [1, 0], d: 24, az: 0.5, el: 0.6 };
+    } else if (view === 'banner') {
+      [['zhu_yuanzhang', '朱'], ['cao_cao', '魏'], ['sun_quan', '吳'], ['local', '豪']].forEach(([f, ch], i) => {
+        const st = HM.standard ? HM.standard(f, ch, { h: 3 }) : (() => { const g = new T.Group(), b = HM.banner(f, ch); b.position.y = 3; g.add(b); return g; })();
+        put('std-' + f, st, (i - 1.5) * 2.2, 0);
+      });
+      cam = { t: [0, 2], d: 11, az: 0.3, el: 0.15 };
+    }
+    const c = { t: [num('tx', cam.t[0]), num('tz', cam.t[1])], d: num('d', cam.d), az: num('az', cam.az), el: num('el', cam.el) };
+    const setCam = (az) => {
+      const t = new T.Vector3(c.t[0], view === 'banner' ? 2 : 0.4, c.t[1]);
+      camera.position.set(t.x + c.d * Math.cos(c.el) * Math.sin(az), t.y + c.d * Math.sin(c.el), t.z + c.d * Math.cos(c.el) * Math.cos(az)); camera.lookAt(t);
+      sun.position.copy(t).addScaledVector(sunDir, 150); sun.target.position.copy(t); sun.target.updateMatrixWorld();
+      const ss = Math.max(12, c.d * 0.9); Object.assign(sun.shadow.camera, { left: -ss, right: ss, top: ss, bottom: -ss, near: 1, far: 400 }); sun.shadow.camera.updateProjectionMatrix();
+    };
+    setCam(c.az);
+    // every flag pivot turns to the camera (as huainan-scene.js orientFlags)
+    const qP = new T.Quaternion(), qY = new T.Quaternion(), wp = new T.Vector3(), UP = new T.Vector3(0, 1, 0);
+    const orient = () => { scene.updateMatrixWorld(); scene.traverse((f) => { if (!f.userData.flag || !f.parent) return; f.getWorldPosition(wp); f.parent.getWorldQuaternion(qP); qY.setFromAxisAngle(UP, Math.atan2(camera.position.x - wp.x, camera.position.z - wp.z)); f.quaternion.copy(qP.invert().multiply(qY)); }); };
+    const draw = () => { orient(); renderer.render(scene, camera); };
+    const measure = () => { renderer.info.autoReset = false; renderer.info.reset(); draw(); const s = K.stats(renderer, scene); renderer.info.autoReset = true; return s; };
+    draw();
+    const m = measure();
+    document.getElementById('cap').textContent = `${view} · ${tier} · ${(m.triangles / 1e6).toFixed(2)} M tam giác · ${m.calls} lệnh vẽ`;
+    window.__extra = { view, tier, measure: m, parts, cam: c };
+    window.__done = true;
+    if (q.get('spin') || q.get('t') == null) { const t0 = performance.now(); const loop = (now) => { if (q.get('spin')) setCam(c.az + (now - t0) * 0.0003); draw(); requestAnimationFrame(loop); }; requestAnimationFrame(loop); }
+  } catch (e) { console.error(e); window.__error = String((e && e.stack) || e); }
+})();
+</script>
+</body></html>
