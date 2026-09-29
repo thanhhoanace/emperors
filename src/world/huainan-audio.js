@@ -70,11 +70,11 @@
   A.MOODS = ['calm', 'tension', 'battle', 'victory', 'defeat', 'off'];
   // per mood: crossfade in / out seconds and the drone's level (0 = none)
   A.MOOD = {
-    calm: { fadeIn: 3.2, fadeOut: 3.2, drone: 0.2 },
-    tension: { fadeIn: 2.4, fadeOut: 2.4, drone: 0.3 },
-    battle: { fadeIn: 0.7, fadeOut: 1.6, drone: 0.14 },
-    victory: { fadeIn: 0.25, fadeOut: 1.4, drone: 0.2 },
-    defeat: { fadeIn: 1.0, fadeOut: 2.4, drone: 0.26 },
+    calm: { fadeIn: 3.2, fadeOut: 3.2, drone: 0.041 },
+    tension: { fadeIn: 2.4, fadeOut: 2.4, drone: 0.052 },
+    battle: { fadeIn: 0.7, fadeOut: 1.6, drone: 0.036 },
+    victory: { fadeIn: 0.25, fadeOut: 1.4, drone: 0.038 },
+    defeat: { fadeIn: 1.0, fadeOut: 2.4, drone: 0.07 },
   };
   A.bpm = (mood, sid, k) => {
     k = k == null ? 0.5 : k;
@@ -635,9 +635,9 @@
   // levels 0..1 per layer: wind, gale (winter's whistle), water, birds, cicada, cricket, crow, din (the battle)
   A.AMB = {
     xuan: { wind: 0.35, water: 0.5, birds: 1 },
-    ha: { wind: 0.16, water: 0.42, cicada: 0.85, birds: 0.3 },
+    ha: { wind: 0.16, water: 0.42, cicada: 1, birds: 0.3 },
     thu: { wind: 0.4, water: 0.36, cricket: 0.8, crow: 0.6 },
-    dong: { gale: 0.8, wind: 0.12, water: 0.08, crow: 0.4 },
+    dong: { gale: 0.5, wind: 0.12, water: 0.08, crow: 0.4 },
   };
   A.LAYERS = ['wind', 'gale', 'water', 'birds', 'cicada', 'cricket', 'crow', 'din'];
   // a season's layers, quieter under a battle (the nature gives way), plus the din
@@ -652,8 +652,13 @@
 
   // ---------------------------------------------------------------- the engine (Web Audio, on any context)
   // Levels are set here in dB and were tuned with A.render + A.analyze (tests/e2e/audio-measure.mjs).
-  const LEV = { music: -8, amb: -14, sfx: -6, ui: -12 };
-  const V = { pluck: 0.55, qin: 0.7, glass: 0.32, flute: 0.34, taiko: 0.85, ka: 0.4, gong: 0.55, horn: 0.5 }; // voice levels inside a mood
+  const LEV = { music: -5.5, amb: -13, sfx: -7, ui: -8 };
+  const V = { pluck: 0.68, qin: 0.7, glass: 0.4, flute: 0.15, taiko: 0.3, ka: 0.55, gong: 0.42, horn: 0.5 }; // voice levels inside a mood
+  const MIXM = { // per mood, what each voice is turned by: the drums lead a battle, the horn and the gong a victory
+    tension: { qin: 0.75, taiko: 1.3, flute: 0.75, gong: 1.5 }, battle: { qin: 0.55, pluck: 1.2, ka: 1.2 },
+    victory: { taiko: 2.2, gong: 2.2, horn: 2 }, defeat: { taiko: 3, gong: 2.8 },
+  };
+  const vol = (mood, v) => V[v] * ((MIXM[mood] || {})[v] || 1);
   const KS = { // Karplus-Strong voices: pipa (bright, short), zheng (rounder), qin (dark, long)
     pipa: { damp: 0.8, t60: 1.4, pos: 0.12, tone: 0.6 }, zheng: { damp: 0.68, t60: 2.2, pos: 0.18, tone: 0.4 }, qin: { damp: 0.55, t60: 3.6, pos: 0.3, tone: 0.2 },
   };
@@ -711,10 +716,12 @@
 
     // ---- the master: a soft compressor, a fast limiter, a soft clip; the mute gain last
     const input = gain(1), comp = ctx.createDynamicsCompressor(), lim = ctx.createDynamicsCompressor(), clip = ctx.createWaveShaper(), master = gain(opts.muted ? 0 : 1);
-    comp.threshold.value = -20; comp.knee.value = 14; comp.ratio.value = 3; comp.attack.value = 0.008; comp.release.value = 0.25;
-    lim.threshold.value = -4; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.08;
+    comp.threshold.value = -14; comp.knee.value = 12; comp.ratio.value = 2.5; comp.attack.value = 0.01; comp.release.value = 0.3;
+    lim.threshold.value = -2; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.08;
     clip.curve = softClip; try { clip.oversample = lite ? 'none' : '2x'; } catch (e) { /* older engines */ }
-    input.connect(comp); comp.connect(lim); lim.connect(clip); clip.connect(master); master.connect(opts.dest || ctx.destination);
+    if (opts.dry) input.connect(master); // (measurements) the mix before the dynamics, to see what they are asked to do
+    else { input.connect(comp); comp.connect(lim); lim.connect(clip); clip.connect(master); }
+    master.connect(opts.dest || ctx.destination);
     E.master = master; E.input = input;
     // ---- buses: music (ducked by big effects), ambience, effects (a scene bus that a skip can cut), the player's own taps
     const musicBus = gain(lin(LEV.music)), duck = gain(1), ambBus = gain(lin(LEV.amb)), sfxBus = gain(lin(LEV.sfx)), uiBus = gain(lin(LEV.ui));
@@ -806,7 +813,7 @@
     };
     // a flute note: a soft-edged wave with a breath of noise, a scoop up to pitch, a shared vibrato; xiao (low) or dizi by register
     const flute = (sc, m, t, dur, g, x) => {
-      const f = A.hz(m), o = ctx.createOscillator(), lp = bq('lowpass', Math.min(5500, f * 4.2), 0.5), env = gain(0), lv = g * V.flute;
+      const f = A.hz(m), o = ctx.createOscillator(), lp = bq('lowpass', Math.min(5500, f * 4.2), 0.5), env = gain(0), lv = g * vol(sc.mood, 'flute');
       o.setPeriodicWave(flutePeriodic()); o.frequency.value = f;
       o.detune.setValueAtTime(x && x.slide ? x.slide * 100 : -32, t); o.detune.linearRampToValueAtTime(0, t + (x && x.slide ? 0.22 : 0.12));
       const vib = x && x.wide ? sc.vibW : sc.vib; if (vib) { vib.connect(o.detune); o.onended = () => { try { vib.disconnect(o.detune); } catch (e) { /* gone */ } }; }
@@ -828,18 +835,18 @@
       switch (e.v) {
         case 'pluck': {
           const buf = B.pluck(x.bed ? 'zheng' : pluckKind(sc), e.n);
-          if (x === 'roll') for (let j = 0; j < 7; j++) hit(buf, t + j * spb * 0.1, { g: g * V.pluck * (0.35 + 0.1 * j), out: sc.bus, pan });
-          else if (x.long) hit(buf, t, { g: g * V.pluck, out: sc.bus, pan, send: 0.2 });
-          else hit(buf, t + jit, { g: g * V.pluck, out: sc.bus, pan });
+          if (x === 'roll') for (let j = 0; j < 7; j++) hit(buf, t + j * spb * 0.1, { g: g * vol(sc.mood, 'pluck') * (0.35 + 0.1 * j), out: sc.bus, pan });
+          else if (x.long) hit(buf, t, { g: g * vol(sc.mood, 'pluck'), out: sc.bus, pan, send: 0.2 });
+          else hit(buf, t + jit, { g: g * vol(sc.mood, 'pluck'), out: sc.bus, pan });
           break;
         }
-        case 'qin': hit(B.pluck('qin', e.n), t + jit, { g: g * V.qin, out: sc.bus, send: 0.1, glide: x.slide ? Math.pow(2, x.slide / 12) : 0, glideT: 0.18 }); break;
-        case 'glass': hit(B.glass(e.n), t + jit, { g: g * V.glass, out: sc.bus, pan: pan * 1.6, send: 0.35 }); break;
+        case 'qin': hit(B.pluck('qin', e.n), t + jit, { g: g * vol(sc.mood, 'qin'), out: sc.bus, send: 0.1, glide: x.slide ? Math.pow(2, x.slide / 12) : 0, glideT: 0.18 }); break;
+        case 'glass': hit(B.glass(e.n), t + jit, { g: g * vol(sc.mood, 'glass'), out: sc.bus, pan: pan * 1.6, send: 0.35 }); break;
         case 'flute': flute(sc, e.n, t, Math.min(6.5, e.d * spb), g, x); break;
-        case 'taiko': { const big = x.size !== 'small'; hit(B.taiko(big ? 'big' : 'small'), t, { g: g * V.taiko, out: sc.bus, rate: 1 + (r() - 0.5) * 0.04, send: big ? 0.12 : 0.08 }); break; }
-        case 'ka': hit(B.ka(), t, { g: g * V.ka, out: sc.bus, rate: 1 + (r() - 0.5) * 0.1, pan }); break;
-        case 'gong': { const kind = x.size === 'small' ? 'small' : x.size === 'low' ? 'low' : 'big', base = kind === 'small' ? 520 : kind === 'low' ? 82 : 110; hit(B.gong(kind), t, { g: g * V.gong, out: sc.bus, rate: clamp(A.hz(e.n) / base, 0.85, 1.2), glide: 0.985, glideT: 0.35, send: 0.3 }); break; }
-        case 'horn': { const d = Math.round(clamp(e.d * spb, 1, 3.4) * 5) / 5; hit(B.horn(e.n, d), t, { g: g * V.horn, out: sc.bus, send: 0.3 }); break; }
+        case 'taiko': { const big = x.size !== 'small'; hit(B.taiko(big ? 'big' : 'small'), t, { g: g * vol(sc.mood, 'taiko'), out: sc.bus, rate: 1 + (r() - 0.5) * 0.04, send: big ? 0.12 : 0.08 }); break; }
+        case 'ka': hit(B.ka(), t, { g: g * vol(sc.mood, 'ka'), out: sc.bus, rate: 1 + (r() - 0.5) * 0.1, pan }); break;
+        case 'gong': { const kind = x.size === 'small' ? 'small' : x.size === 'low' ? 'low' : 'big', base = kind === 'small' ? 520 : kind === 'low' ? 82 : 110; hit(B.gong(kind), t, { g: g * vol(sc.mood, 'gong'), out: sc.bus, rate: clamp(A.hz(e.n) / base, 0.85, 1.2), glide: 0.985, glideT: 0.35, send: 0.3 }); break; }
+        case 'horn': { const d = Math.round(clamp(e.d * spb, 1, 3.4) * 5) / 5; hit(B.horn(e.n, d), t, { g: g * vol(sc.mood, 'horn'), out: sc.bus, send: 0.3 }); break; }
         default: break;
       }
     };
@@ -897,7 +904,7 @@
     const birdAt = (t, lv, r) => {
       const list = BIRDS[M.sid] || BIRDS.xuan, tot = list.reduce((s, x) => s + x[1], 0); let pickw = r() * tot, kind = list[0][0];
       for (const [k, w] of list) { if ((pickw -= w) < 0) { kind = k; break; } }
-      hit(B.bird(kind, Math.floor(r() * 3)), t, { g: (kind === 'coo' ? 0.4 : 0.55) * (0.5 + 0.5 * lv) * (0.6 + 0.4 * r()), rate: 0.92 + 0.16 * r(), pan: (r() - 0.5) * 1.4, out: ambBus, send: 0.22 });
+      hit(B.bird(kind, Math.floor(r() * 3)), t, { g: (kind === 'coo' ? 0.3 : 0.42) * (0.5 + 0.5 * lv) * (0.6 + 0.4 * r()), rate: 0.92 + 0.16 * r(), pan: (r() - 0.5) * 1.4, out: ambBus, send: 0.22 });
     };
 
     // ---- the tick: schedules music bars and ambience events up to `until`
@@ -950,43 +957,44 @@
         const dur = o.dur || 3.2, n = Math.max(1, Math.min(o.n || 4, lite ? 2 : 6)), jit = 0.025;
         for (let w = 0; w < n; w++) {
           const ph = r() * 0.5, pan = (r() - 0.5) * 1.2;
-          for (let x = ph; x < dur; x += 0.5 + (r() - 0.5) * 0.04) hit(B.foot(Math.floor(r() * 4)), t + x + (r() - 0.5) * jit, { g: (0.22 + 0.16 * r()) * env(x / dur) * o.g / Math.sqrt(n / 2 + 0.5), rate: 0.92 + 0.16 * r(), pan });
+          for (let x = ph; x < dur; x += 0.5 + (r() - 0.5) * 0.04) hit(B.foot(Math.floor(r() * 4)), t + x + (r() - 0.5) * jit, { g: (0.7 + 0.45 * r()) * env(x / dur) * o.g / Math.sqrt(n / 2 + 0.5), rate: 0.92 + 0.16 * r(), pan });
         }
-        for (let x = 0.4 + r() * 0.6; x < dur; x += 1.1 + r() * 0.9) hit(B.clang(Math.floor(r() * 4)), t + x, { g: 0.045 * env(x / dur) * o.g, rate: 1.6 + 0.6 * r(), pan: (r() - 0.5) * 1.4, send: 0.1 });
+        for (let x = 0.4 + r() * 0.6; x < dur; x += 1.1 + r() * 0.9) hit(B.clang(Math.floor(r() * 4)), t + x, { g: 0.1 * env(x / dur) * o.g, rate: 1.6 + 0.6 * r(), pan: (r() - 0.5) * 1.4, send: 0.1 });
       },
       oars(t, o, r) { // strokes of the oars: a knock in the rowlock, a wash of water
         const dur = o.dur || 3, n = lite ? 2 : 3;
-        for (let w = 0; w < n; w++) for (let x = r() * 0.8; x < dur; x += 0.95 + (r() - 0.5) * 0.06) { const a = env(x / dur) * o.g; hit(B.wood(210), t + x, { g: 0.32 * a, rate: 0.95 + 0.1 * r(), pan: (w - 1) * 0.5 }); hit(B.whoosh(Math.floor(r() * 3)), t + x + 0.1, { g: 0.22 * a, rate: 0.55 + 0.1 * r(), pan: (w - 1) * 0.5 }); }
+        for (let w = 0; w < n; w++) for (let x = r() * 0.8; x < dur; x += 0.95 + (r() - 0.5) * 0.06) { const a = env(x / dur) * o.g; hit(B.wood(210), t + x, { g: 0.7 * a, rate: 0.95 + 0.1 * r(), pan: (w - 1) * 0.5 }); hit(B.whoosh(Math.floor(r() * 3)), t + x + 0.1, { g: 0.5 * a, rate: 0.55 + 0.1 * r(), pan: (w - 1) * 0.5 }); }
       },
       horse(t, o, r) { // gallop: three hoof-falls and a rest, several horses out of step
         const dur = o.dur || 2.2, n = lite ? 2 : 4;
         for (let h = 0; h < n; h++) {
           const ph = r() * 0.5, pan = (r() - 0.5) * 1.2;
-          for (let x = ph; x < dur; x += 0.5 + (r() - 0.5) * 0.03) [0, 0.09, 0.19].forEach((d, j) => hit(B.hoof(Math.floor(r() * 4)), t + x + d, { g: (0.2 + 0.1 * j) * env((x + d) / dur) * o.g, rate: 0.9 + 0.2 * r(), pan }));
+          for (let x = ph; x < dur; x += 0.5 + (r() - 0.5) * 0.03) [0, 0.09, 0.19].forEach((d, j) => hit(B.hoof(Math.floor(r() * 4)), t + x + d, { g: (0.4 + 0.2 * j) * env((x + d) / dur) * o.g, rate: 0.9 + 0.2 * r(), pan }));
         }
       },
       charge(t, o, r) { // the cavalry comes on: a heavier gallop, a roll of drums, a far roar
         CUES.horse(t, { g: 1.15 * o.g, dur: 2.6 }, r);
         for (let x = 0, i = 0; x < 2.4; i++, x += 0.22 - 0.07 * (x / 2.4)) hit(B.taiko(i % 2 ? 'small' : 'big'), t + x, { g: (0.2 + 0.4 * (x / 2.4)) * o.g, out: scene, send: 0.1 });
-        hit(B.cheer(), t + 0.4, { g: 0.32 * o.g, send: 0.2 });
+        hit(B.cheer(), t + 0.4, { g: 0.32 * o.g, send: 0.2 }); duckMusic(t, 3.5, 2.8);
       },
       horn(t, o) { // two calls of a long horn, the second a fifth up, over a drum
         const g = o.g; hit(B.horn(45, 1.8), t, { g: 0.85 * g, send: 0.3 }); hit(B.horn(52, 1.4), t + 1.95, { g: 0.85 * g, send: 0.3 }); hit(B.taiko('big'), t, { g: 0.7 * g, send: 0.2 }); duckMusic(t, 5, 3.2);
       },
       volley(t, o, r) { // arrows leave the bows with a twang, whistle over, and land
         const n = Math.round(clamp((o.n || 2) * 4 + 4, 4, lite ? 8 : 14));
-        for (let i = 0; i < n; i++) { const s = r() * 0.4, pan = (r() - 0.5) * 1.6; hit(B.thud(210), t + s, { g: 0.1, rate: 1.1 + 0.3 * r(), pan }); hit(B.whoosh(Math.floor(r() * 3)), t + s + 0.02, { g: 0.32 * (0.6 + 0.4 * r()) * o.g, rate: 0.85 + 0.3 * r(), pan }); }
-        for (let i = 0; i < n * 0.8; i++) hit(B.thud(150 + 60 * r()), t + 0.62 + 0.4 * r(), { g: 0.2 * o.g, rate: 1.4 + 0.7 * r(), pan: (r() - 0.5) * 1.6, send: 0.1 });
+        for (let i = 0; i < n; i++) { const s = r() * 0.4, pan = (r() - 0.5) * 1.6; hit(B.thud(210), t + s, { g: 0.14, rate: 1.1 + 0.3 * r(), pan }); hit(B.whoosh(Math.floor(r() * 3)), t + s + 0.02, { g: 0.45 * (0.6 + 0.4 * r()) * o.g, rate: 0.85 + 0.3 * r(), pan }); }
+        for (let i = 0; i < n * 0.8; i++) hit(B.thud(150 + 60 * r()), t + 0.62 + 0.4 * r(), { g: 0.3 * o.g, rate: 1.4 + 0.7 * r(), pan: (r() - 0.5) * 1.6, send: 0.1 });
+        duckMusic(t, 3, 1.4);
       },
       clash(t, o, r) { // steel on steel and shields, a press of men behind it
         const n = Math.round(clamp(o.n || 6, 2, lite ? 6 : 12)), dur = o.dur || 1.1;
-        hit(B.crowd(), t, { g: 0.55 * o.g, dur: dur + 1, fadeIn: 0.25, fadeOut: 0.8, offset: r() * 2 });
+        hit(B.crowd(), t, { g: 0.55 * o.g, dur: dur + 1, fadeIn: 0.25, fadeOut: 0.8, offset: r() * 2 }); duckMusic(t, 3, dur + 0.4);
         for (let i = 0; i < n; i++) { const x = (i / n) * dur * (0.8 + 0.4 * r()), pan = (r() - 0.5) * 1.6; if (r() < 0.62) hit(B.clang(Math.floor(r() * 4)), t + x, { g: (0.4 + 0.4 * r()) * o.g, rate: 0.85 + 0.35 * r(), pan, send: 0.15 }); else hit(B.thud(85 + 40 * r()), t + x, { g: (0.5 + 0.3 * r()) * o.g, rate: 0.9 + 0.3 * r(), pan }); }
       },
       fire(t, o) { // a whoomph as it takes hold, then the crackle and roar, dying away
         const dur = o.dur || 2.8;
-        hit(atom('fs', () => Y.sweep(sr, { dur: 0.5, f0: 200, f1: 1400, q: 0.8, shape: 'rise', mode: 'lp', noise: 'pink', seed: 6 })), t, { g: 0.5 * o.g, send: 0.1 });
-        hit(B.fire(), t + 0.1, { g: 0.7 * o.g, dur, fadeIn: 0.4, fadeOut: 1, send: 0.12, loop: true });
+        hit(atom('fs', () => Y.sweep(sr, { dur: 0.5, f0: 200, f1: 1400, q: 0.8, shape: 'rise', mode: 'lp', noise: 'pink', seed: 6 })), t, { g: 0.6 * o.g, send: 0.1 });
+        hit(B.fire(), t + 0.1, { g: 0.9 * o.g, dur, fadeIn: 0.4, fadeOut: 1, send: 0.12, loop: true }); duckMusic(t, 2, dur - 0.4);
       },
       breach(t, o, r) { // the boom of the ram or the wall going, a crash of masonry, stones settling
         const g = o.g; hit(atom('bo', () => Y.taiko(sr, { f: 44, dur: 1.6, seed: 4 })), t, { g: 1 * g, send: 0.25 }); hit(B.thud(55), t, { g: 0.7 * g });
@@ -996,10 +1004,10 @@
         duckMusic(t, 5, 2.4);
       },
       rout(t, o, r) { // a low gong for the broken line, boots running every which way, the roar falling away
-        const g = o.g; hit(B.gong('low'), t, { g: 0.6 * g, send: 0.3, glide: 0.985, glideT: 0.35 }); hit(B.crowd(), t + 0.1, { g: 0.45 * g, dur: 2.6, fadeIn: 0.3, fadeOut: 1.5, offset: r() * 2, rate: 0.85 });
+        const g = o.g; duckMusic(t, 3, 2.5); hit(B.gong('low'), t, { g: 0.6 * g, send: 0.3, glide: 0.985, glideT: 0.35 }); hit(B.crowd(), t + 0.1, { g: 0.45 * g, dur: 2.6, fadeIn: 0.3, fadeOut: 1.5, offset: r() * 2, rate: 0.85 });
         for (let i = 0, n = lite ? 8 : 16; i < n; i++) hit(B.foot(Math.floor(r() * 4)), t + 0.2 + r() * 2.2, { g: (0.25 + 0.15 * r()) * g, rate: 1.05 + 0.3 * r(), pan: (r() - 0.5) * 1.8 });
       },
-      flag(t, o, r) { hit(B.snap(), t, { g: 0.85 * o.g, rate: 0.95 + 0.1 * r(), send: 0.12 }); if (o.n > 1) hit(B.snap(), t + 0.55, { g: 0.6 * o.g, rate: 1.05, pan: 0.3 }); },
+      flag(t, o, r) { hit(B.snap(), t, { g: 1.2 * o.g, rate: 0.95 + 0.1 * r(), send: 0.12 }); if (o.n > 1) hit(B.snap(), t + 0.55, { g: 0.6 * o.g, rate: 1.05, pan: 0.3 }); },
       camp(t, o, r) { // mallets on tent-pegs, a canvas flap, a small fire
         const dur = o.dur || 3;
         for (let i = 0, n = 5; i < n; i++) { const x = 0.15 + (i / n) * (dur - 0.6) + 0.15 * r(); hit(B.wood(230 + 70 * r()), t + x, { g: 0.55 * o.g, rate: 0.95 + 0.1 * r(), pan: (r() - 0.5) * 1.2, send: 0.1 }); hit(B.thud(150), t + x, { g: 0.22 * o.g }); }
@@ -1010,10 +1018,10 @@
       gong(t, o) { const k = o.k === 'small' ? 'small' : o.k === 'low' ? 'low' : 'big'; hit(B.gong(k), t, { g: (k === 'small' ? 0.55 : 0.65) * o.g, send: 0.3, glide: 0.985, glideT: 0.35 }); if (k !== 'small') duckMusic(t, 3, 2); },
       chime(t, o, r) { // the turn of a season: three notes of its mode, rising in spring, falling in autumn
         const S = A.SEASONS[o.season] || A.SEASONS[M.sid] || A.SEASONS.thu, up = S.id === 'xuan' || S.id === 'ha', ds = up ? [0, 2, 4] : [4, 2, 0];
-        ds.forEach((d, i) => { hit(B.pluck('zheng', A.midi(S, d + 2)), t + i * 0.2, { g: 0.5 * o.g, send: 0.3, pan: (i - 1) * 0.3 }); });
-        hit(B.glass(A.midi(S, 7)), t + 0.5, { g: 0.32 * o.g, send: 0.4 });
+        ds.forEach((d, i) => { hit(B.pluck('zheng', A.midi(S, d + 2)), t + i * 0.2, { g: 0.8 * o.g, send: 0.3, pan: (i - 1) * 0.3 }); });
+        hit(B.glass(A.midi(S, 7)), t + 0.5, { g: 0.5 * o.g, send: 0.4 });
       },
-      card(t, o) { const S = A.SEASONS[M.sid] || A.SEASONS.thu; hit(B.pluck('zheng', A.midi(S, 3)), t, { g: 0.32 * o.g, send: 0.25, out: uiBus }); hit(B.pluck('zheng', A.midi(S, 5)), t + 0.14, { g: 0.28 * o.g, send: 0.25, out: uiBus }); },
+      card(t, o) { const S = A.SEASONS[M.sid] || A.SEASONS.thu; hit(B.pluck('zheng', A.midi(S, 3)), t, { g: 0.5 * o.g, send: 0.25, out: uiBus }); hit(B.pluck('zheng', A.midi(S, 5)), t + 0.14, { g: 0.45 * o.g, send: 0.25, out: uiBus }); },
       victory(t, o) { if (M.scene && M.scene.mood === 'victory' && t < M.scene.t0 + 8) return; E.setMood('victory', { t }); hit(B.cheer(), t + 0.7, { g: 0.6 * o.g, send: 0.2 }); },
       defeat(t) { if (M.scene && M.scene.mood === 'defeat' && t < M.scene.t0 + 8) return; E.setMood('defeat', { t }); },
     };
@@ -1035,7 +1043,7 @@
   A.render = async (spec) => {
     const OC = root.OfflineAudioContext || root.webkitOfflineAudioContext;
     if (!OC) throw new Error('HuaiNanAudio.render: no OfflineAudioContext');
-    const sr = spec.sr || 44100, sec = spec.seconds || 5, ctx = new OC(2, Math.ceil(sec * sr), sr), E = A.create(ctx, { lite: !!spec.lite, seed: spec.seed || 1, offline: true, voices: spec.voices });
+    const sr = spec.sr || 44100, sec = spec.seconds || 5, ctx = new OC(2, Math.ceil(sec * sr), sr), E = A.create(ctx, { lite: !!spec.lite, seed: spec.seed || 1, offline: true, voices: spec.voices, dry: !!spec.dry });
     if (spec.script) spec.script(E, ctx);
     E.tick(sec);
     const buf = await ctx.startRendering();

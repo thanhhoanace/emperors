@@ -13,17 +13,17 @@ import { ROOT } from '../load.mjs';
 const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:3000/';
 const OUT = path.join(ROOT, 'test-results', 'polish-audio');
 fs.mkdirSync(OUT, { recursive: true });
-const args = process.argv.slice(2), quick = args.includes('quick'), lite = args.includes('lite'), voices = args.includes('voices'), tag = (quick ? 'quick' : 'full') + (lite ? '-lite' : '') + (voices ? '-voices' : '');
+const args = process.argv.slice(2), quick = args.includes('quick'), lite = args.includes('lite'), voices = args.includes('voices'), dry = args.includes('dry'), tag = (quick ? 'quick' : 'full') + (lite ? '-lite' : '') + (voices ? '-voices' : '') + (dry ? '-dry' : '');
 const report = { tag, checks: [], errors: [] };
 const check = (ok, what, detail) => { report.checks.push({ ok: !!ok, what, detail }); console.log((ok ? 'ok   ' : 'FAIL ') + what + (detail !== undefined ? ' ' + JSON.stringify(detail) : '')); };
 
 // the mix targets, dBFS at the master (after the compressor, the limiter and the soft clip). "RMS active" ignores stretches below -60.
 const T = {
   peakMax: -1.0, dcMax: 0.002,
-  moods: { calm: [-34, -24], tension: [-31, -21], battle: [-27, -17], victory: [-30, -18], defeat: [-34, -22] }, // rmsActive
-  ambience: [-46, -28],
-  ui: { tap: [-26, -10], select: [-26, -10], confirm: [-24, -8], cancel: [-28, -12], skip: [-34, -14], card: [-30, -12] }, // peak
-  sfxPeak: [-18, -1],
+  moods: { calm: [-31, -24], tension: [-29, -22], battle: [-25, -18], victory: [-27, -18], defeat: [-29, -22] }, // rmsActive, music alone
+  ambience: [-40, -28],
+  ui: { tap: [-22, -9], select: [-22, -9], confirm: [-22, -8], cancel: [-22, -9], skip: [-26, -12], card: [-22, -9] }, // peak
+  sfxPeak: [-16, -1],
 };
 
 const browser = await puppeteer.launch({ headless: true, protocolTimeout: 1800000, args: ['--no-sandbox', '--disable-setuid-sandbox', '--autoplay-policy=no-user-gesture-required'] });
@@ -78,7 +78,7 @@ try {
 
   // ---- the offline measurements
   const t0 = Date.now();
-  const rows = await page.evaluate((q, l, v) => window.__audio.measureAll({ quick: q, lite: l, voices: v }), quick, lite, voices);
+  const rows = await page.evaluate((q, l, v, d) => window.__audio.measureAll({ quick: q, lite: l, voices: v, dry: d }), quick, lite, voices, dry);
   report.renderS = (Date.now() - t0) / 1000; report.rows = rows;
   const f = (v, d = 1) => (Number.isFinite(v) ? v.toFixed(d) : '-inf');
   const lines = ['name'.padEnd(20) + ['peak', 'rms', 'rmsAct', 'short', 'dc', 'clip', 'sil', 'centroid', 'ms'].map((h) => h.padStart(9)).join('')];

@@ -171,7 +171,7 @@ test('results, towns and marches', () => {
 
 test('ambience by season: winter wind, spring birds, summer cicadas, autumn crickets; the battle covers the nature', () => {
   const s = (id, mood, din) => A.ambSpec(id, mood || 'calm', din || 0);
-  assert.ok(s('xuan').birds > 0.8 && !s('xuan').cicada && !s('xuan').cricket); assert.ok(s('ha').cicada > 0.6 && s('ha').birds < 0.5); assert.ok(s('thu').cricket > 0.6 && s('thu').crow > 0); assert.ok(s('dong').gale > 0.6 && !s('dong').birds && !s('dong').cicada);
+  assert.ok(s('xuan').birds > 0.8 && !s('xuan').cicada && !s('xuan').cricket); assert.ok(s('ha').cicada > 0.6 && s('ha').birds < 0.5); assert.ok(s('thu').cricket > 0.6 && s('thu').crow > 0); assert.ok(s('dong').gale > 0.4 && !s('dong').birds && !s('dong').cicada);
   for (const id of A.SEASON_IDS) for (const k of A.LAYERS) { assert.ok(s(id)[k] >= 0 && s(id)[k] <= 1, id + k); assert.ok(s(id, 'battle')[k] <= s(id)[k] + 1e-9, 'quieter under a battle'); }
   assert.equal(s('thu', 'calm', 5).din, 1); assert.equal(s('thu', 'calm', -1).din, 0); assert.equal(s('thu', 'calm', 0.4).din, 0.4);
   assert.deepEqual(A.LAYERS.slice().sort(), Object.keys(s('thu')).sort());

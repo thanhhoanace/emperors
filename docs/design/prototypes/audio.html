@@ -186,11 +186,11 @@ meter();
 
 // ---- offline measurement
 const fmt = (v, d = 1) => (isFinite(v) ? v.toFixed(d) : '-∞');
-async function timed(spec) { const t0 = performance.now(); const r = await A.render(spec); r.ms = performance.now() - t0; return r; }
+async function timedRaw(spec) { const t0 = performance.now(); const r = await A.render(spec); r.ms = performance.now() - t0; return r; }
 function row(name, kind, sec, r, extra) { const a = A.analyze(r.ch, r.sr, { chroma: !!(extra && extra.chroma) }); return Object.assign({ name, kind, sec, ms: Math.round(r.ms), lite: !!(extra && extra.lite), peakDb: a.peakDb, rmsDb: a.rmsDb, rmsActiveDb: a.rmsActiveDb, shortMaxDb: a.shortMaxDb, dcMax: a.dcMax, clip: a.clip, silent: a.silent, centroid: a.centroid, bands: a.bands, chroma: a.chroma }, extra && extra.tags ? extra.tags : {}); }
 window.__audio = {
   async measureAll(o) {
-    o = o || {}; const out = [], lite = !!o.lite, seed = 219, stat = (t) => { $('#mstat').textContent = t; };
+    o = o || {}; const out = [], lite = !!o.lite, seed = 219, stat = (t) => { $('#mstat').textContent = t; }, timed = (spec) => timedRaw(Object.assign({ dry: !!o.dry }, spec));
     // every cue alone, from 0.25 s, in a 7 s window (the mood cues 20 s)
     for (const n of A.CUES) {
       const long = n === 'victory' || n === 'defeat', sec = long ? 20 : 7; stat('cue ' + n);
