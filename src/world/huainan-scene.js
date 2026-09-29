@@ -304,8 +304,7 @@
           const foe = dirTo(p, (q) => hostile(a.fid, ownerOf(q.id))), home = dirTo(p, (q) => ownerOf(q.id) === a.fid);
           const ang = (a.besieging ? home : foe) + S.slotAngle(kl++), off = (p.kind === 'town' ? (p.size / 2) * 1.02 * ts : 2.2) + r * 0.9 + 0.5;
           const x = p.x + Math.cos(ang) * off, z = p.z + Math.sin(ang) * off;
-          const faceA = a.besieging ? Math.atan2(p.z - z, p.x - x) : Math.atan2(Math.sin(foe) , Math.cos(foe));
-          out[a.id] = { x, z, face: faceA };
+          out[a.id] = { x, z, face: a.besieging ? Math.atan2(p.z - z, p.x - x) : foe }; // a besieger faces the town, a garrison the nearest foe
         }
       }
       return out;
@@ -326,8 +325,9 @@
         let m = armies[a.id];
         if (!m || m.sig !== S.armySig(a)) {
           if (m) { root.remove(m.g); freeArmy(m.g); }
-          const keep = m;
-          m = armies[a.id] = { g: buildArmy(a), sig: S.armySig(a), a, label: keep ? keep.label : newLabel(() => armyAnchor(a.id), 'map', 2), to: keep ? keep.to : null, moving: keep ? keep.moving : null };
+          const keep = m; // a new look (more men, another arm) keeps the army's place, march and label
+          m = armies[a.id] = { g: buildArmy(a), sig: S.armySig(a), a, label: keep ? keep.label : newLabel(() => armyAnchor(a.id), 'map', 2), to: keep ? keep.to : null, moving: keep ? keep.moving : null, site: keep ? keep.site : null, face: keep ? keep.face : 0 };
+          if (keep) { m.g.position.copy(keep.g.position); m.g.rotation.copy(keep.g.rotation); }
           root.add(m.g); m.g.visible = !BT.on;
         }
         m.a = a; m.animate = opt.animate !== false;
@@ -606,7 +606,7 @@
         const x = pts[i][0] + (pts[i + 1][0] - pts[i][0]) * r, z = pts[i][1] + (pts[i + 1][1] - pts[i][1]) * r;
         m.g.position.set(x, m.a.arm === 'fleet' ? waterY(x, z) + 0.02 : terr.h(x, z), z);
         m.g.rotation.y = u < 1 ? Math.atan2(-(pts[i + 1][1] - pts[i][1]), pts[i + 1][0] - pts[i][0]) : -m.moving.face;
-        if (u >= 1) m.moving = null;
+        if (u >= 1) { m.moving = null; if (m.to) m.g.position.set(m.to[0], m.to[1], m.to[2]); } // arrived: on its stand as it is now (the stand moves with the zoom)
         if (sel && sel.kind === 'army' && sel.id === m.a.id) placeSel();
       }
       return any;
@@ -742,7 +742,6 @@
       });
       return any;
     };
-    // the wing under a screen point: the nearest block by its size on screen, or none
     // the wing under a screen point: its pill first, then the ground its block covers (the one whose middle is nearest), then the nearest block by its size on screen
     const pickWing = (x, y) => {
       if (!BT.on) return null;
