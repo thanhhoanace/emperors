@@ -46,10 +46,10 @@
 
   const LANE_VI = { open: 'Đồng trống', ford: 'Bến sông', wood: 'Rừng thưa', hill: 'Đồi' }, LANE_SIDE = ['trái', 'giữa', 'phải'];
   const SEASONS = ['Xuân', 'Hạ', 'Thu', 'Đông'], SEASON_OF = { spring: 'Xuân', summer: 'Hạ', autumn: 'Thu', winter: 'Đông' };
-  const MODES = ['deploy', 'clash', 'result'], ARMS = ['bo', 'cung', 'ky', 'thuy'];
+  const MODES = ['deploy', 'clash', 'result', 'ground'], ARMS = ['bo', 'cung', 'ky', 'thuy'];
   // per tier: the figures drawn in all, the fallen, and the share of the reeds, dust and arrows
   const TIER = { high: { figures: 3200, fallen: 420, fx: 1 }, mid: { figures: 2200, fallen: 260, fx: 0.6 }, low: { figures: 1000, fallen: 120, fx: 0.35 } };
-  const ROW = 55, G = 70; // a row of the engine's field (metres along z); the gap left beside a ford lane for the river's arms
+  const ROW = 44, G = 70; // a row of the engine's field (metres along z); the gap left beside a ford lane for the river's arms
   const rowZ = (r) => (2.5 - r) * ROW; // rows 0–1 the attacker's (+z), 4–5 the defender's; the middle of the field at 0
   const face = (side) => (side === 'A' ? -1 : 1); // the way along z a side faces
   FB.LANE_VI = LANE_VI; FB.ROW = ROW; FB.rowZ = rowZ; FB.TIER = TIER;
@@ -88,9 +88,10 @@
 
   // ---------------------------------------------------------------- the sun for an hour of a season (Huainan, ~32.5° N)
   // A drawn day, not an ephemeris: the sun rises at `rise` from azimuth `az0` (east of north), culminates at `top`
-  // degrees in the south and sets at `set`; 17.5 in autumn is the golden hour (~14° up, a little south of west).
+  // degrees in the south and sets at `set`; 17.5 in autumn is the golden hour (~19° up, a little south of west: low enough for long shadows, high
+  // enough to light the ground).
   // dir points to the sun (x east, y up, z south). Colours are linear multipliers as the siege's light (1, .72, .46).
-  const DAY = { Xuân: { rise: 5.9, set: 18.5, top: 58, az0: 84 }, Hạ: { rise: 5.2, set: 19.2, top: 78, az0: 64 }, Thu: { rise: 6.1, set: 18.4, top: 52, az0: 95 }, Đông: { rise: 7.0, set: 17.4, top: 34, az0: 118 } };
+  const DAY = { Xuân: { rise: 5.7, set: 19.0, top: 58, az0: 84 }, Hạ: { rise: 5.2, set: 19.2, top: 78, az0: 64 }, Thu: { rise: 5.9, set: 18.9, top: 52, az0: 95 }, Đông: { rise: 6.8, set: 18.3, top: 34, az0: 118 } };
   const SKY = { // zenith, horizon, the warm band round the sun; the haze (lens atmos) and its colour
     Xuân: { zen: [0.13, 0.25, 0.47], hor: [0.8, 0.74, 0.62], haze: 0.00019, hazeCol: 0xa9b0b2 },
     Hạ: { zen: [0.11, 0.24, 0.5], hor: [0.78, 0.74, 0.66], haze: 0.00023, hazeCol: 0xa8b2ba },
@@ -140,7 +141,7 @@
       : [...FB.wingsOf(D.attacker.troops, 'A'), ...FB.wingsOf(D.defender.troops, 'D')];
     const wings = src.filter((w) => !w.left && w.men > 0);
     const menAll = wings.reduce((s, w) => s + w.men, 0) || 1, cap = D.figures || TQ.figures;
-    const k = Math.min(0.5, (0.8 * cap) / menAll), spread = clamp(Math.sqrt(0.3 / k), 1, 2.3); // a fifth kept for the posts, the fallen, the boats' crews
+    const k = Math.min(0.5, (0.8 * cap) / menAll), spread = clamp(Math.sqrt(0.3 / k), 1, 1.7); // a fifth kept for the posts, the fallen, the boats' crews
     const river = D.river, fordLane = D.lanes.indexOf('ford');
     const shapeOf = (w) => {
       const boat = w.arm === 'thuy' && river, S = SHAPE[w.arm === 'ky' ? 'ky' : w.arm === 'cung' ? 'cung' : 'foot'], sp = w.arm === 'ky' ? Math.max(1, spread * 0.85) : spread;
@@ -172,7 +173,8 @@
       if (fordLane >= 0) {
         const l = lanes[fordLane], half = LW / 2 + G / 2; a = fordLane === 0 ? 1 : fordLane === 2 ? -1 : rnd() < 0.5 ? -1 : 1;
         const xa = l.cx + a * half, xb = l.cx - a * half, ph = rnd() * 6;
-        cp = [[xa + a * 60, -2800], [xa - a * 30 + 40 * Math.sin(ph), -1700], [xa + a * 14, -900], [xa, -420], [xa + a * 3, -200], [xa - a * 4, -64], [l.cx + a * LW * 0.3, -13], [l.cx, 0], [l.cx - a * LW * 0.3, 13], [xb + a * 4, 64], [xb - a * 3, 200], [xb, 420], [xb - a * 14, 900], [xb + a * 30 + 40 * Math.sin(ph + 2), 1700], [xb - a * 60, 2800]];
+        const mA = (k) => 150 * Math.sin(ph + k * 1.9); // the arms wander once they are off the field
+        cp = [[xa + mA(0), -2800], [xa + mA(1), -1900], [xa + mA(2) * 0.8, -1150], [xa + a * 30 + mA(3) * 0.35, -700], [xa, -420], [xa + a * 3, -200], [xa - a * 4, -64], [l.cx + a * LW * 0.3, -13], [l.cx, 0], [l.cx - a * LW * 0.3, 13], [xb + a * 4, 64], [xb - a * 3, 200], [xb, 420], [xb - a * 30 + mA(4) * 0.35, 700], [xb + mA(5) * 0.8, 1150], [xb + mA(6), 1900], [xb + mA(7), 2800]];
       } else {
         const z0 = 360 + R() * 40; cp = [[-2800, z0 + 60], [-1600, z0 + 110], [-800, z0 - 40], [0, z0 + 30], [800, z0 - 50], [1600, z0 + 90], [2800, z0 + 20]];
       }
@@ -196,7 +198,7 @@
       l.zc = l.zf + (D.wings && rA != null && rD != null ? ((rowZ(rA) + rowZ(rD)) / 2) * 0.6 : 0);
       l.both = rA != null && rD != null;
     }
-    const V = D.result, mode = D.mode;
+    const V = D.result, ground = D.mode === 'ground', mode = ground ? 'deploy' : D.mode; // ground: the field laid out for the troops, no one on it
     for (const g of Object.values(groups)) {
       const l = lanes[g[0].lane], side = g[0].side;
       // order across the lane: horse toward the lane's outer flank (the centre lane: toward the side away from the river arm)
@@ -214,7 +216,7 @@
       b.yaw = yawTo(0, f); b.face = f;
       b.state = 'stand';
       // deploy: where its row puts it (the horse a little behind the foot)
-      let z = rowZ(b.row) - f * ((b.arm === 'ky' ? 8 : 0) + (l.kind === 'ford' ? 16 : 0)); // the ford lane's lines stand back from the banks
+      let z = rowZ(b.row) - f * ((b.arm === 'ky' ? 8 : 0) + (l.kind === 'ford' ? 14 : 0)); // the ford lane's lines stand back from the banks
       if (b.boat) { b.z = z; b.state = mode === 'deploy' ? 'stand' : 'row'; continue; }
       const front = combat(b) && lr != null && Math.abs(b.row - lr) < 0.5;
       const loser = mode === 'result' && b.side !== V, winner = mode === 'result' && b.side === V;
@@ -290,6 +292,7 @@
       for (let i = 0; i < n; i++) { const side = mode === 'result' ? (rnd() < 0.75 ? (V === 'A' ? 'D' : 'A') : V) : rnd() < 0.5 ? 'A' : 'D', d = mode === 'result' && side !== V ? rnd() * 70 : rnd() * 10; addFallen(l.cx + R() * l.w * 0.72, l.zc - face(side) * (d - 3) + R() * 5, side, rnd() < 0.06); }
     }
     fallen.splice(TQ.fallen); // a figure count, not a tally
+    if (ground) { for (const b of blocks) b.figs = []; figs.length = 0; boats.length = 0; }
     // spent arrows in the ground before the blocks the archers shot at (clash and result)
     if (mode !== 'deploy') for (const b of blocks.filter((q) => q.arm === 'cung' && q.state !== 'rout' && q.state !== 'deploy')) {
       const l = lanes[b.lane], zT = l.zc + b.face * 30;
@@ -313,14 +316,15 @@
       if (mode === 'result' && side === V) { const zz = dec.zc - face(side) * 34; gens[side] = { x: dec.cx + (dec.i === 1 ? 26 : dec.i === 0 ? 30 : -30), z: zz, forward: true }; }
       else gens[side] = { x: p.x - p.sx * 12, z: p.z + p.face * 14, down: p.abandoned };
     }
-    // ---- flags: along the rear rank of a block (one per ~26 m), pennants over the horse, a few carried off in a rout
+    // ---- flags: along the rear rank of a block (one per ~16 m), pennants over the horse, a few carried off in a rout
     const flags = [];
     for (const b of blocks) {
       if (b.boat) continue;
       if (b.state === 'rout') { for (let i = 0; i < 2 && b.figs.length; i++) { const fg = b.figs[Math.floor(rnd() * Math.min(b.figs.length, 40))]; flags.push([fg[0], fg[1], R() * 0.4, 1, b.side, 1]); } continue; }
-      const nf = Math.max(1, Math.round(b.F / 26)), zr = b.z - b.face * (b.depth / 2 + (b.arm === 'ky' ? 1.5 : 0.8));
-      for (let i = 0; i < nf; i++) flags.push([b.x + (i - (nf - 1) / 2) * (b.F / nf), zr, R() * 0.3, b.arm === 'ky' ? 0.8 : 1, b.side, 0]);
+      const nf = Math.max(2, Math.round(b.F / 16)), zr = b.z - b.face * (b.depth / 2 + (b.arm === 'ky' ? 1.5 : 0.8));
+      for (let i = 0; i < nf; i++) flags.push([b.x + (i - (nf - 1) / 2) * (b.F / nf) + R() * 2, zr + R() * 1.5, R() * 0.3, (b.arm === 'ky' ? 0.95 : 1.2) * (0.92 + rnd() * 0.16), b.side, 0]);
     }
+    if (ground) flags.length = 0;
     // ---- trees the plan asks for: the wood lane's edge, lone old trees, a row along the road, willows by the ford
     const extra = [], clear = []; // extra: [x, z, species, height]; clear: rectangles kept free of woods [x0, x1, z0, z1]
     for (const b of blocks) if (!b.boat) {
@@ -514,7 +518,7 @@
   FB.create = function (desc, deps) {
     const T = THREE, BGU = THREE.BufferGeometryUtils, t0 = typeof performance !== 'undefined' ? performance.now() : 0;
     const HM = deps.HM, P = HM.parts, N = deps.Nature || root.Nature, env = deps.env || null, tier = tierOf(deps.q), TQ = TIER[tier], qN = deps.q || tier;
-    const plan = FB.plan(desc, tier), D = plan.desc, L = FB.land(plan, N), lanes = plan.lanes, mode = D.mode, V = D.result;
+    const plan = FB.plan(desc, tier), D = plan.desc, L = FB.land(plan, N), lanes = plan.lanes, ground = D.mode === 'ground', mode = ground ? 'deploy' : D.mode, V = D.result;
     const atk = D.attacker, dfd = D.defender, SIDES = { A: atk, D: dfd };
     const group = new T.Group(); group.name = 'field-battle';
     const U = { time: { value: 0 } }, texs = [], mats = [], keep = new Set(); // keep: geometries the model kit caches (not ours to dispose)
@@ -525,7 +529,7 @@
       : Object.assign(FB.sunAt(17.5, D.season), { dir: deps.sun.dir.clone().normalize(), color: deps.sun.color.clone() });
     const lightSun = { dir: sun.dir, color: sun.color };
     const shadowsOn = tier !== 'low';
-    const M4 = new T.Matrix4(), Q4 = new T.Quaternion(), EU = new T.Euler(), V3 = new T.Vector3(), SC = new T.Vector3(), C3 = new T.Color();
+    const M4 = new T.Matrix4(), Q4 = new T.Quaternion(), EU = new T.Euler(), V3 = new T.Vector3(), SC = new T.Vector3(), C3 = new T.Color(), UP = new T.Vector3(0, 1, 0);
     // instances of one geometry on a material: rows [x, y, z, yaw, sx, sy, sz, pitch, roll, [r, g, b]]; every
     // InstancedMesh on the kit's material carries instance colours (three r146 keeps one program per material)
     const inst = (geo, material, list, shadow = true) => {
@@ -690,6 +694,7 @@
       for (const sx of [-1, 1]) one(drum, p.x + sx * 5.5, p.z + f * 10.5, 0);
       one(rack, p.x + p.sx * 9, p.z - f * 2, Math.PI / 2);
       for (let i = 0; i < 5; i++) sigRows.push([p.x - p.sx * (9 + i * 2.6), Y(p.x - p.sx * (9 + i * 2.6), p.z + f * 4), p.z + f * 4, R() * 0.3, 0.55, SIGNAL[i]]);
+      if (ground) continue; // the stage that is laid on this ground brings its own generals and standards
       if (!p.abandoned) {
         const guard = [], riders = [], horses = [];
         for (let i = 0; i < 7; i++) for (const sx of [-1, 1]) { const x = p.x + sx * 3.2, z = p.z + f * (6 + i * 2.2); guard.push([x, Y(x, z), z, yawTo(-sx, 0) + R() * 0.2, 'idle', rnd()]); }
@@ -712,13 +717,13 @@
     for (const c of Object.values(crowds)) if (c.flush) c.flush();
 
     // ---------------------------------------------------------------- the fallen, spent arrows, boats, hamlets
-    const lying = { A: [lyingGeo(atk.color, 0), lyingGeo(atk.color, 1)], D: [lyingGeo(dfd.color, 0), lyingGeo(dfd.color, 1)] }, fl = { A: [[], []], D: [[], []] }, horsesDown = [];
+    const fl = { A: [[], []], D: [[], []] }, horsesDown = [];
     for (const [x, z, yaw, side, horse, ph] of plan.fallen) {
       const y = Y(x, z), b = 0.75 + 0.3 * ph;
       if (horse) horsesDown.push([x, y + 0.02, z, yaw, 1.05, 1, 1.05, 0, 0, COATS[Math.floor(ph * COATS.length)].map((c) => c * 0.85)]);
       else fl[side][ph < 0.5 ? 0 : 1].push([x, y + 0.01, z, yaw, 1, 1, 1, 0, 0, [b, b, b]]);
     }
-    for (const side of ['A', 'D']) fl[side].forEach((list, v) => { if (list.length) inst(lying[side][v], HM.mat, list, tier === 'high'); });
+    for (const side of ['A', 'D']) fl[side].forEach((list, v) => { if (list.length) inst(lyingGeo(SIDES[side].color, v), HM.mat, list, tier === 'high'); });
     if (horsesDown.length) inst(deadHorseGeo(), HM.mat, horsesDown, tier === 'high');
     if (plan.arrowsIn.length) inst(arrowGeo(), HM.mat, plan.arrowsIn.map(([x, z, yaw, tilt]) => [x, Y(x, z) - 0.12, z, yaw, 1, 1, 1, tilt, 0]), false);
     const boats = [];
@@ -763,7 +768,7 @@
     const clothGeo = new T.PlaneGeometry(1.4, 2.6, 12, 3).translate(0.72, 4.55, 0), sigCloth = new T.PlaneGeometry(1.4, 1.6, 10, 2).translate(0.72, 5.0, 0);
     const poleGeo = (() => { const k = P.kit(); k.add(P.cyl(0.06, 0.07, 6, 5), 0x3a2a1c, [0, 3, 0]); k.add(P.cone(0.07, 0.35, 4), 0x9aa0a8, [0, 6.17, 0]); k.add(P.sph(0.09, 5, 3), 0xb8893a, [0, 5.92, 0]); return k.geo(); })();
     const poles = [];
-    const clothInst = (geo, mat, rows, tintRows) => { if (!rows.length) return; const m = new T.InstancedMesh(geo, mat, rows.length); rows.forEach((p, i) => { m.setMatrixAt(i, M4.compose(V3.set(p[0], p[1], p[2]), Q4.setFromAxisAngle(V3.set(0, 1, 0), p[3]), SC.setScalar(p[4]))); if (tintRows) m.setColorAt(i, C3.set(tintRows[i])); }); m.castShadow = shadowsOn; m.receiveShadow = false; m.frustumCulled = false; group.add(m); for (const p of rows) poles.push([p[0], p[1], p[2], p[3], p[4], p[4], p[4]]); };
+    const clothInst = (geo, mat, rows, tintRows) => { if (!rows.length) return; const m = new T.InstancedMesh(geo, mat, rows.length); rows.forEach((p, i) => { m.setMatrixAt(i, M4.compose(V3.set(p[0], p[1], p[2]), Q4.setFromAxisAngle(UP, p[3]), SC.setScalar(p[4]))); if (tintRows) m.setColorAt(i, C3.set(tintRows[i])); }); m.castShadow = shadowsOn; m.receiveShadow = false; m.frustumCulled = false; group.add(m); for (const p of rows) poles.push([p[0], p[1], p[2], p[3], p[4], p[4], p[4]]); };
     let nFlags = 0;
     for (const side of ['A', 'D']) {
       const s = SIDES[side];
@@ -846,14 +851,19 @@
     const pick = (make) => { const sc = (v) => { const dx = v.target[0] - v.cam[0], dz = v.target[2] - v.cam[2], l = Math.hypot(dx, dz) || 1; return Math.abs((dx / l) * sunH.x + (dz / l) * sunH.y + 0.35); }, a = make(1), b = make(-1); return sc(a) <= sc(b) ? a : b; };
     const above = (x, z, y) => Math.max(y, Y(x, z) + 4);
     const views = {};
-    // deploy: high behind the attacker's shoulder, the whole field to the enemy line and the country beyond
-    views.deploy = pick((s) => { const tx = -s * 0.06 * Wf, tz = -60, cx = s * 0.34 * Wf, cz = 700; return { target: [tx, Y(tx, tz) + 6, tz], cam: [cx, above(cx, cz, Y(cx, cz) + 210), cz], fov: 40, shadow: [0, 40, 620], ao: 5 }; });
-    // a lane: close on its line, three quarters from the attacker's side; wider while the lines are apart
+    // deploy: over the attacker's shoulder, low, his ranks and flags close below, the field and the enemy line beyond
+    views.deploy = pick((s) => { const tx = -s * 0.12 * Wf, tz = -30, cx = s * (Wf / 2 + 150), cz = 250; return { target: [tx, Y(tx, tz) + 4, tz], cam: [cx, above(cx, cz, Y(cx, cz) + 58), cz], fov: 36, shadow: [0, 20, 480], ao: 3 }; });
+    // a lane: before the fight from behind the attacker's block across to the enemy's; in a clash close three quarters
+    // on the locked front ranks; in a result behind the victor's line toward the rout
     lanes.forEach((l) => {
-      const dist = mode === 'deploy' ? 175 : mode === 'result' ? 120 : 88, hgt = mode === 'deploy' ? 62 : mode === 'result' ? 34 : 24;
-      views['lane' + l.i] = pick((s) => { const tx = l.cx - s * 6, tz = mode === 'deploy' ? l.zf : l.zc + 3, ty = Y(tx, tz) + 3, dx = -s * 0.7, dz = -0.71, cx = tx - dx * dist, cz = tz - dz * dist; return { target: [tx, ty, tz], cam: [cx, above(cx, cz, ty + hgt), cz], fov: 38, shadow: [tx, tz, mode === 'deploy' ? 260 : 180], ao: 1.4 }; });
+      const zA = l.A[1], zD = l.D[1];
+      views['lane' + l.i] = pick((s) => {
+        if (mode === 'deploy') { const tx = l.cx - s * 8, tz = zD + 6, cx = l.cx + s * 46, cz = zA + 112; return { target: [tx, Y(tx, tz) + 3, tz], cam: [cx, above(cx, cz, Math.max(Y(cx, cz), Y(tx, tz)) + 21), cz], fov: 30, shadow: [l.cx, (zA + zD) / 2, 190], ao: 1.6 }; }
+        const dist = mode === 'result' ? 118 : 86, hgt = mode === 'result' ? 30 : 22, tx = l.cx - s * 6, tz = l.zc + (mode === 'result' ? face(V || 'A') * 40 : 3), ty = Y(tx, tz) + 3, dx = -s * 0.7, dz = mode === 'result' && V === 'D' ? 0.71 : -0.71, cx = tx - dx * dist, cz = tz - dz * dist;
+        return { target: [tx, ty, tz], cam: [cx, above(cx, cz, Math.max(ty, Y(cx, cz)) + hgt), cz], fov: 38, shadow: [tx, tz, 180], ao: 1.4 };
+      });
     });
-    views.overview = { target: [0, Y(0, -20), -20], cam: [0.12 * Wf, 640, 420], fov: 38, shadow: [0, -10, 640], ao: 6 };
+    views.overview = { target: [0, Y(0, -20), -20], cam: [0.1 * Wf, 470, 380], fov: 40, shadow: [0, -10, 560], ao: 6 };
     { // result: behind the victor's line in the decisive lane, looking where the beaten are running
       const l = lanes[plan.decisive], fV = face(V || 'A');
       views.result = pick((s) => { const tx = l.cx - s * 10, tz = l.zc + fV * 70, ty = Y(tx, tz) + 3, cx = l.cx + s * 62, cz = l.zc - fV * 78; return { target: [tx, ty, tz], cam: [cx, above(cx, cz, Math.max(ty, Y(cx, cz)) + 20), cz], fov: 40, shadow: [l.cx, l.zc + fV * 30, 220], ao: 1.6 }; });
@@ -862,7 +872,7 @@
     // ---------------------------------------------------------------- labels (projected by the camera given)
     const LABELS = [
       ...lanes.map((l) => ({ text: 'Cánh ' + LANE_SIDE[l.i] + ' · ' + l.name, kind: 'lane', p: [l.cx, Y(l.cx, l.zf) + 26, l.zf] })),
-      ...['A', 'D'].map((side) => { const p = plan.posts[side], s = SIDES[side]; return { text: s.name + (s.general ? ' · ' + s.general : ''), kind: 'side', side, p: [p.x, Y(p.x, p.z) + 16, p.z] }; }),
+      ...['A', 'D'].map((side) => { const p = plan.posts[side], s = SIDES[side]; return { text: s.general && s.general !== s.name ? s.general + ' · ' + s.name : s.name, kind: 'side', side, p: [p.x, Y(p.x, p.z) + 16, p.z] }; }),
       ...(plan.river && plan.river.ford ? [{ text: 'Bến lội', kind: 'thing', p: [plan.river.ford[0], 6, plan.river.ford[1]] }] : []),
     ];
     const v3 = new T.Vector3(), v2 = new T.Vector2();
@@ -892,7 +902,14 @@
       if (L.landTex) L.landTex.dispose();
       if (group.parent) group.parent.remove(group);
     };
+    // the frame of Battle.frame (battle.js, the cinema's stage): u along the front to the attacker's right (+x), v toward
+    // the attacker (+z); lanes and rows where this field has them (fractional rows allowed), no walls
+    const y0 = Y(0, 0), frame = { W: (u, v) => [u, v], rs: 1, s0: 0, gw: 0, sec: lanes.map((l) => [l.x0, l.x1]), laneW: plan.LW, laneU: (l) => lanes[clamp(Math.round(l), 0, 2)].cx, rowV: (r) => rowZ(clamp(r, -1, 6)), V: [0, 1, 2, 3, 4, 5].map(rowZ),
+      front: (l) => lanes[clamp(Math.round(l), 0, 2)].zc, siege: false, field: true, gate: null, edge: null, out: [0, 1], tan: [1, 0], gx: 0, gz: 0, y: Y, wallY: y0, y0, towerY: y0, H: 0, WB: 0, WT: 0, vOut: 0, moat: null,
+      yawA: yawTo(0, -1), yawD: yawTo(0, 1), L, city: null, lanes: lanes.map((l) => ({ kind: l.kind, x0: l.x0, x1: l.x1, cx: l.cx, zc: l.zc })) };
+    // what a stage laid on this ground needs (battle.js's site.kit): the models, the land, the crowd, the figures used
+    const kit = { HM, N, L, env, tier, q: deps.q, renderer: deps.renderer, Crowd: CL, animated: !!(CL && CL.ANIMS), engines: {}, bannerCache: {}, city: null, camp: null, side: 's', k: plan.k, cap: TQ.figures, used: crowds.A.count + crowds.D.count, frame, field: true };
     return { group, tick, views, labels, focus, stats, dispose, land: L, lanes: lanes.map((l) => ({ i: l.i, kind: l.kind, name: l.name, cx: l.cx, x0: l.x0, x1: l.x1, front: l.front, A: l.A, D: l.D })),
-      sun, plan, units, crowds, trees: [], nature: true, tier, mode, time: () => time };
+      sun, plan, units, crowds, frame, kit, trees: [], nature: true, tier, mode: D.mode, side: 's', time: () => time };
   };
 })(typeof window !== 'undefined' ? window : globalThis);
