@@ -202,3 +202,62 @@ test('on v1 battles (npm run sim -- N --battles) the turn battle mostly agrees w
   }
   assert.ok(n > 100 && agree / n > 0.75, `${agree}/${n}`);
 });
+
+// ASSIGN mục 4: the general's forecast. A label and his numbers, never a percentage or the true odds; his error is
+// fixed per question and scaled by ±(42 − 3.5·Mưu) %.
+const questions = (n) => Array.from({ length: n }, (_, i) => {
+  const bo = 1500 + ((i * 7919) % 5000), ky = (i * 104729) % 3000, dbo = 800 + ((i * 1299709) % 3000);
+  return [{ site: 'q' + i, siege: i % 3 !== 0, walls: 1 + (i % 4), lanes: [['open', 'ford', 'wood'], ['open', 'open', 'wood'], ['hill', 'open', 'wood']][i % 3],
+    attacker: { fid: 'a', gen: null, units: { bo, cung: 600, ky } }, defender: { fid: 'd', gen: null, units: { bo: dbo, cung: 400 }, holding: i % 2 === 0 } }, 'q' + i];
+});
+const analyst = (muu) => ({ id: 'g' + muu, name: 'Tướng Mưu ' + muu, uy: 5, tai: 5, muu, dung: 5, kien: 5 });
+
+test('forecast: a label, his numbers and reasons; never the true odds, never a percentage', () => {
+  const [plan, key] = questions(1)[0];
+  const f = Battle.forecast(plan, analyst(6), { key });
+  assert.deepEqual(Object.keys(f).sort(), ['analyst', 'band', 'est', 'estWin', 'label', 'lanes', 'reasons', 'sa', 'sd']);
+  assert.ok(['Thắng lớn', 'Thắng', 'Ngang ngửa', 'Thua', 'Thua lớn'].includes(f.label));
+  assert.ok(f.estWin >= 0.02 && f.estWin <= 0.98);
+  assert.equal(f.band, 21);
+  assert.ok(f.est.la % 100 === 0 && f.est.ld % 100 === 0 && f.sa % 100 === 0 && f.sd % 100 === 0);
+  assert.ok(f.reasons.length <= 6 && f.reasons.every((r) => (r.side === 'A' || r.side === 'D') && typeof r.why === 'string' && Math.abs(r.pct) >= 10));
+  const text = JSON.stringify({ label: f.label, reasons: f.reasons.map((r) => r.why), lanes: f.lanes });
+  assert.doesNotMatch(text, /%/);
+  assert.equal(Battle.labelOf(0.81), 'Thắng lớn');
+  assert.equal(Battle.labelOf(0.6), 'Thắng');
+  assert.equal(Battle.labelOf(0.5), 'Ngang ngửa');
+  assert.equal(Battle.labelOf(0.3), 'Thua');
+  assert.equal(Battle.labelOf(0.1), 'Thua lớn');
+});
+
+test('forecast: the same question gets the same answer, whatever day the battle is really fought', () => {
+  const [plan, key] = questions(2)[1];
+  const a = Battle.forecast({ ...plan, seed: 1 }, analyst(5), { key }), b = Battle.forecast({ ...plan, seed: 999 }, analyst(5), { key });
+  assert.deepEqual(a, b);
+  const others = ['x', 'y', 'z'].map((k) => Battle.forecast(plan, analyst(5), { key: key + k }).estWin);
+  assert.ok(others.some((w) => w !== a.estWin), 'another question, another reading');
+});
+
+test('forecast: the better the Mưu, the closer to the truth (demo 1: Mưu 7 off by 0.07 on average, Mưu 3 by 0.18)', () => {
+  const Q = questions(60), err = {};
+  for (const muu of [3, 7, 10]) {
+    let sum = 0;
+    for (const [plan, key] of Q) {
+      const t = Battle.odds(plan, { key }).win, f = Battle.forecast(plan, analyst(muu), { key });
+      const off = Math.abs(f.estWin - t);
+      assert.ok(off <= Battle.bandOf(Battle.genOf(analyst(muu))) * 1.3 + 1e-9, `Mưu ${muu}: off ${off.toFixed(2)}`);
+      sum += off;
+    }
+    err[muu] = sum / Q.length;
+  }
+  assert.ok(err[10] < err[7] && err[7] < err[3], JSON.stringify(err));
+  assert.ok(err[3] > 0.1 && err[10] < 0.06, JSON.stringify(err));
+});
+
+test('forecast: it reads the plan it is given (the enemy as perception shows it)', () => {
+  const [plan, key] = questions(4)[3];
+  const more = { ...plan, defender: { ...plan.defender, units: { bo: plan.defender.units.bo * 1.2, cung: plan.defender.units.cung * 1.2 } } };
+  const a = Battle.forecast(plan, analyst(10), { key }), b = Battle.forecast(more, analyst(10), { key });
+  assert.ok(b.sd > a.sd);
+  assert.ok(b.estWin <= a.estWin);
+});

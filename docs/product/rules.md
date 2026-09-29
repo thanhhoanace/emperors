@@ -37,6 +37,16 @@ API thuần, chưa nối vào lượt v1: `resolveAttack` vẫn một lần tung
 - **Ngẫu nhiên:** gió và vận mỗi bên (±15 %) trong ngày, dao động từng đòn; tất cả từ `seed` của trận.
 - **Số:** của spike demo 1, không đổi: test so từng seed với `demo1/src/hn-rules.js` (Thọ Xuân khi Trương Liêu còn trong thành 0 %, Liêu đã rút một đạo 20 %, hợp binh 100 %). Trên các trận v1 (`npm run sim -- 500 --battles`, cả hai bên tự động, tướng thường): cùng kết quả với v1 ở 85 % số trận, bên đánh thắng 75 % (v1 88 %), bên đánh mất 26 % quân (v1 22 %), trận dài 3 / 4 / 5 lượt: 36 / 29 / 35 %.
 
+## Dự đoán của tướng (v2, `Battle.forecast`)
+
+Trước trận, tướng Mưu cao nhất bên hỏi đọc trận: `Battle.forecast(plan, tướng, { key })` → `{ analyst, label, estWin, est: { la, ld }, sa, sd, reasons, band, lanes }`.
+
+- **Sự thật** là 24 trận mô phỏng của `plan` với 24 ngày khác (gió, vận khác ngày thật). `plan` là cái bên hỏi biết: quân địch qua perception (±20 %), nên đọc sai địch và tướng kém cộng dồn.
+- **Sai số:** một độ lệch cố định cho mỗi câu hỏi (`key`, ví dụ lượt + nơi + đạo quân), trong ±(42 − 3,5·Mưu) %, tối thiểu 6 %; hỏi lại không ra số khác. Đo trên 200 câu hỏi: lệch trung bình Mưu 3 là 0,11, Mưu 5 0,09, Mưu 7 0,07, Mưu 10 0,035; nhãn trùng nhãn thật 73 / 77 / 87 / 97 %.
+- **Nhãn:** Thắng lớn (> 0,8), Thắng (> 0,55), Ngang ngửa (> 0,42), Thua (> 0,18), Thua lớn. **Không in %.** `estWin` chỉ để vẽ (thanh, màu).
+- **Số của tướng:** sức hai bên (`sa`, `sd`, kiểu Civ, làm tròn trăm), thương vong ước (`est.la`, `est.ld`), tối đa 6 lý do ±% lớn nhất (địa thế làn, tường, xung phong, bến sông…), đều lệch theo cùng độ lệch của tướng.
+- Kết quả không bao giờ mang tỉ lệ thật hay độ lệch; `Battle.odds` (tỉ lệ thật) chỉ cho test và báo cáo cân bằng.
+
 ## Perception
 
 `decide` không nhận `game` sau khi perception attach.

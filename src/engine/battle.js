@@ -22,6 +22,9 @@
  *   Battle.view(b) → the wings as the scene places them · Battle.simulate(b) → both sides on auto to the end
  *   Battle.outcome(b) → { win, turns, losses: { A, D }, routed } (BattleDescriptor.result's shape)
  *   Battle.power(b, w, foe, mode) / Battle.guard(b, w, foe) → { p | k, mods: [[why, pct]] } (the forecast's reasons)
+ *   Battle.forecast(plan, analyst, { key }) → the general's reading before the battle (ASSIGN mục 4):
+ *       { analyst, label, estWin, est: { la, ld }, sa, sd, reasons, band, lanes }; never the true odds
+ *   Battle.odds(plan, { key }) → the true odds the forecast starts from (tests, the balance report; not for the player)
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -406,8 +409,71 @@
     }
   }
 
+  // ---------------------------------------------------------------- the general's forecast (ASSIGN mục 4)
+  // The truth is RUNS simulated battles of the plan (other days: other wind and fortune than the real one). The analyst
+  // reads it with one error for this question, e ∈ [−1, 1] from the question's key, scaled by his band
+  // ±(42 − 3.5·Mưu) % (at least 6 %): a Mưu 10 general is off by 7 % at most, a Mưu 3 one by 31.5 %. He says a label
+  // and the numbers as he sees them, never a percentage and never the truth. The plan is what the asking side knows
+  // (the enemy through perception, ±20 %), so a bad read of the enemy and a bad analyst add up.
+  const RUNS = 24;
+  const LABELS = [[0.8, 'Thắng lớn'], [0.55, 'Thắng'], [0.42, 'Ngang ngửa'], [0.18, 'Thua'], [-1, 'Thua lớn']];
+  function hash32(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+  const keyOf = (plan, opts) => String((opts && opts.key) || [plan.site, plan.attacker && plan.attacker.fid, plan.defender && plan.defender.fid].join('|'));
+  function odds(plan, opts) {
+    const key = keyOf(plan, opts), runs = (opts && opts.runs) || RUNS;
+    let wins = 0, la = 0, ld = 0;
+    for (let k = 0; k < runs; k++) {
+      const b = simulate(create({ ...plan, seed: hash32(key + '|day|' + k) }, opts));
+      if (b.over.win === 'A') wins++;
+      la += lossOf(b, 'A'); ld += lossOf(b, 'D');
+    }
+    return { win: wins / runs, la: la / runs, ld: ld / runs, runs };
+  }
+  const bandOf = (gen) => Math.max(0.06, 0.42 - 0.035 * gen.muu);
+  const labelOf = (p) => LABELS.find(([t]) => p > t)[1];
+  function forecast(plan, analyst, opts) {
+    const gen = genOf(analyst, opts && opts.gens), key = keyOf(plan, opts), band = bandOf(gen);
+    const truth = odds(plan, opts);
+    const e = (hash32(key + '|read|' + (gen.id || gen.name) + '|' + gen.muu) / 4294967296) * 2 - 1; // this analyst on this question
+    const estWin = clamp(truth.win + e * band * 1.3, 0.02, 0.98);
+    const r100 = (n) => Math.round(n / 100) * 100;
+    // strength as he reads it (Civ style: one number a side), and the reasons behind it, largest first
+    const b0 = create({ ...plan, seed: hash32(key + '|read') }, opts);
+    let sa = 0, sd = 0;
+    const reasons = [], seen = {};
+    for (const w of b0.wings) {
+      const foe = b0.wings.find((f) => f.side !== w.side && f.lane === w.lane) || b0.wings.find((f) => f.side !== w.side);
+      if (!foe) continue;
+      const P = power({ ...b0, luck: null }, w, foe), G = guard(b0, w), v = P.p * G.k * 1000;
+      if (w.side === 'A') sa += v; else sd += v;
+      for (const [why, pct] of P.mods.concat(G.mods)) {
+        if (Math.abs(pct) < 10 || /^sĩ khí|^Dũng|^Kiên/.test(why)) continue;
+        if (seen[w.side + why]) continue;
+        seen[w.side + why] = 1;
+        reasons.push({ side: w.side, why, pct });
+      }
+    }
+    reasons.sort((x, y) => Math.abs(y.pct) - Math.abs(x.pct));
+    return {
+      analyst: { id: gen.id, name: gen.name, muu: gen.muu },
+      label: labelOf(estWin),
+      estWin,
+      est: { la: r100(truth.la * (1 - e * band)), ld: r100(truth.ld * (1 + e * band)) },
+      sa: r100(sa * (1 + e * band * 0.5)),
+      sd: r100(sd * (1 - e * band * 0.5)),
+      reasons: reasons.slice(0, 6),
+      band: Math.round(band * 100),
+      lanes: b0.lanes.map((l) => LANE_TEXT[l]),
+    };
+  }
+
   return {
-    ARMS, ARM_NAME, LANES, ROWS, MAX_TURN, BASE, ORDERS, TRAITS, LANE_TEXT, TERRAIN_LANES, OFFICER,
+    ARMS, ARM_NAME, LANES, ROWS, MAX_TURN, BASE, ORDERS, TRAITS, LANE_TEXT, TERRAIN_LANES, OFFICER, LABELS, RUNS,
+    forecast, odds, labelOf, bandOf,
     create, lanesFor, genOf, loyalMorale, legalOrders, orders, autoOrders, resolve, simulate, power, guard, strength,
     lossOf, outcome, view, say, live: (b, side) => live(b, side).map((w) => w.id), onWalls,
   };
