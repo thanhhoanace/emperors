@@ -402,12 +402,18 @@
         atmosSun: { value: new THREE.Color(o.atmos ? o.atmos.sunColor ?? 0xf3d9a6 : 0xf3d9a6) },
         sunDirW: { value: o.atmos && o.atmos.sunDir ? o.atmos.sunDir.clone().normalize() : new THREE.Vector3(0, 1, 0) },
         camPos: { value: camera.position },
+        // the season's grade and ground mist (K.wx.grade): identity by default, and nothing else writes them, so a page's
+        // per-view saturation / contrast stay its own. Mist lies in the low ground: density, e-folding height, base height
+        gradeMul: { value: new THREE.Vector3(1, 1, 1) }, gradeLift: { value: new THREE.Vector3(0, 0, 0) }, gradeSat: { value: 1 }, gradeCon: { value: 1 },
+        mist: { value: 0 }, mistH: { value: 1 }, mistBase: { value: 0 }, mistCol: { value: new THREE.Color(0xdde3e2) },
+        mistNoise: { value: new THREE.Vector3(0, 0, 0) }, // x: banks a world unit (0: an even layer), yz: drift
       },
       vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.,1.); }',
       fragmentShader: `
         #include <packing>
         varying vec2 vUv;
         uniform sampler2D tColor, tDepth; uniform float near, far, focus, range, maxBlur, tilt, vignette, focusR, grayAmt, contrast, saturation, aoStrength, aoRadius, projScale; uniform vec2 band, res, focusXZ;
+        uniform vec3 gradeMul, gradeLift; uniform float gradeSat, gradeCon;
         uniform mat4 projInv, camWorld;
         vec3 worldAt(vec2 uv){
           float d = texture2D(tDepth, uv).x;
@@ -416,14 +422,29 @@
           return (camWorld * v).xyz;
         }
         uniform float atmos, atmosFall; uniform vec3 atmosCol, atmosSun, sunDirW, camPos;
+        uniform float mist, mistH, mistBase; uniform vec3 mistCol, mistNoise;
+        float lh(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+        float lvn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f); return mix(mix(lh(i), lh(i + vec2(1., 0.)), f.x), mix(lh(i + vec2(0., 1.)), lh(i + vec2(1., 1.)), f.x), f.y); }
+        // the mean of exp(-k·y) along a ray from height y0 to y1 (both above 0)
+        float fogAvg(float y0, float y1, float k){ return abs(y1 - y0) < 0.05 / k ? exp(-k * y0) : (exp(-k * y0) - exp(-k * y1)) / (k * (y1 - y0)); }
         vec3 aerial(vec3 col, vec2 uv){
-          if (atmos <= 0.0 || texture2D(tDepth, uv).x > 0.9999) return col;
+          if ((atmos <= 0.0 && mist <= 0.0) || texture2D(tDepth, uv).x > 0.9999) return col;
           vec3 wp = worldAt(uv); vec3 ray = wp - camPos; float dist = length(ray);
-          float y0 = max(camPos.y, 0.0), y1 = max(wp.y, 0.0), k = atmosFall;
-          float avg = abs(y1 - y0) < 0.05 ? exp(-k * y0) : (exp(-k * y0) - exp(-k * y1)) / (k * (y1 - y0));
-          float f = 1.0 - exp(-atmos * dist * avg);
-          float sd = pow(max(dot(ray / dist, sunDirW), 0.0), 6.0);
-          return mix(col, mix(atmosCol, atmosSun, sd * 0.6), f);
+          if (atmos > 0.0) {
+            float y0 = max(camPos.y, 0.0), y1 = max(wp.y, 0.0), k = atmosFall;
+            float avg = abs(y1 - y0) < 0.05 ? exp(-k * y0) : (exp(-k * y0) - exp(-k * y1)) / (k * (y1 - y0));
+            float f = 1.0 - exp(-atmos * dist * avg);
+            float sd = pow(max(dot(ray / dist, sunDirW), 0.0), 6.0);
+            col = mix(col, mix(atmosCol, atmosSun, sd * 0.6), f);
+          }
+          if (mist > 0.0) { // a morning mist in the valleys: thick at the ground, gone a few e-folds up (hills stand out of it),
+            // lying in banks over the fields (a noise where the ray meets the ground)
+            float banks = 1.0;
+            if (mistNoise.x > 0.0) { vec2 mp = wp.xz * mistNoise.x + mistNoise.yz; banks = 0.15 + 1.7 * smoothstep(0.38, 0.82, lvn(mp) * 0.65 + lvn(mp * 2.3 + 7.1) * 0.35); }
+            float f = 1.0 - exp(-mist * banks * dist * fogAvg(max(camPos.y - mistBase, 0.0), max(wp.y - mistBase, 0.0), 1.0 / mistH));
+            col = mix(col, mistCol, f * 0.92);
+          }
+          return col;
         }
         vec3 vpos(vec2 uv){ float d = texture2D(tDepth, uv).x; vec4 v = projInv * vec4(uv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0); return v.xyz / v.w; }
         float ssao(vec2 uv){
@@ -476,8 +497,9 @@
             col = mix(col, vec3(l) * vec3(0.8, 0.79, 0.77), out_ * grayAmt);
           }
           float lg = dot(col, vec3(0.2126, 0.7152, 0.0722));
-          col = mix(vec3(lg), col, saturation);
-          col = max((col - 0.18) * contrast + 0.18, 0.0);
+          col = mix(vec3(lg), col, saturation * gradeSat);
+          col = max((col - 0.18) * contrast * gradeCon + 0.18, 0.0);
+          col = col * gradeMul + gradeLift;
           float v = smoothstep(0.95, 0.25, distance(vUv, vec2(0.5)));
           col *= mix(1.0 - vignette, 1.0, v);
           gl_FragColor = vec4(col, 1.0);
@@ -502,6 +524,206 @@
         renderer.render(qs, qc);
       },
     };
+  };
+
+  // ---------------------------------------------------------------- seasons and weather (docs/design/v2-polish.md, job 4)
+  // One season for the whole page. Its state is a handful of shared uniforms that every seasonal material reads: the
+  // map's ground, forests and rivers (terrain.js, terrain-real.js), everything that takes the map's baked light
+  // (Terrain.receiveBaked: the model kit, the cities, the villages) and the 1 m scenes (nature.js). A change of season
+  // changes numbers, never shader programs. The names are the calendar's (view.calendar 'Thu 219'): Xuân, Hạ, Thu, Đông.
+  //   K.wx.index('Thu 219') → 2 · K.wx.name('winter') → 'Đông' · K.wx.U: the shared uniforms
+  //   K.wx.patch(material, { scale, foliage, snow }): snow on what faces up, wet in the rain, seasonal leaves (opt-in)
+  //   K.wx.particles(kind, { count, seed }): 'rain' | 'snow' | 'leaves' | 'petals' → { mesh, U, place(camera, box, t) }
+  //   K.wx.grade(lens, g): the season's grade and ground mist on a K.lens
+  const WX = (K.wx = {});
+  WX.NAMES = ['Xuân', 'Hạ', 'Thu', 'Đông'];
+  const WX_ALIAS = { xuan: 0, spring: 0, ha: 1, summer: 1, thu: 2, autumn: 2, fall: 2, dong: 3, winter: 3 };
+  // a season from a name, an English word, a calendar line or an index; -1 when none
+  WX.index = (s) => {
+    if (typeof s === 'number') return s >= 0 && s < 4 ? Math.floor(s) : -1;
+    const w = String(s || '').trim().split(/\s+/)[0].normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase();
+    return Object.prototype.hasOwnProperty.call(WX_ALIAS, w) ? WX_ALIAS[w] : -1;
+  };
+  WX.name = (s) => WX.NAMES[WX.index(s)] || null;
+  WX.weights = (i) => [0, 1, 2, 3].map((k) => (k === i ? 1 : 0));
+  // uSeasonW: weights of spring, summer, autumn, winter (sum 1; autumn, the approved look, until a page sets one).
+  // uSnow: snow cover, uWet: rain on the ground, uWxTime: seconds for the weather.
+  WX.U = { uSeasonW: { value: new THREE.Vector4(0, 0, 1, 0) }, uSnow: { value: 0 }, uWet: { value: 0 }, uWxTime: { value: 0 } };
+  WX.GLSL_HEAD = `
+    varying vec4 vWxO; varying vec3 vWxP; varying vec3 vWxN;
+    uniform vec4 uSeasonW; uniform float uSnow, uWet, uWxScale;
+    float wxH(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+    float wxN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f); return mix(mix(wxH(i), wxH(i + vec2(1., 0.)), f.x), mix(wxH(i + vec2(0., 1.)), wxH(i + vec2(1., 1.)), f.x), f.y); }
+    float wxSnowK = 0., wxLeaf = 0.;`;
+  // after <color_fragment>: diffuseColor is the surface's own colour (linear). uWxScale: world units → about one tree
+  WX.GLSL_COLOR = `
+    #ifdef WX_FOLIAGE
+    { // leaves: the kit paints them summer green; the season recolours the colours where green leads and is saturated
+      // (a crown's dark and pale blobs alike); the darkest greens (pines) keep theirs, as do the greyed pine tiers
+      vec3 c = diffuseColor.rgb;
+      float leaf = smoothstep(1.02, 1.12, c.g / max(max(c.r, c.b), 1e-4)) * smoothstep(.12, .2, (c.g - min(c.r, c.b)) / max(c.g, 1e-4));
+      if (leaf > .001) {
+        float con = 1. - smoothstep(.012, .02, c.g);
+        // one colour a tree: its instance, or (a merged model) a smooth noise over the ground
+        float id = vWxO.w > .5 ? wxH(floor(vWxO.xz * uWxScale * 7.3) + .5) : wxN(vWxP.xz * uWxScale * 1.3 + 7.);
+        float lv = clamp(dot(c, vec3(.2126, .7152, .0722)) / .045, .35, 1.8);
+        vec3 spring = mix(vec3(.05, .14, .012), vec3(.1, .21, .02), id) * lv;
+        spring = mix(spring, (id > .86 ? vec3(.74, .7, .64) : vec3(.8, .42, .48)) * (.55 + .45 * lv), step(.74, id)); // blossom: peach, plum
+        vec3 autumn = (id < .28 ? vec3(.34, .05, .014) : id < .52 ? vec3(.46, .16, .014) : id < .8 ? vec3(.5, .31, .024) : vec3(.12, .13, .014)) * lv;
+        vec3 winter = mix(vec3(.03, .024, .022), vec3(.05, .04, .034), id) * lv; // bare crowns: twigs, grey-brown
+        vec3 s = uSeasonW.x * spring + uSeasonW.y * c + uSeasonW.z * autumn + uSeasonW.w * winter;
+        s = mix(s, c * (1. - .25 * uSeasonW.w), con);
+        diffuseColor.rgb = mix(c, s, leaf); wxLeaf = leaf * (1. - con);
+      }
+    }
+    #endif
+    #ifndef WX_NOSNOW
+    if (uSnow > .001) { // snow settles on what faces up, in drifts; it comes in patches as the cover grows
+      vec2 q = vWxP.xz * uWxScale;
+      float n = wxN(q * 2.3) * .6 + wxN(q * 7.1 + 3.) * .4;
+      wxSnowK = clamp((smoothstep(.2, .7, normalize(vWxN).y) * (.4 + .6 * n) - (1. - uSnow)) * 4., 0., 1.) * (1. - .7 * wxLeaf); // bare twigs hold little
+      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.7, .74, .82), wxSnowK);
+    }
+    #endif
+    diffuseColor.rgb *= 1. - uWet * .3 * (1. - wxSnowK); // rain darkens what it wets`;
+  WX.GLSL_ROUGH = `
+    roughnessFactor = mix(roughnessFactor, roughnessFactor * .5, uWet * (1. - wxSnowK));
+    roughnessFactor = mix(roughnessFactor, .9, wxSnowK);`;
+  WX.VERT = `
+    { vec4 wxP = vec4(transformed, 1.); vec3 wxN = objectNormal; vec4 wxO = vec4(0., 0., 0., 1.); float wxI = 0.;
+    #ifdef USE_INSTANCING
+      wxP = instanceMatrix * wxP; wxN = mat3(instanceMatrix) * wxN; wxO = instanceMatrix * wxO; wxI = 1.;
+    #endif
+      vWxP = (modelMatrix * wxP).xyz; vWxN = normalize(mat3(modelMatrix) * wxN); vWxO = vec4((modelMatrix * wxO).xyz, wxI); }`;
+  // A lit material (standard, Lambert, Phong) takes the season: o.scale (world units a tree is tall, inverted: the map's
+  // kit ≈ 3, metres ≈ 0.08), o.foliage (recolour the kit's leaves), o.snow false (never snowed on: the army figures).
+  // It chains the material's own onBeforeCompile, keeps its cache key apart, and is applied once.
+  WX.patch = function (mat, o = {}) {
+    if (!mat || mat.userData.wx || !(mat.isMeshStandardMaterial || mat.isMeshLambertMaterial || mat.isMeshPhongMaterial)) return mat;
+    const prev = mat.onBeforeCompile, prevKey = mat.customProgramCacheKey, scale = { value: o.scale || 1 };
+    mat.userData.wx = { scale: scale.value };
+    const defs = {}; if (o.foliage) defs.WX_FOLIAGE = ''; if (o.snow === false) defs.WX_NOSNOW = '';
+    if (Object.keys(defs).length) mat.defines = Object.assign({}, mat.defines, defs);
+    mat.onBeforeCompile = function (sh, r) {
+      if (prev) prev.call(this, sh, r);
+      Object.assign(sh.uniforms, WX.U); sh.uniforms.uWxScale = scale;
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec4 vWxO; varying vec3 vWxP; varying vec3 vWxN;').replace('#include <project_vertex>', '#include <project_vertex>\n' + WX.VERT);
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + WX.GLSL_HEAD).replace('#include <color_fragment>', '#include <color_fragment>\n' + WX.GLSL_COLOR)
+        .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n' + WX.GLSL_ROUGH);
+    };
+    mat.customProgramCacheKey = function () { return (prevKey ? prevKey.call(this) : '') + '|wx'; };
+    return mat;
+  };
+  // a twin of a patched material with other season options (same look otherwise): e.g. the leaves of a model kit whose
+  // one material also dresses the soldiers. The twin chains the original's onBeforeCompile (built once for both).
+  WX.twin = function (mat, o = {}) {
+    const t = mat.clone();
+    t.onBeforeCompile = mat.onBeforeCompile; t.customProgramCacheKey = mat.customProgramCacheKey;
+    const defs = Object.assign({}, mat.defines); delete defs.WX_FOLIAGE; delete defs.WX_NOSNOW;
+    if (o.foliage) defs.WX_FOLIAGE = ''; if (o.snow === false) defs.WX_NOSNOW = '';
+    t.defines = defs; t.userData = Object.assign({}, mat.userData, { twinOf: mat });
+    return t;
+  };
+
+  // Weather: one draw call per kind, every particle moved in the vertex shader (nothing per frame on the CPU but a few
+  // uniforms). Particles live in a cube of side `box` round a centre the page puts in front of the camera; they are
+  // anchored to the world (they drift past as the camera moves) and wrap round the cube, faded near its faces.
+  // kinds: rain (streaks along the fall), snow (soft flakes), leaves (tumbling, autumn colours), petals (spring).
+  const WX_KINDS = {
+    rain: { fall: [0.06, -1.25, 0.03], size: 0.0016, len: 0.045, color: 0xc6d2dc, opacity: 0.3, define: 'WX_RAIN' },
+    snow: { fall: [0.02, -0.11, 0.012], size: 0.0042, color: 0xffffff, opacity: 0.9, define: 'WX_SNOW', sway: 0.018 },
+    leaves: { fall: [0.07, -0.06, 0.025], size: 0.0065, color: 0xffffff, opacity: 0.95, define: 'WX_LEAF', sway: 0.03 },
+    petals: { fall: [0.05, -0.04, 0.02], size: 0.006, color: 0xffffff, opacity: 0.9, define: 'WX_PETAL', sway: 0.025 },
+  };
+  WX.particles = function (kind, o = {}) {
+    const K0 = WX_KINDS[kind] || WX_KINDS.snow, n = Math.max(1, o.count || 1000);
+    const g = new THREE.InstancedBufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute([-0.5, 0, 0, 0.5, 0, 0, 0.5, 1, 0, -0.5, 1, 0], 3));
+    g.setIndex([0, 1, 2, 0, 2, 3]);
+    let sd = o.seed || 17; const rnd = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+    const seed = new Float32Array(n * 4); for (let i = 0; i < seed.length; i++) seed[i] = rnd();
+    g.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seed, 4));
+    g.instanceCount = n;
+    const U = {
+      uTime: WX.U.uWxTime, uCenter: { value: new THREE.Vector3() }, uBox: { value: 1 }, uAmount: { value: 1 },
+      uFall: { value: new THREE.Vector3(...K0.fall) }, uWind: { value: new THREE.Vector3(0, 0, 0) }, uSize: { value: K0.size }, uLen: { value: K0.len || 0 },
+      uColor: { value: new THREE.Color(K0.color) }, uOpacity: { value: K0.opacity }, uSway: { value: K0.sway || 0 },
+    };
+    const mat = new THREE.ShaderMaterial({
+      uniforms: U, transparent: true, depthWrite: false, side: THREE.DoubleSide, defines: { [K0.define]: '' },
+      vertexShader: `attribute vec4 aSeed; uniform float uTime, uBox, uAmount, uSize, uLen, uSway; uniform vec3 uCenter, uFall, uWind;
+        varying vec2 vUv; varying float vA; varying vec3 vTint;
+        void main(){
+          vUv = vec2(position.x + .5, position.y);
+          float sp = .75 + .5 * fract(aSeed.w * 7.13), on = step(aSeed.w, uAmount);
+          // in box units: a start in the cube, the fall and the wind, the cube's centre subtracted so it is anchored to the world
+          vec3 u = aSeed.xyz + (uFall * sp + uWind) * uTime - uCenter / uBox;
+          u.xz += uSway * vec2(sin(uTime * 1.3 + aSeed.x * 40.), cos(uTime * 1.1 + aSeed.y * 40.));
+          vec3 rel = (fract(u) - .5) * uBox, wp = uCenter + rel;
+          float edge = max(max(abs(rel.x), abs(rel.y)), abs(rel.z)) / (.5 * uBox);
+          vA = on * (1. - smoothstep(.7, 1., edge)) * smoothstep(.1, .28, length(wp - cameraPosition) / uBox); // none right at the lens
+          vec3 camR = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]), camU = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
+          vTint = vec3(1.);
+        #ifdef WX_RAIN
+          vec3 d = normalize(uFall * sp + uWind), side = normalize(cross(d, cameraPosition - wp));
+          vec3 pos = wp + side * position.x * uSize * uBox + d * (position.y - .5) * uLen * uBox * sp;
+        #else
+          float a = aSeed.x * 6.283 + uTime * (.5 + 2. * aSeed.y);
+          vec2 cn = vec2(position.x, position.y - .5);
+          #if defined(WX_LEAF) || defined(WX_PETAL)
+            cn.x *= .2 + .8 * abs(sin(uTime * (1.6 + aSeed.z * 2.) + aSeed.z * 30.)); // turning over as it falls
+          #endif
+          cn = vec2(cn.x * cos(a) - cn.y * sin(a), cn.x * sin(a) + cn.y * cos(a));
+          vec3 pos = wp + (camR * cn.x + camU * cn.y) * uSize * uBox * (.65 + .7 * aSeed.z);
+          #ifdef WX_LEAF
+            float h = fract(aSeed.w * 13.7); // gold, orange, red, brown
+            vTint = h < .3 ? vec3(.62, .36, .05) : h < .55 ? vec3(.6, .18, .03) : h < .8 ? vec3(.45, .06, .02) : vec3(.28, .15, .06);
+          #endif
+          #ifdef WX_PETAL
+            vTint = fract(aSeed.w * 13.7) < .6 ? vec3(.95, .62, .7) : vec3(.95, .92, .88);
+          #endif
+        #endif
+          gl_Position = projectionMatrix * viewMatrix * vec4(pos, 1.);
+        }`,
+      fragmentShader: `uniform vec3 uColor; uniform float uOpacity; varying vec2 vUv; varying float vA; varying vec3 vTint;
+        void main(){
+          vec2 c = vUv * 2. - 1.; float a;
+        #ifdef WX_RAIN
+          a = (1. - abs(c.x)) * smoothstep(0., .35, vUv.y) * smoothstep(1., .6, vUv.y);
+        #elif defined(WX_LEAF)
+          float w = .62 * (1. - c.y * c.y); a = 1. - smoothstep(w * .75, w + .02, abs(c.x));
+        #else
+          a = 1. - smoothstep(.25, 1., length(c));
+        #endif
+          a *= vA * uOpacity; if (a < .01) discard;
+          vec3 col = uColor * vTint;
+        #ifdef WX_LEAF
+          col *= .78 + .22 * smoothstep(.0, .14, abs(c.x)); // the midrib
+        #endif
+          gl_FragColor = vec4(col, a);
+          #include <tonemapping_fragment>
+          #include <encodings_fragment>
+        }`,
+    });
+    const mesh = new THREE.Mesh(g, mat);
+    mesh.frustumCulled = false; mesh.renderOrder = 9;
+    const fwd = new THREE.Vector3();
+    return {
+      mesh, U, count: n, kind,
+      // the cube in front of the camera: side `box` (world units), its centre `ahead` sides along the view
+      place(camera, box, ahead = 0.55) { camera.getWorldDirection(fwd); U.uBox.value = box; U.uCenter.value.copy(camera.position).addScaledVector(fwd, box * ahead); },
+      dispose() { g.dispose(); mat.dispose(); },
+    };
+  };
+  // the season's grade on a K.lens: { mul: [r, g, b], lift: [r, g, b], sat, con, mist, mistH, mistBase, mistCol,
+  // mistScale (banks of mist a world unit, 0: an even layer), mistDrift: [x, z] }
+  WX.grade = function (lens, g = {}) {
+    const L = lens && lens.uniforms; if (!L || !L.gradeMul) return;
+    L.gradeMul.value.set(...(g.mul || [1, 1, 1])); L.gradeLift.value.set(...(g.lift || [0, 0, 0]));
+    L.gradeSat.value = g.sat ?? 1; L.gradeCon.value = g.con ?? 1;
+    L.mist.value = g.mist || 0; L.mistH.value = g.mistH || 1; L.mistBase.value = g.mistBase || 0;
+    if (L.mistNoise) L.mistNoise.value.set(g.mistScale || 0, ...(g.mistDrift || [0, 0]));
+    if (g.mistCol !== undefined) L.mistCol.value.set(g.mistCol);
   };
 
   // Weight of a rendered frame: draw calls, triangles, GPU buffer bytes, timings.

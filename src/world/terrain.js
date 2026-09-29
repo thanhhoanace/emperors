@@ -535,8 +535,14 @@
       return col;
     }`;
   T.GLSL_NOISE = GLSL_NOISE;
+  // The season (K.wx in kit.js): weights of spring, summer, autumn, winter, the snow cover and the rain, shared by every
+  // seasonal material of the page. uSeasonOn is each material's own: 0 keeps the round-8 look (game.html), 1 draws the
+  // season (WorldRuntime rt.setSeason).
+  const seasonU = () => (window.K && K.wx ? { uSeasonW: K.wx.U.uSeasonW, uSnow: K.wx.U.uSnow, uWet: K.wx.U.uWet } : { uSeasonW: { value: new THREE.Vector4(0, 0, 1, 0) }, uSnow: { value: 0 }, uWet: { value: 0 } });
+  T.seasonUniforms = seasonU;
   // Shared uniforms: grid → uv, baked light, owner colours, view mode.
   T.uniforms = (terr, extra = {}) => ({
+    ...seasonU(), uSeasonOn: { value: 0 },
     tMaskA: { value: terr.tex.A }, tMaskB: { value: terr.tex.B }, tMaskD: { value: terr.tex.D }, tOwn: { value: terr.tex.own }, tBord: { value: terr.tex.bord },
     uGrid: { value: new THREE.Vector4(terr.G.x0, terr.G.z0, terr.G.w, terr.G.d) },
     tLand: { value: terr.tex.land || terr.tex.D }, uLandOn: { value: terr.land ? 1 : 0 },
@@ -559,7 +565,15 @@
   const FS_LIGHT = `
     reflectedLight.directDiffuse *= tSunVis; reflectedLight.directSpecular *= tSunVis;
     reflectedLight.indirectDiffuse *= tAO;`;
-  T.receiveBaked = function (mat, terr, strength = 1) {
+  // It also takes the season (K.wx.patch at the map's scale: snow on roofs and tops, wet in the rain), so every model on
+  // the map has it; o.foliage recolours the leaves (trees, villages), o.weather false leaves the material out.
+  T.MAP_WX_SCALE = 3; // the map's props: a tree about a third of a unit tall
+  T.receiveBaked = function (mat, terr, strength = 1, o = {}) {
+    T.receiveBakedOnly(mat, terr, strength);
+    if (o.weather !== false && window.K && K.wx) K.wx.patch(mat, { scale: T.MAP_WX_SCALE, foliage: !!o.foliage });
+    return mat;
+  };
+  T.receiveBakedOnly = function (mat, terr, strength = 1) {
     const prev = mat.onBeforeCompile;
     mat.onBeforeCompile = (sh, r) => {
       if (prev) prev(sh, r);
@@ -591,8 +605,19 @@
         .replace('#include <common>', `#include <common>
           varying vec3 vWP; varying vec3 vWN;
           uniform sampler2D tMaskA, tMaskB, tMaskD, tOwn, tBord, tGrass, tLand; uniform vec4 uGrid, uLandGrid; uniform float uLandOn; uniform float uTint, uBorder, uBorderW, uSeason, uSnowLine, uSnowWest, uWaterLine, uFieldK, uDetailK, uSoft, uEdgeFog; uniform vec4 uOutArid;
+          uniform vec4 uSeasonW; uniform float uSeasonOn, uSnow, uWet;
+          float gPaddy = 0.0, gDyke = 0.0, gFur = 0.0, gParcel = 0.5; // for the snow and the gloss below: flooded parcels, bunds, furrows, the parcel's draw
           ${GLSL_NOISE}
           ${GLSL_BORDER}
+          // a parcel's crop by season (authored in sRGB): spring young rice and flooded paddies, a little rapeseed; summer
+          // greens; autumn gold, stubble, ploughland; winter stubble and fallow, some winter wheat
+          vec3 cropOf(float r){
+            vec3 sp = r < 0.3 ? vec3(0.40, 0.50, 0.49) : r < 0.62 ? vec3(0.44, 0.60, 0.21) : r < 0.8 ? vec3(0.36, 0.52, 0.18) : r < 0.92 ? vec3(0.44, 0.36, 0.26) : r < 0.96 ? vec3(0.80, 0.73, 0.25) : vec3(0.50, 0.58, 0.27);
+            vec3 su = r < 0.35 ? vec3(0.25, 0.43, 0.12) : r < 0.6 ? vec3(0.32, 0.49, 0.14) : r < 0.8 ? vec3(0.21, 0.37, 0.11) : r < 0.92 ? vec3(0.39, 0.47, 0.16) : vec3(0.56, 0.50, 0.24);
+            vec3 au = r < 0.3 ? vec3(0.67, 0.55, 0.26) : r < 0.55 ? vec3(0.60, 0.50, 0.23) : r < 0.72 ? vec3(0.72, 0.62, 0.32) : r < 0.84 ? vec3(0.55, 0.47, 0.33) : r < 0.93 ? vec3(0.45, 0.38, 0.29) : vec3(0.45, 0.47, 0.24);
+            vec3 wi = r < 0.35 ? vec3(0.48, 0.42, 0.32) : r < 0.6 ? vec3(0.41, 0.35, 0.27) : r < 0.8 ? vec3(0.53, 0.48, 0.37) : r < 0.92 ? vec3(0.36, 0.30, 0.24) : vec3(0.38, 0.43, 0.28);
+            return uSeasonW.x * sp + uSeasonW.y * su + uSeasonW.z * au + uSeasonW.w * wi;
+          }
           vec3 fieldColor(vec2 wp, float lush, out float bump){
             float ang = (tnoise(wp * 0.009) - 0.5) * 3.0;
             vec2 q = mat2(cos(ang), -sin(ang), sin(ang), cos(ang)) * wp;
@@ -603,22 +628,29 @@
             vec3 col = r < 0.3 ? vec3(0.33, 0.40, 0.17) : r < 0.55 ? vec3(0.40, 0.45, 0.19) : r < 0.72 ? vec3(0.48, 0.48, 0.22) : r < 0.84 ? vec3(0.56, 0.52, 0.29) : r < 0.93 ? vec3(0.45, 0.38, 0.27) : vec3(0.36, 0.42, 0.20);
             col = mix(col, vec3(0.30, 0.41, 0.37), lush * step(mix(0.86, 0.94, uSoft), th21(c + 3.1)) * mix(0.7, 0.4, uSoft)); // flooded paddies in the wet south
             col = mix(col, vec3(0.42, 0.45, 0.21), 0.35 * uSoft); // round 5: calmer patchwork
+            if (uSeasonOn > 0.5) { // the season's crop, calmed toward its own mean the same way
+              col = mix(cropOf(r), cropOf(0.45) * 0.5 + cropOf(0.75) * 0.5, 0.22 * uSoft); gPaddy = uSeasonW.x * step(r, 0.3);
+            }
             float fw = length(fwidth(q / sz));
             float fur = 0.5 + 0.5 * sin((r > 0.5 ? f.x : f.y) * 30.0);
             float furFade = 1.0 - smoothstep(0.006, 0.014, fw); // furrows vanish before they alias
             fur = mix(0.5, fur, furFade);
-            col *= 0.95 + 0.06 * fur;
+            col *= 0.95 + 0.06 * fur; gFur = (fur - 0.5) * furFade;
             float e = min(min(f.x, 1.0 - f.x) * sz.x, min(f.y, 1.0 - f.y) * sz.y);
             float fe = max(fwidth(e), 1e-4), dw = max(0.035, fe * mix(0.8, 1.6, uSoft)); // round 5: bunds never thinner than ~1.5 px (no dotted lines)
             float dyke = (1.0 - smoothstep(dw - fe * 0.5, dw + fe * 0.5, e)) * (0.035 / dw) * (1.0 - smoothstep(mix(0.06, 0.02, uSoft), mix(0.15, 0.06, uSoft), fe)); // >= 1px, fainter far away
-            col = mix(col, mix(vec3(0.30, 0.34, 0.18), vec3(0.47, 0.46, 0.30), uSoft), dyke * mix(0.5, 0.35, uSoft)); // round 5: pale earth bunds
-            bump = fur * 0.08 + dyke * 0.35;
+            vec3 bund = mix(vec3(0.30, 0.34, 0.18), vec3(0.47, 0.46, 0.30), uSoft);
+            if (uSeasonOn > 0.5) bund = uSeasonW.x * vec3(0.50, 0.55, 0.33) + uSeasonW.y * vec3(0.36, 0.44, 0.22) + uSeasonW.z * vec3(0.50, 0.44, 0.30) + uSeasonW.w * vec3(0.34, 0.30, 0.25); // grassy in spring, bare earth in winter
+            col = mix(col, bund, dyke * mix(0.5, 0.35, uSoft)); // round 5: pale earth bunds
+            bump = fur * 0.08 + dyke * 0.35; gDyke = dyke;
             // fade the pattern out where cells shrink below a few pixels (no shimmering at the overview)
             float px = length(fwidth(q / sz));
             // round 5: blocks of 4×4 parcels share a crop colour, so the patchwork still reads from the campaign camera
             vec2 cB = floor(q / (sz * 4.0)); float rB = th21(cB + 17.0);
             vec3 blockC = rB < 0.35 ? vec3(0.40, 0.45, 0.20) : rB < 0.6 ? vec3(0.47, 0.47, 0.24) : rB < 0.8 ? vec3(0.53, 0.49, 0.28) : vec3(0.36, 0.41, 0.19);
             vec3 farC = mix(vec3(0.41, 0.44, 0.20), mix(blockC, vec3(0.44, 0.45, 0.22), smoothstep(0.1, 0.35, px / 4.0)), uSoft);
+            if (uSeasonOn > 0.5) { vec3 m = cropOf(0.45) * 0.5 + cropOf(0.75) * 0.5; farC = mix(m, mix(mix(cropOf(rB), m, 0.2), m, smoothstep(0.15, 0.5, px / 4.0)), uSoft); }
+            gPaddy *= 1.0 - smoothstep(0.08, 0.3, px); gParcel = mix(r, rB, smoothstep(0.08, 0.3, px));
             return mix(col, farC, smoothstep(0.08, 0.3, px));
           }`)
         .replace('#include <color_fragment>', `#include <color_fragment>
@@ -644,13 +676,23 @@
           vec3 lush = mix(vec3(0.20, 0.30, 0.10), vec3(0.34, 0.41, 0.15), n1);
           lush = mix(lush, vec3(0.42, 0.44, 0.18), smoothstep(0.62, 0.85, n2) * 0.35);
           vec3 dry = mix(vec3(0.50, 0.45, 0.28), vec3(0.64, 0.55, 0.35), n1);
+          if (uSeasonOn > 0.5) { // grass by season: fresh green, deep green, tawny gold, dormant straw
+            vec4 W = uSeasonW; float pt = smoothstep(0.62, 0.85, n2) * 0.35;
+            lush = W.x * mix(mix(vec3(0.23, 0.38, 0.10), vec3(0.38, 0.53, 0.15), n1), vec3(0.52, 0.58, 0.18), pt)
+                 + W.y * mix(mix(vec3(0.16, 0.28, 0.07), vec3(0.27, 0.39, 0.10), n1), vec3(0.33, 0.42, 0.12), pt)
+                 + W.z * mix(mix(vec3(0.30, 0.34, 0.15), vec3(0.44, 0.44, 0.22), n1), vec3(0.51, 0.46, 0.24), pt)
+                 + W.w * mix(mix(vec3(0.34, 0.32, 0.25), vec3(0.45, 0.41, 0.31), n1), vec3(0.49, 0.43, 0.32), pt);
+            dry = mix(dry, dry * vec3(0.9, 1.02, 0.86), W.x + W.y * 0.6); dry = mix(dry, vec3(dot(dry, vec3(0.33))) * vec3(1.0, 0.97, 0.94), W.w * 0.5);
+          }
           vec3 col = mix(lush, dry, mB.r);
           col = mix(col, vec3(0.74, 0.60, 0.38) * (0.9 + 0.2 * n2), mB.g); // sand: ochre, not white
           col = mix(col, vec3(0.52, 0.33, 0.22) * (0.85 + 0.3 * n1), mB.b * 0.55);
           float fb; vec3 fc = fieldColor(vWP.xz * uFieldK, 1.0 - mB.r, fb); // uFieldK > 1: smaller parcels (round 5 scale)
           float fm = smoothstep(0.1, 0.5, mA.g + (n2 - 0.5) * 0.2);
           col = mix(col, fc, fm); tBump += fb * fm;
-          col = mix(col, vec3(0.12, 0.17, 0.07), smoothstep(0.15, 0.6, mA.r));
+          vec3 floorC = vec3(0.12, 0.17, 0.07); // the forest floor: leaf litter in autumn, bare in winter
+          if (uSeasonOn > 0.5) floorC = uSeasonW.x * vec3(0.14, 0.2, 0.07) + uSeasonW.y * vec3(0.1, 0.16, 0.06) + uSeasonW.z * vec3(0.24, 0.17, 0.08) + uSeasonW.w * vec3(0.22, 0.19, 0.16);
+          col = mix(col, floorC, smoothstep(0.15, 0.6, mA.r));
           col = mix(col, vec3(0.55, 0.48, 0.36) * (0.85 + 0.25 * n3), mB.a * 0.8);
           col = mix(col, vec3(0.50, 0.46, 0.36) * (0.9 + 0.2 * n3), mA.a * 0.4);
           float road = smoothstep(0.45, 0.8, mA.b + (n3 - 0.5) * 0.12);
@@ -662,14 +704,30 @@
           float snowLine = uSnowLine + 5.0 * smoothstep(-130.0, -175.0, vWP.x) * uSnowWest;
           float snow = smoothstep(snowLine, snowLine + 2.5, hgt + (n1 - 0.5) * 3.0) * (1.0 - smoothstep(0.5, 0.78, slope));
           col = mix(col, vec3(0.90, 0.91, 0.93), snow);
+          float gSnowK = 0.0;
+          if (uSnow > 0.001) { // a winter's snow over the low ground: whole on the flats, thin on slopes, none on cliffs;
+            // roads stay trodden mud, bunds and furrows draw the fields through it, it comes in drifts as the cover grows
+            float sflat = 1.0 - smoothstep(0.3, 0.62, slope + (n2 - 0.5) * 0.12);
+            float sn = mix(tfbm(vWP.xz * 0.55 + 11.0), 0.5, smoothstep(0.25, 0.6, fwp * 0.55 * 4.0));
+            float thin = smoothstep(0.52, 0.78, tfbm(vWP.xz * 0.11 + 3.0)) * (1.0 - fm * 0.6); // wind-scoured patches where the grass shows
+            float pv = mix(1.0, 0.62 + 0.38 * smoothstep(0.18, 0.5, gParcel), fm); // ploughed parcels hold it thinner: the patchwork shows
+            gSnowK = clamp((sflat * (0.62 + 0.38 * sn) + 0.12 - (1.0 - uSnow) * 1.25) * 3.2, 0.0, 1.0) * (1.0 - road * 0.72) * (1.0 - 0.45 * thin) * pv * step(uWaterLine, hgt);
+            vec3 snowC = vec3(0.77, 0.8, 0.85) * (0.93 + 0.08 * n3 + 0.05 * (gA - 0.5) + 0.06 * (n1 - 0.5));
+            col = mix(col, snowC, gSnowK);
+            col = mix(col, col * (1.0 - 0.13 * gFur), gSnowK * fm); // ridges of the furrows under it
+            col = mix(col, vec3(0.46, 0.44, 0.43), gSnowK * fm * gDyke * 0.7); // the bunds show as lines
+            col = mix(col, col * 0.8, gSnowK * smoothstep(0.35, 0.6, mA.r)); // under the woods: shade, bare twigs
+          }
           if (hgt < uWaterLine) {
             float dep = clamp(-hgt / 2.2, 0.0, 1.0);
             vec3 shallow = mix(vec3(0.19, 0.34, 0.32), vec3(0.50, 0.42, 0.25), mD.a);
             vec3 deep = mix(vec3(0.05, 0.16, 0.22), vec3(0.34, 0.27, 0.15), mD.a);
             col = mix(col, mix(shallow, deep, dep), smoothstep(uWaterLine, uWaterLine - 0.37, hgt));
           }
-          col *= mix(0.74 + 0.5 * gA * 0.75, 0.86 + 0.28 * gA * 0.75, uSoft) + 0.25 * (gB - 0.5);
+          col *= mix(mix(0.74 + 0.5 * gA * 0.75, 0.86 + 0.28 * gA * 0.75, uSoft) + 0.25 * (gB - 0.5), 1.0, gSnowK * 0.7);
           col = pow(col, vec3(2.2)); // authored in sRGB, lit in linear
+          col *= 1.0 - uWet * 0.22 * (1.0 - gSnowK); // rain darkens the ground (and makes it shine a little, below)
+          gPaddy *= fm * (1.0 - gSnowK);
           col = mix(col, own.rgb, uTint * own.a * step(0.1, hgt));
           // wasteland (no province at all; encoded as black, alpha 0): washed pale in the owner view
           float wild = (1.0 - own.a) * (1.0 - step(0.05, own.r + own.g + own.b));
@@ -684,10 +742,13 @@
             float bx = dFdx(tBump), by = dFdy(tBump);
             vec3 r1 = cross(dpy, normal), r2 = cross(normal, dpx); float det = dot(dpx, r1);
             normal = normalize(abs(det) * normal - sign(det) * (bx * r1 + by * r2) * 0.9); }`)
+        .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+          roughnessFactor = mix(roughnessFactor, 0.32, gPaddy * 0.85); // spring's flooded paddies catch the sun
+          roughnessFactor = mix(roughnessFactor, 0.74, uWet * (1.0 - gSnowK));`)
         .replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
           { float tSunVis = 0.2 + 0.8 * mD.g; float tAO = 0.62 + 0.76 * mD.b; ${FS_LIGHT} }`);
     };
-    mat.customProgramCacheKey = () => 'ground4';
+    mat.customProgramCacheKey = () => 'ground4s';
     return mat;
   };
 
@@ -711,6 +772,7 @@
       sh.fragmentShader = sh.fragmentShader
         .replace('#include <common>', `#include <common>
           varying vec3 vWP; varying vec3 vWN; uniform sampler2D tMaskA, tMaskB, tMaskD, tOwn, tBord, tLand; uniform vec4 uGrid, uLandGrid; uniform float uLandOn; uniform float uSeason, uTint, uBorder, uBorderW, uCanopyBorder, uSoft, uEdgeFog, uCrownK;
+          uniform vec4 uSeasonW; uniform float uSeasonOn, uSnow, uWet;
           ${GLSL_NOISE}
           ${GLSL_BORDER}`)
         .replace('#include <color_fragment>', `#include <color_fragment>
@@ -733,6 +795,17 @@
           col = mix(col, vec3(0.62, 0.35, 0.40), step(0.985, id) * (1.0 - conifer) * 0.8 * (1.0 - smoothstep(0.1, 0.3, length(fwidth(vWP.xz)) * 2.1)));
           vec3 autumn = id < 0.4 ? vec3(0.55, 0.30, 0.10) : id < 0.7 ? vec3(0.62, 0.48, 0.14) : col;
           col = mix(col, autumn, uSeason * (1.0 - conifer * 0.8));
+          if (uSeasonOn > 0.5) { // crowns by season: fresh with peach and plum in blossom, deep green, red and gold, bare
+            vec3 sp = mix(vec3(0.22, 0.37, 0.10), vec3(0.37, 0.51, 0.16), id);
+            sp = mix(sp, id > 0.955 ? vec3(0.90, 0.88, 0.84) : vec3(0.88, 0.62, 0.68), step(0.9, id) * det0 * 0.9); // blossom on the crowns one can see
+            sp = mix(sp, vec3(0.45, 0.50, 0.30), (1.0 - det0) * 0.12);
+            vec3 su = mix(vec3(0.12, 0.22, 0.07), vec3(0.22, 0.33, 0.10), id); su = mix(su, vec3(0.30, 0.36, 0.11), step(0.95, id) * 0.6);
+            // red, orange, gold, a few still green: blended (no hard edges where the crowns fade into a smooth noise)
+            vec3 au = mix(mix(vec3(0.48, 0.21, 0.10), vec3(0.58, 0.36, 0.14), smoothstep(0.12, 0.38, id)), mix(vec3(0.60, 0.50, 0.20), vec3(0.30, 0.33, 0.13), smoothstep(0.7, 0.92, id)), smoothstep(0.38, 0.62, id));
+            au = mix(au, vec3(0.46, 0.39, 0.19), (1.0 - det0) * 0.6); // afar the colours blend to a warm russet
+            vec3 wi = mix(vec3(0.24, 0.21, 0.2), vec3(0.34, 0.3, 0.27), id);
+            col = mix(uSeasonW.x * sp + uSeasonW.y * su + uSeasonW.z * au + uSeasonW.w * wi, mix(needle, needle * vec3(0.8, 0.88, 0.95), uSeasonW.w), conifer);
+          }
           float fwc = length(fwidth(vWP.xz)) * 2.1 * uCrownK; // crowns per pixel: fade the pattern before it aliases
           float detail = (1.0 - smoothstep(0.15, 0.45, fwc)) * (1.0 - steep); // crowns stretch on slopes: drop them there
           col *= mix(0.9, 0.72 + 0.42 * crown, detail); col *= mix(1.0, mix(0.62, 1.0, gap), detail);
@@ -742,7 +815,12 @@
           // organic forest edge: keep whole crowns where the density is high enough
           if (mA.r < 0.13 + 0.14 * (1.0 - crown * detail) + 0.08 * (tnoise(vWP.xz * 0.8) - 0.5)) discard;
           if (uLandOn > 0.5) { vec2 exC = max(uGrid.xy - vWP.xz, vWP.xz - uGrid.xy - uGrid.zw); if (max(exC.x, exC.y) + 12.0 * (tnoise(vWP.xz * 0.04) - 0.5) > -18.0) discard; } // thins out where the core meets the land mask
-          diffuseColor.rgb = pow(col, vec3(2.2));
+          if (uSnow > 0.001) { // snow on the crowns' tops; from afar an even dusting that leaves the woods darker than the fields
+            float sn = tnoise(vWP.xz * 1.7 + 3.0), top = mix(0.55, crown, detail);
+            float cov = clamp((top * (0.7 + 0.5 * sn) - (1.0 - uSnow) * 1.1) * 2.2, 0.0, 0.8) * mix(0.42, 0.9, detail) * mix(0.55, 1.0, conifer) * (1.0 - steep * 0.6); // bare twigs hold little
+            col = mix(col, vec3(0.84, 0.86, 0.90) * (0.88 + 0.12 * crown), cov);
+          }
+          diffuseColor.rgb = pow(col, vec3(2.2)) * (1.0 - uWet * 0.12);
           { vec4 own = texture2D(tOwn, uvG); diffuseColor.rgb = mix(diffuseColor.rgb, own.rgb, uTint * own.a);
             float wild = (1.0 - own.a) * (1.0 - step(0.05, own.r + own.g + own.b)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(dot(diffuseColor.rgb, vec3(0.3, 0.55, 0.15))) * 0.9 + vec3(0.1, 0.09, 0.07), min(uTint, 0.06) * wild * 1.6);
             if (uCanopyBorder > 0.0) diffuseColor.rgb = mix(diffuseColor.rgb, applyBorders(diffuseColor.rgb, own, texture2D(tBord, uvG), 1.0, vWP.xz), uCanopyBorder);
@@ -761,7 +839,7 @@
         .replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
           { float tSunVis = 0.2 + 0.8 * mD.g; float tAO = (0.55 + 0.7 * mD.b) * (0.7 + 0.3 * mA.r); ${FS_LIGHT} }`);
     };
-    mat.customProgramCacheKey = () => 'canopy4';
+    mat.customProgramCacheKey = () => 'canopy4s';
     return mat;
   };
 
@@ -776,6 +854,7 @@
       sh.fragmentShader = sh.fragmentShader
         .replace('#include <common>', `#include <common>
           varying vec3 vWP; uniform sampler2D tMaskD, tLand; uniform vec4 uGrid, uLandGrid; uniform float uEdgeFog, uLandOn;
+          uniform vec4 uSeasonW; uniform float uSeasonOn;
           ${GLSL_NOISE}`)
         .replace('#include <color_fragment>', `#include <color_fragment>
           vec2 uvG = (vWP.xz - uGrid.xy) / uGrid.zw;
@@ -787,6 +866,7 @@
           float dep = max(0.0, -tH);
           float silt = inside ? mD.a : 0.0;
           vec3 wc = mix(vec3(0.07, 0.18, 0.21), vec3(0.03, 0.11, 0.18), smoothstep(0.4, 3.0, dep));
+          if (uSeasonOn > 0.5) wc = mix(mix(wc, wc * vec3(1.2, 1.25, 1.02), uSeasonW.x), vec3(0.11, 0.16, 0.2), uSeasonW.w * 0.6); // green spring water, steel-grey winter sea
           wc = mix(wc, vec3(0.42, 0.34, 0.19), silt * 0.85);
           float foam = (1.0 - smoothstep(0.0, 0.07, dep)) * (0.5 + 0.5 * tnoise(vWP.xz * 3.0));
           diffuseColor.rgb = pow(mix(wc, vec3(0.80, 0.83, 0.80), foam * 0.45), vec3(2.2));
@@ -795,7 +875,7 @@
           diffuseColor.rgb = mix(diffuseColor.rgb, pow(vec3(0.74, 0.79, 0.81), vec3(2.2)), fogE); diffuseColor.a = mix(diffuseColor.a, 1.0, fogE);
           if (tH > 0.08) discard;`);
     };
-    mat.customProgramCacheKey = () => 'water4';
+    mat.customProgramCacheKey = () => 'water4s';
     return mat;
   };
 

@@ -483,25 +483,48 @@
     geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
     geo.setAttribute('aSilt', new THREE.Float32BufferAttribute(silt, 1));
     geo.setIndex(ind); geo.computeVertexNormals();
+    // lakes: uv (0.5, -1) marks them (no banks along a ribbon; their ice follows the shallows of the baked bed)
     const lakeGeos = terr.water.lakes.map((L) => {
       const sh = new THREE.Shape(L.ring.map(([x, z]) => new THREE.Vector2(x, -z)));
       const g = new THREE.ShapeGeometry(sh).rotateX(-Math.PI / 2); g.translate(0, L.level + 0.01, 0);
-      const n = g.attributes.position.count; g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(n * 2).fill(0.5), 2)); g.setAttribute('aSilt', new THREE.Float32BufferAttribute(new Float32Array(n), 1));
+      const n = g.attributes.position.count, uvs = new Float32Array(n * 2); for (let i = 0; i < n; i++) { uvs[i * 2] = 0.5; uvs[i * 2 + 1] = -1; }
+      g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); g.setAttribute('aSilt', new THREE.Float32BufferAttribute(new Float32Array(n), 1));
       return g;
     });
     const mat = new THREE.MeshStandardMaterial({ color: 0x1d4a5a, roughness: 0.08, metalness: 0, normalMap: normals, normalScale: new THREE.Vector2(0.3, 0.3), envMap: env, envMapIntensity: 0.8, transparent: true, depthWrite: false });
+    // the season (terrain.js T.seasonUniforms: shared with the ground); uSeasonOn 0 keeps the round-8 water
+    const U = Object.assign(T.seasonUniforms(), { uSeasonOn: { value: 0 }, tMaskD: { value: terr.tex.D }, uGrid: { value: new THREE.Vector4(terr.G.x0, terr.G.z0, terr.G.w, terr.G.d) } });
+    mat.userData.uniforms = U;
     mat.onBeforeCompile = (sh) => {
-      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aSilt; varying float vSilt; varying vec2 vRiverUv;')
-        .replace('#include <uv_vertex>', '#include <uv_vertex>\nvSilt = aSilt; vRiverUv = uv;');
-      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vSilt; varying vec2 vRiverUv;')
+      Object.assign(sh.uniforms, U);
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aSilt; varying float vSilt; varying vec2 vRiverUv; varying vec3 vRiverWP;')
+        .replace('#include <uv_vertex>', '#include <uv_vertex>\nvSilt = aSilt; vRiverUv = uv;')
+        .replace('#include <project_vertex>', '#include <project_vertex>\nvRiverWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+          varying float vSilt; varying vec2 vRiverUv; varying vec3 vRiverWP; uniform vec4 uSeasonW, uGrid; uniform float uSeasonOn, uSnow; uniform sampler2D tMaskD;
+          ${T.GLSL_NOISE}`)
         .replace('#include <color_fragment>', `#include <color_fragment>
-          float edge = min(vRiverUv.x, 1.0 - vRiverUv.x) * 2.0; // 0 at the banks, 1 mid-stream
+          float lake = step(vRiverUv.y, -0.5), edge = mix(min(vRiverUv.x, 1.0 - vRiverUv.x) * 2.0, 1.0, lake); // 0 at the banks, 1 mid-stream
           vec3 wc = mix(vec3(0.08, 0.20, 0.23), vec3(0.44, 0.35, 0.20), vSilt * 0.85);
+          if (uSeasonOn > 0.5) { // jade spring floods, deep summer green-blue, clear autumn, steel winter
+            vec3 clear = uSeasonW.x * vec3(0.12, 0.25, 0.23) + uSeasonW.y * vec3(0.07, 0.21, 0.25) + uSeasonW.z * vec3(0.06, 0.18, 0.23) + uSeasonW.w * vec3(0.10, 0.16, 0.20);
+            wc = mix(clear, mix(vec3(0.44, 0.35, 0.20), vec3(0.47, 0.39, 0.24), uSeasonW.x), vSilt * 0.85);
+          }
           wc = mix(mix(wc, vec3(0.40, 0.40, 0.33), 0.45), wc, smoothstep(0.05, 0.45, edge)); // shallows at the banks
+          float alpha = smoothstep(0.0, 0.3, edge) * 0.93;
+          if (uSnow > 0.001) { // winter: ice grows in from the banks (and over a lake's shallows), cracked, dusted with snow
+            float n = tnoise(vRiverWP.xz * 1.1) * 0.65 + tnoise(vRiverWP.xz * 4.3) * 0.35;
+            float bank = 1.0 - smoothstep(0.0, 0.08, edge - uSnow * (0.34 + 0.34 * n));
+            float bed = texture2D(tMaskD, (vRiverWP.xz - uGrid.xy) / uGrid.zw).r * 8.0 - 4.0, depth = vRiverWP.y - bed;
+            float ice = max(bank * (1.0 - lake), lake * (1.0 - smoothstep(0.0, 0.12, depth - uSnow * (0.2 + 0.5 * n)))) * step(0.02, uSnow);
+            float crack = smoothstep(0.03, 0.0, abs(tnoise(vRiverWP.xz * 2.6 + 5.0) - 0.5)) * 0.35;
+            vec3 ic = mix(vec3(0.66, 0.74, 0.80), vec3(0.86, 0.89, 0.92), smoothstep(0.35, 0.8, n)) * (1.0 - crack);
+            wc = mix(wc, ic, ice); alpha = mix(alpha, 0.97, ice);
+          }
           diffuseColor.rgb = pow(wc, vec3(2.2));
-          diffuseColor.a = smoothstep(0.0, 0.3, edge) * 0.93;`);
+          diffuseColor.a = alpha;`);
     };
-    mat.customProgramCacheKey = () => 'rivers5';
+    mat.customProgramCacheKey = () => 'rivers5s';
     const rivers = new THREE.Mesh(geo, mat);
     rivers.renderOrder = 3;
     const lakes = lakeGeos.length ? new THREE.Mesh(THREE.BufferGeometryUtils.mergeBufferGeometries(lakeGeos), mat) : null;

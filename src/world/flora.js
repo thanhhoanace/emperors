@@ -56,7 +56,7 @@
   // Trees inside the focus disc replace the canopy shell there; a few lone trees everywhere break up open land.
   F.trees = function (terr, o) {
     const PS = o.scale ?? 1, sp = o.spacing ?? 0.5; // round 5: props shrink so trees stay below city walls
-    const mat = Terrain.receiveBaked(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }), terr);
+    const mat = Terrain.receiveBaked(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }), terr, 1, { foliage: true }); // leaves by season (K.wx)
     const lists = { broad: [], pine: [] };
     const place = (x, z, f, y0) => {
       const g = y0 ?? terr.h(x, z); if (g < (o.minH ?? 0.4)) return;
