@@ -36,7 +36,7 @@
     "towns": {
       "chung_ly": { "owner": "zhu_yuanzhang", "gar": { "bo": 800 }, "walls": 2, "dan": 24000, "gov": null },
       "am_lang": { "owner": "zhu_yuanzhang", "gar": { "bo": 500 }, "walls": 1, "dan": 12000, "gov": null },
-      "tho_xuan": { "owner": "cao_cao", "gar": { "bo": 3000, "cung": 1000 }, "walls": 3, "dan": 30000, "gov": "man_chong" },
+      "tho_xuan": { "owner": "cao_cao", "gar": { "bo": 3200, "cung": 1000 }, "walls": 3, "dan": 30000, "gov": "man_chong" },
       "hu_di": { "owner": "local", "gar": { "bo": 1200 }, "walls": 1, "dan": 14000, "gov": "tran" },
       "lich_duong": { "owner": "local", "gar": { "bo": 700 }, "walls": 1, "dan": 10000, "gov": null }
     },

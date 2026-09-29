@@ -16,6 +16,8 @@
  *   V2.transfer(g, townId, armyId, arm, n) · V2.answer(g, cardId, yes) · V2.forecast(g, armyIds, target)
  *   V2.endSeason(g) → g.pending (a battle of ours: V2.battle / battleTurn / autoBattle) or the next season, g.report
  *   V2.lastBattle(g) → the battle that just ended, { plan, b, me, proposed: {}, outcome }, for the screen after it
+ *   V2.battle(g).hopeless / .withdraw · V2.withdraw(g) → yield the battle before its first turn, at its cost (29/9)
+ *   V2.advise(g) → the general's plan for the season · V2.adviseCards(g) → his answers to the cards (29/9)
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(require('../battle.js'));

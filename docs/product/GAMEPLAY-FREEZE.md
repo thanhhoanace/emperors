@@ -66,9 +66,9 @@ Test engine kiểm tra tính đúng; bảy tiêu chí này kiểm tra cách ngư
 
 Số lấy từ demo 1, đã chạy và đo; chỉnh được khi chơi thử mà không đụng tầng A.
 
-- **Bàn cờ:** Chu Nguyên Chương giữ Chung Ly, Âm Lăng; Tào giữ Thọ Xuân (Mãn Sủng, lũy 3, đồn 3.000 bộ + 1.000 cung; Trương Liêu 6.000 quân, 3.500 kỵ); Ngô ở Lịch Dương (Chu Thái, thuyền); hào tộc Hu Dị (Trần Kiểu). **Thắng:** đủ 5 thành. **Thua:** mất hết thành, Chu tử trận, hoặc chạm đáy hai mùa liền.
+- **Bàn cờ:** Chu Nguyên Chương giữ Chung Ly, Âm Lăng; Tào giữ Thọ Xuân (Mãn Sủng, lũy 3, đồn 3.200 bộ + 1.000 cung; Trương Liêu 6.000 quân, 3.500 kỵ); Ngô ở Lịch Dương (Chu Thái, thuyền); hào tộc Hu Dị (Trần Kiểu). **Thắng:** đủ 5 thành. **Thua:** mất hết thành, Chu tử trận, hoặc chạm đáy hai mùa liền.
 - **Nhịp ván (29/9, sau lượt chơi đầu và `npm run v2sim`: lối "tham" thắng 89 % sau 4 mùa, quá dễ và quá ngắn).** Đích: người chơi chú tâm thắng sau khoảng 6–10 mùa, có lúc vấp; người chơi ẩu thua được. Sửa:
-  - Thọ Xuân đồn 4.000 (demo 1: 2.600): hai đạo quân đầu ván không còn chắc lấy được bằng một trận; phải vây hạ lũy trước, mộ thêm, hay đánh lúc tướng đoán tốt.
+  - Thọ Xuân đồn 4.200 (demo 1: 2.600): hai đạo quân đầu ván không còn chắc lấy được bằng một trận; phải vây hạ lũy trước, mộ thêm, hay đánh lúc tướng đoán tốt.
   - **Trương Liêu trở lại hạ 220** (mùa 4) với 3.500 quân nếu đã bị gọi về Phàn Thành: Tào còn giữ thành ở Hoài Nam thì ông về thành đó, đánh từ mùa sau; Thọ Xuân đã mất thì ông đánh thẳng vào Thọ Xuân ngay mùa đó, thua thì về Hợp Phì. Thẻ "Quan Vũ sắp dìm bảy quân" nói trước điều này (tri thức của người xuyên không), nên người chơi chuẩn bị được.
   - **Vây: lũy sụp hết rồi mới mở cổng** (thủ dưới 30 % quân vây *và* lũy về 0). Thành lũy 1 yếu (Hu Dị) vẫn mở cổng ngay cuối mùa đầu vây; thành lũy 3 (Thọ Xuân) phải vây ít nhất 3 mùa. Demo 1 để Thọ Xuân mở cổng sau một mùa vây.
   - Thẻ Lã Mông đòi Uy ≥ 55 (demo 1: 45, tức là gần như chắc được Lịch Dương ở mùa 2); thẻ chỉ ra khi Lịch Dương còn của hào tộc.

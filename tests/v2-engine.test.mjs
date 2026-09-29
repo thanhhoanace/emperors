@@ -32,7 +32,7 @@ function calm(seed = 3) {
   return g;
 }
 const FORBIDDEN = /"(estWin|trueWin|odds|band|bias|rs|seed|win_p|truth)"\s*:/;
-// the spike's Thọ Xuân (2.600 men) where a test is about what follows a battle, not the demo's balance (29/9: 4.000)
+// the spike's Thọ Xuân (2.600 men) where a test is about what follows a battle, not the demo's balance (29/9: 4.200)
 const SPIKE_THO_XUAN = { bo: 2000, cung: 600 };
 
 // ---------------------------------------------------------------- data and view shapes
