@@ -1,0 +1,111 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Field battle harness</title>
+<!-- Dev harness for src/world/battle-field.js (docs/design/v2-polish.md, job 2): a battle in the open at 1 unit = 1 m.
+     Serve the repo root and open /docs/design/prototypes/field.html
+       ?lanes=open,ford,wood  three of open | ford | wood | hill (left → right from the attacker)   &river=1 (a river with no ford)
+       &season=Xuân|Hạ|Thu|Đông  &hour=17.5  &seed=7  &mode=deploy|clash|result  &result=A|D  &fire=2 (hỏa công in lane 2)
+       &view=deploy|lane0|lane1|lane2|overview|result  &tier=high|mid|low  &w=&h=&dpr=  &labels=0  &t=4 (seconds played
+       before the shot)  &measure=1 (window.__extra: renderer counts, stats)  &play=1 (orbit, live)  &crowd=static
+       &atk=bo,cung,ky,thuy  &def=bo,cung,ky,thuy (troops; default Chu Nguyên Chương's two hosts against Trương Liêu)
+     window.__show(view) re-aims at another view and renders it (the shot script uses it to take every view in one load).
+     The sky, sun, hemisphere light and lens are this page's (the host's in the game); the sun follows battle.sun. -->
+<style>html,body{margin:0;background:#1a1712;overflow:hidden;font-family:"Be Vietnam Pro",system-ui,sans-serif}canvas{display:block}
+#labels{position:fixed;inset:0;pointer-events:none}
+.lb{position:absolute;transform:translate(-50%,-100%);white-space:nowrap;font-size:13px;color:#f3ead6;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+.lb.side{font-size:14px;font-weight:700;padding:3px 10px;border-radius:4px;background:rgba(30,24,16,.72);border:1px solid rgba(214,188,130,.6)}
+.lb.lane{font-size:12.5px;font-weight:600;padding:3px 9px;border-radius:999px;background:rgba(30,24,16,.62);color:#f3ead6;border:1px solid rgba(214,188,130,.35)}
+.lb.thing{font-size:12px;color:#e8dcc0;font-style:italic}</style></head><body>
+<canvas id="c"></canvas><div id="labels"></div>
+<script src="../../../node_modules/three/build/three.min.js"></script>
+<script src="../../../node_modules/three/examples/js/utils/BufferGeometryUtils.js"></script>
+<script src="../../../node_modules/three/examples/js/geometries/RoundedBoxGeometry.js"></script>
+<script src="../../../node_modules/three/examples/js/controls/OrbitControls.js"></script>
+<script src="../../../src/world/kit.js"></script>
+<script src="../../../src/world/nature.js"></script>
+<script src="../../../src/world/han-models.js"></script>
+<script src="../../../src/world/crowd.js"></script>
+<script src="../../../src/world/battle.js"></script>
+<script src="../../../src/world/battle-field.js"></script>
+<script>
+(async () => {
+  const T = THREE, q = new URLSearchParams(location.search);
+  const TIERS = { high: { dpr: 1.5, shadow: 4096, ssao: true, dof: true }, mid: { dpr: 1, shadow: 2048, ssao: false, dof: true }, low: { dpr: 1, shadow: 0, ssao: false, dof: false } };
+  const tier = TIERS[q.get('tier')] ? q.get('tier') : 'high', TQ = TIERS[tier];
+  const W = +q.get('w') || innerWidth, H = +q.get('h') || innerHeight, dpr = +q.get('dpr') || TQ.dpr;
+  const cv = document.getElementById('c'); cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  const troops = (s, d) => { const v = (s || d).split(',').map(Number); return { bo: v[0] || 0, cung: v[1] || 0, ky: v[2] || 0, thuy: v[3] || 0 }; };
+  try {
+    const desc = {
+      attacker: { fid: 'zhu_yuanzhang', color: '#b3262e', glyph: '明', name: 'Chu Nguyên Chương', general: 'Chu Nguyên Chương', troops: troops(q.get('atk'), '3800,1000,800,1800') },
+      defender: { fid: 'cao_cao', color: '#4d6a3a', glyph: '魏', name: 'Tào', general: 'Trương Liêu', troops: troops(q.get('def'), '2000,500,3500,0') },
+      lanes: (q.get('lanes') || 'open,ford,wood').split(','), river: q.get('river') === '1', season: q.get('season') || 'Thu', hour: q.get('hour') != null ? +q.get('hour') : 17.5,
+      seed: +(q.get('seed') || 7), mode: q.get('mode') || 'deploy', result: q.get('result') || undefined, fire: q.get('fire') != null ? q.get('fire').split(',').map(Number) : undefined,
+    };
+    const t0 = performance.now();
+    T.ColorManagement.legacyMode = false;
+    const renderer = new T.WebGLRenderer({ canvas: cv, antialias: false, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(dpr); renderer.setSize(W, H, false);
+    renderer.outputEncoding = T.sRGBEncoding; renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.92;
+    renderer.shadowMap.enabled = !!TQ.shadow; renderer.shadowMap.type = T.PCFSoftShadowMap;
+    const scene = new T.Scene(), camera = new T.PerspectiveCamera(40, W / H, 1.5, 16000);
+    const N = window.Nature, S = FieldBattle.sunAt(desc.hour, desc.season), sunDir = new T.Vector3(...S.dir).normalize();
+    // the sky of the siege prototype (sg-main.js), its colours from the battle's sun
+    const v3 = (a) => new T.Vector3(...a);
+    const skyMaterial = () => new T.ShaderMaterial({ side: T.BackSide, depthWrite: false, uniforms: { uSun: { value: sunDir }, uZen: { value: v3(S.sky.zenith) }, uHor: { value: v3(S.sky.horizon) }, uWarm: { value: v3(S.sky.warm) } },
+      vertexShader: 'varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
+      fragmentShader: `varying vec3 vD; uniform vec3 uSun, uZen, uHor, uWarm; ${N.GLSL}
+        void main(){ vec3 d = normalize(vD); float h = clamp(d.y, -.1, 1.), s = max(dot(d, normalize(uSun)), 0.);
+          vec3 c = mix(uHor, uZen, pow(max(h, 0.), .45));
+          c = mix(c, uWarm, pow(s, 2.2) * .85 * (1. - smoothstep(.02, .45, h)));
+          c += vec3(1.4, .9, .5) * pow(s, 60.) + vec3(4., 3., 2.) * pow(s, 900.);
+          float cl = smoothstep(.55, .8, fbm2(d.xz / max(d.y, .06) * 1.4 + 3.)) * smoothstep(.02, .18, d.y) * (1. - smoothstep(.4, .7, d.y));
+          c = mix(c, mix(vec3(.95, .72, .58), vec3(1.1, .75, .45), pow(s, 2.)), cl * .55);
+          if (d.y < 0.) c = uHor * .8;
+          gl_FragColor = vec4(c, 1.); }` });
+    const sky = new T.Mesh(new T.SphereGeometry(15000, 48, 24), skyMaterial()); scene.add(sky);
+    const es = new T.Scene(); es.add(new T.Mesh(new T.SphereGeometry(100, 32, 16), skyMaterial()));
+    const pm = new T.PMREMGenerator(renderer), env = pm.fromScene(es, 0.03).texture; pm.dispose();
+    const sun = new T.DirectionalLight(new T.Color(...S.color), S.intensity); sun.castShadow = !!TQ.shadow;
+    if (TQ.shadow) { sun.shadow.mapSize.set(TQ.shadow, TQ.shadow); sun.shadow.bias = -0.00025; sun.shadow.normalBias = 0.6; }
+    scene.add(sun, sun.target, new T.HemisphereLight(new T.Color(...S.hemi.sky), new T.Color(...S.hemi.ground), S.hemi.intensity));
+    const colors = { [desc.attacker.fid]: parseInt(desc.attacker.color.slice(1), 16), [desc.defender.fid]: parseInt(desc.defender.color.slice(1), 16) };
+    const HM = HanModels.create({ recv: (m) => m, renderer, colors });
+    const battle = FieldBattle.create(desc, { HM, Nature: N, Crowd: q.get('crowd') === 'static' ? null : window.Crowd, env, q: tier, renderer, camera });
+    scene.add(battle.group);
+    const tBuild = performance.now();
+    const lens = K.lens(renderer, scene, camera, { focus: 300, range: 300, maxBlur: 3, ao: 0.8, aoRadius: 2, vignette: 0.28, contrast: 1.06, saturation: 1.06,
+      atmos: { density: S.atmos.density, falloff: S.atmos.falloff, color: S.atmos.color, sunColor: S.atmos.sunColor, sunDir } });
+    const LU = lens.uniforms, blurK = renderer.getDrawingBufferSize(new T.Vector2()).y / 900; LU.band.value.set(0.5, 0.5);
+    let controls = null;
+    const aim = (v) => {
+      const tgt = controls ? controls.target : new T.Vector3(...v.target), dist = camera.position.distanceTo(tgt);
+      const [sx, sz, ext] = v.shadow || [tgt.x, tgt.z, Math.max(200, dist * 0.8)];
+      sun.position.set(sx, 0, sz).addScaledVector(sunDir, 3000); sun.target.position.set(sx, 0, sz); sun.target.updateMatrixWorld();
+      Object.assign(sun.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext, near: 100, far: 6000 }); sun.shadow.camera.updateProjectionMatrix();
+      LU.focus.value = dist; LU.range.value = Math.max(120, dist * 1.2); LU.maxBlur.value = TQ.dof ? 2.6 * blurK : 0;
+      LU.aoStrength.value = TQ.ssao ? 0.85 : 0; LU.aoRadius.value = v.ao || Math.max(1.5, dist * 0.006);
+      LU.near.value = camera.near; LU.far.value = camera.far;
+      LU.projScale.value = renderer.getDrawingBufferSize(new T.Vector2()).y / (2 * Math.tan(T.MathUtils.degToRad(camera.fov) / 2));
+      sky.position.copy(camera.position);
+    };
+    const setView = (v) => {
+      camera.fov = v.fov; camera.aspect = W / H; camera.position.set(...v.cam); camera.lookAt(...v.target); camera.updateProjectionMatrix(); camera.updateMatrixWorld();
+      if (controls) { controls.target.set(...v.target); controls.update(); }
+      aim(v); battle.focus(camera);
+    };
+    let shot = battle.views[q.get('view')] ? q.get('view') : 'deploy';
+    if (q.get('play') && T.OrbitControls) { controls = new T.OrbitControls(camera, cv); controls.enableDamping = true; controls.maxPolarAngle = 1.45; controls.addEventListener('change', () => aim({ ...battle.views[shot], shadow: null })); }
+    if (q.get('cam')) { const c = q.get('cam').split(',').map(Number), t = q.get('tgt').split(',').map(Number); setView({ cam: c, target: t, fov: +(q.get('fov') || 40), shadow: null, ao: 2 }); } else setView(battle.views[shot]);
+    const box = document.getElementById('labels');
+    const drawLabels = () => { if (q.get('labels') === '0') { box.innerHTML = ''; return; } box.innerHTML = battle.labels(camera, W, H).filter((l) => l.visible && (l.kind !== 'lane' || shot === 'overview' || shot === 'deploy')).map((l) => `<div class="lb ${l.kind}" style="left:${l.x}px;top:${l.y}px">${l.text}</div>`).join(''); };
+    const render = (dt) => { battle.tick(dt); if (controls) controls.update(); lens.render(); };
+    // &t: play that many seconds first (the crowd's loops and any staged motion), in steps
+    const tt = +(q.get('t') || 0.5); for (let s = 0; s < tt; s += 0.5) battle.tick(Math.min(0.5, tt - s));
+    render(0); drawLabels();
+    const measure = () => { renderer.info.autoReset = false; renderer.info.reset(); const f0 = performance.now(); lens.render(); renderer.getContext().finish(); const s = K.stats(renderer, scene, { frameMs: performance.now() - f0 }); renderer.info.autoReset = true; return s; };
+    window.__show = (name) => { shot = name; setView(battle.views[name]); render(0); drawLabels(); const m = q.get('measure') ? measure() : null; return { view: name, calls: m && m.calls, triangles: m && m.triangles, stats: battle.stats() }; };
+    if (q.get('measure')) window.__extra = { measure: measure(), stats: battle.stats(), buildMs: Math.round(tBuild - t0), tier, mode: desc.mode, view: shot, lanes: battle.lanes, sun: { elevation: battle.sun.elevation, azimuth: battle.sun.azimuth } };
+    window.__battle = battle; window.__done = true;
+    if (q.get('play')) { let last = performance.now(); const loop = (now) => { render((now - last) / 1000); last = now; drawLabels(); requestAnimationFrame(loop); }; requestAnimationFrame(loop); }
+  } catch (e) { console.error(e); window.__error = String(e.stack || e); }
+})();
+</script></body></html>
