@@ -57,8 +57,12 @@
     let list = shots;
     if (list.length > 6) { const tail = list.slice(5); list = list.slice(0, 5).concat([{ kind: 'many', rank: 9, moves: tail.flatMap((s) => s.moves), clash: false }]); }
     for (const s of list) s.ms = base(s);
-    const sum = list.reduce((n, s) => n + s.ms.march + s.ms.arrive + 250, 0);
-    if (sum > BUDGET) { const k = Math.max(0.5, BUDGET / sum); for (const s of list) { s.ms.march = Math.round(Math.max(900, s.ms.march * k)); s.ms.arrive = Math.round(s.ms.arrive * k); } }
+    const room = BUDGET - 250 * list.length, sum = () => list.reduce((n, s) => n + s.ms.march + s.ms.arrive, 0);
+    if (sum() > room) {
+      const k = room / sum(); for (const s of list) { s.ms.march = Math.round(Math.max(900, s.ms.march * k)); s.ms.arrive = Math.round(s.ms.arrive * k); }
+      const over = sum() - room, arr = list.reduce((n, s) => n + s.ms.arrive, 0); // the marches at their floor: the arrivals give the rest
+      if (over > 0 && arr > 0) for (const s of list) s.ms.arrive = Math.max(0, Math.round(s.ms.arrive * (1 - over / arr)));
+    }
     return list;
   };
   // the caption of a move ("Trương Liêu vây Hu Dị"): the general when the View names him, else the side
@@ -84,7 +88,7 @@
   // waits a tap cuts short
   const Stage = () => {
     const st = { skipped: false, waits: new Set() };
-    st.wait = (ms) => new Promise((res) => { if (st.skipped || ms <= 0) { res(); return; } const done = () => { clearTimeout(tm); st.waits.delete(done); res(); }; const tm = setTimeout(done, ms); st.waits.add(done); });
+    st.wait = (ms) => new Promise((res) => { if (st.skipped || ms <= 0) { res(); return; } const done = () => { clearTimeout(tm); st.waits.delete(done); res(); }; const tm = setTimeout(done, ms * ((E && E.sc && E.sc.play && E.sc.play.slow) || 1)); st.waits.add(done); });
     st.race = (p, ms) => Promise.race([p, st.wait(ms)]);
     st.skip = () => { st.skipped = true; for (const d of [...st.waits]) d(); };
     return st;
@@ -97,7 +101,7 @@
     if (sh.kind === 'siegeOn') { // the siege goes on: a slow turn over the town and its camp, the season's word on it
       const p = place[sh.town]; if (!p) return;
       if (!P.hasCamp(sh.town)) { const b = stB[(after.armies.find((a) => a.besieging === sh.town) || {}).id]; P.camp(sh.town, sh.fid, 3000, b ? Math.atan2(b.z - p.z, b.x - p.x) : 0, 0); }
-      const az = sc.cam.az, t0 = performance.now(), ms = sh.ms.arrive;
+      const az = sc.cam.az, t0 = P.now(), ms = sh.ms.arrive;
       P.rig((now) => ({ t: [p.x, p.z], dist: 24, az: az + 0.3 * clamp((now - t0) / ms, 0, 1), el: 0.6, k: 2.6 }));
       caption(sh.line, { ms });
       await stage.wait(ms);
@@ -126,7 +130,7 @@
     const az = M.azFor(a0, a1), el = 0.66, all = legs.flatMap((l) => [l.pts[0], l.pts[Math.floor(l.pts.length / 2)], l.pts[l.pts.length - 1]]);
     const fit = P.fitPts(all, az, el, 1.15), dist = clamp(fit.dist, 26, 85), cam = { t: fit.t.slice(), dist, az, el };
     P.rig(() => { const p = P.at(lead.m.id) || cam.t; return { t: [cam.t[0] + (p[0] - cam.t[0]) * 0.45, cam.t[1] + (p[1] - cam.t[1]) * 0.45], dist: cam.dist, az: cam.az, el: cam.el, k: 2.2 }; });
-    const t0 = performance.now() + 280, marchMs = sh.ms.march;
+    const t0 = P.now() + 280, marchMs = sh.ms.march;
     const runs = legs.map((l, k) => P.march(l.m.id, { pts: l.pts, end: l.end, kind: l.m.kind === 'retreat' ? 'retreat' : 'march', ms: l.m.kind === 'leave' ? marchMs * 1.1 : marchMs, t0: t0 + k * 200, face: l.face }));
     cue('march', { kind: lead.m.kind, arm: lead.m.arm });
     const names = [...new Set(legs.map((l) => M.say(l.m, (l.site && l.site.name) || '', sideName(l.m.fid))))];
@@ -175,7 +179,7 @@
     stage = Stage();
     try {
       // a short move in, low over the town, turning slowly while the standards change
-      const az = sc.cam.az + 0.2, t0 = performance.now(), ms = 3400, R = P.townR(taken.town) || 2.3;
+      const az = sc.cam.az + 0.2, t0 = P.now(), ms = 3400, R = P.townR(taken.town) || 2.3;
       P.rig((now) => ({ t: [p.x, p.z], dist: clamp(R * 9, 18, 30), az: az + 0.32 * clamp((now - t0) / ms, 0, 1), el: 0.5, k: 2.8 }));
       await stage.wait(500);
       await stage.race(P.beat(taken.town, { ms: 2600, onSwap: () => cue('flag', { town: taken.town, to: taken.to }) }), 3000);

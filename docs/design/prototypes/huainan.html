@@ -5,6 +5,7 @@
      of docs/design/v2-fixtures/ (or data/scenario/huainan.json when it exists). Serve the repo root (node server/server.js) and open
        docs/design/prototypes/huainan.html?view=start|season2 &shot=overview|town:<id>|army:<id> &battle=turn1|turn3|over &tier=high|mid|low
        &w=&h=&dpr=  &d=&az=&el= (camera)  &data=fixture (skip the scenario file)  &probe=1 (taps on everything, the answers in __extra)
+       &order=1 (orders drawn along their roads) &camp=<town> (a siege camp) &play=1 (a season played on the map, then its beats) &slowmo=N
      Sets window.__done when drawn; window.__extra = { measure, times, … } for tools/shoot.mjs. -->
 <style>html,body{margin:0;background:#15120f;overflow:hidden}canvas{display:block}</style>
 </head><body>
@@ -21,6 +22,7 @@
 <script src="../../../src/world/world-runtime.js"></script>
 <script src="../../../src/world/han-models.js"></script>
 <script src="../../../src/world/huainan-scene.js"></script>
+<script src="../../../src/world/huainan-map-play.js"></script>
 <script>
 (async () => {
   const q = new URLSearchParams(location.search), ROOT = '../../../', FIX = ROOT + 'docs/design/v2-fixtures/';
@@ -92,6 +94,21 @@
     }
     extra.fleets = Object.fromEntries(Object.entries(sc.armies).filter(([, m]) => m.a.arm === 'fleet').map(([k, m]) => [k, { at: m.a.at, to: m.to.map((v) => +v.toFixed(2)), riverSD: +rt.terr.riverSD(m.to[0], m.to[2]).toFixed(2) }]));
     extra.waterNear = Object.fromEntries(Object.entries(sc.place).filter(([, p]) => p.kind === 'town').map(([k, p]) => { let mn = 1e9; for (let r = 0.5; r < 14; r += 0.5) for (let a = 0; a < 6.28; a += 0.2) mn = Math.min(mn, rt.terr.riverSD(p.x + Math.cos(a) * r, p.z + Math.sin(a) * r)); return [k, +mn.toFixed(2)]; }));
+    // ?camp=<town>: a siege camp round that town (pitched at once; &slowmo=N and &rise=1 to watch it go up), smoke over its walls
+    if (q.get('camp') && sc.place[q.get('camp')]) { const p = sc.place[q.get('camp')], a0 = sc.armies.a1; sc.play.camp(p.id, 'zhu_yuanzhang', 5000, a0 ? Math.atan2(a0.to[2] - p.z, a0.to[0] - p.x) : 0, q.get('rise') ? 1300 : 0); if (!q.get('shot')) sc.flyTo({ t: [p.x, p.z], dist: 26, el: 0.62 }); sc.settle(); }
+    // ?play=1: a season on the map (src/world/huainan-map-play.js) from the fixture's start: our a1 besieges Hu Dị, Trương Liêu
+    // takes Âm Lăng, Ngô takes Lịch Dương; then each change of hands on its beat. &slowmo=N to watch it slowly
+    if (q.get('play') && window.HuaiNanMapPlay) {
+      const after = JSON.parse(JSON.stringify(view)), next = await json(FIX + 'view-season2.json');
+      Object.assign(after, { towns: next.towns, armies: next.armies.map((a) => (a.id === 'a1' ? Object.assign({}, a, { at: 'hu_di', besieging: 'hu_di' }) : a)), pending: false });
+      after.moves = [{ id: 'a1', from: 'chung_ly', to: 'hu_di' }, { id: 'e1', from: 'tho_xuan', to: 'am_lang', attack: true }, { id: 'e2', from: 'lich_duong', to: 'lich_duong', attack: true }];
+      after.report = { season: 'Thu 219', lines: [], fought: [], income: null, towns: 1, taken: [{ town: 'am_lang', from: 'zhu_yuanzhang', to: 'cao_cao', siege: false }, { town: 'lich_duong', from: 'local', to: 'sun_quan', siege: false }] };
+      const env = { sc, data, fast: false, ui: null };
+      sc.play.hold = true; sc.loop(null);
+      const t0 = performance.now(); await HuaiNanMapPlay.playback({ before: view, after }, env); extra.playbackMs = Math.round(performance.now() - t0);
+      for (const t of after.report.taken) { sc.focus(t.town); await HuaiNanMapPlay.beat({ taken: t, view: after }, env); }
+      sc.play.flushBeats(); Object.assign(view, after);
+    }
     if (q.get('measure') !== '0') extra.measure = sc.measure();
     if (q.get('tri')) { // where the triangles are: the visible meshes, biggest first (one pass; the shadow pass draws the casters again)
       const rows = [], vis = (o) => { for (let p = o; p; p = p.parent) if (!p.visible) return false; return true; };

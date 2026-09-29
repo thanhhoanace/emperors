@@ -168,6 +168,9 @@
     const HM = HanModels.create({ recv, renderer: rt.renderer, colors: COLOR });
     const seedOf = (id) => [...id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 2147483647, 7) || 1;
     const ease = (u) => (u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2);
+    // the map's clock: real time, or slowed for review and for recording clips (&slowmo=N, or HuaiNanScene.slowmo = N)
+    const TS = Math.max(1, Number(S.slowmo) || (typeof location !== 'undefined' ? Number(new URLSearchParams(location.search).get('slowmo')) : 0) || 1);
+    const clock = () => performance.now() / TS;
     const backOut = (u) => { const c = 1.5; return 1 + (c + 1) * Math.pow(u - 1, 3) + c * Math.pow(u - 1, 2); };
 
     // ------------------------------------------------------------ places: the data's towns (a runtime seat or a lon/lat) and the seats round them
@@ -805,7 +808,7 @@
       endFly(); endRig();
       const from = JSON.parse(JSON.stringify(cam)), goal = Object.assign(JSON.parse(JSON.stringify(cam)), to);
       goal.az = from.az + S.turn(from.az, goal.az); // the short way round
-      anim = { from, to: goal, t0: performance.now(), ms: Math.max(1, ms) }; dirty = true;
+      anim = { from, to: goal, t0: clock(), ms: Math.max(1, ms) }; dirty = true;
     };
     const fly = (to, ms = 900) => new Promise((res) => { flyTo(to, ms); anim.done = res; });
     const rig = (fn, done) => { endFly(); endRig(); rigFn = fn; rigDone = done || null; dirty = true; };
@@ -813,7 +816,7 @@
     // round a place (or an army, or [x, z]) for ms: o.turn radians (default 0.9), o.dist, o.el, from o.az (default: where the camera is)
     const orbit = (id, ms = 4000, o2 = {}) => new Promise((res) => {
       const p = ptOf(id); if (!p) { res(); return; }
-      const az0 = o2.az ?? cam.az, turn = o2.turn ?? 0.9, dist = o2.dist ?? Math.min(cam.dist, 30), el = o2.el ?? 0.62, t0 = performance.now();
+      const az0 = o2.az ?? cam.az, turn = o2.turn ?? 0.9, dist = o2.dist ?? Math.min(cam.dist, 30), el = o2.el ?? 0.62, t0 = clock();
       rig((now) => { const u = clamp((now - t0) / ms, 0, 1); return { t: p, dist, az: az0 + turn * u, el, k: 3, end: u >= 1 }; }, res);
     });
     const focus = (id) => {
@@ -998,7 +1001,7 @@
     const pitchCamp = (id, fid, men, home, o2 = {}) => {
       if (!place[id] || place[id].kind !== 'town') return null;
       dropCamp(id);
-      const g = new T.Group(), lay = campLayout(id, home), c = { id, fid, men, home, g, lay, u: o2.ms ? 0 : 1, t0: performance.now(), ms: o2.ms || 0, state: o2.ms ? 'rising' : 'up', hold: false, stds: [], ext: null, tents: null, pal: null, towers: null, cmd: null };
+      const g = new T.Group(), lay = campLayout(id, home), c = { id, fid, men, home, g, lay, u: o2.ms ? 0 : 1, t0: clock(), ms: o2.ms || 0, state: o2.ms ? 'rising' : 'up', hold: false, stds: [], ext: null, tents: null, pal: null, towers: null, cmd: null };
       if (HM.siegeCamp) { // the kit's camp (job 6): rotated so its front (+x) faces out from the besiegers' side
         try { c.ext = HM.siegeCamp({ fid, men, r: lay.Rc, seed: seedOf(id) }); c.ext.rotation.y = -home; c.ext.traverse(colored); g.add(c.ext); if (c.ext.userData && c.ext.userData.fires) lay.fires = c.ext.userData.fires.map((f) => ({ x: f[0] * Math.cos(home) + f[2] * Math.sin(home), z: -f[0] * Math.sin(home) + f[2] * Math.cos(home), acc: Math.random() })); } catch (e) { console.warn('HM.siegeCamp:', e); c.ext = null; }
       }
@@ -1013,7 +1016,7 @@
       g.visible = !BT.on; root.add(g); camps[id] = c; layCamp(c); dirty = true;
       return c;
     };
-    const strikeCamp = (id, ms = 1000) => { const c = camps[id]; if (!c || c.state === 'striking') return; c.state = 'striking'; c.hold = false; c.t0 = performance.now(); c.ms = ms; c.u0 = c.u; dirty = true; };
+    const strikeCamp = (id, ms = 1000) => { const c = camps[id]; if (!c || c.state === 'striking') return; c.state = 'striking'; c.hold = false; c.t0 = clock(); c.ms = ms; c.u0 = c.u; dirty = true; };
     // camps going up or coming down; their fires and the smoke over the walls they besiege, while the map shows
     const stepCamps = (now, dt) => {
       let any = false;
@@ -1063,7 +1066,7 @@
       const to = t.pend !== undefined ? t.pend : t.fid;
       if (!t.std || !to) { if (to !== t.fid) setOwner(id, to); release(id); strikeHeld(id); res(); return; }
       t.pend = undefined; t.beating = to;
-      beats.push({ id, to, t0: performance.now() + (o2.delay || 0), ms: o2.ms || 2600, swapped: false, struck: false, onSwap: o2.onSwap, done: res });
+      beats.push({ id, to, t0: clock() + (o2.delay || 0), ms: o2.ms || 2600, swapped: false, struck: false, onSwap: o2.onSwap, done: res });
       dirty = true;
     });
     const endBeat = (b) => {
@@ -1081,7 +1084,7 @@
       // a ring of the new colour on the ground round the walls, and sparks at the top of the pole
       const ring = new T.Mesh(ringGeo, new T.MeshBasicMaterial({ color: COLOR[b.to] || GOLD, transparent: true, opacity: 0.9, depthWrite: false }));
       ring.material.userData.own = true; ring.position.set(p.x, p.y + 0.15, p.z); ring.renderOrder = 6; root.add(ring);
-      pulses.push({ m: ring, t0: performance.now(), ms: 1300, r0: (p.size / 2) * ts, r1: (p.size / 2 + 3.2) * ts });
+      pulses.push({ m: ring, t0: clock(), ms: 1300, r0: (p.size / 2) * ts, r1: (p.size / 2 + 3.2) * ts });
       const top = new T.Vector3(); t.std.getWorldPosition(top); top.y += ud.h * ts;
       for (let i = 0; i < 16; i++) { const a = Math.random() * 6.2832; emit('spark', top.x, top.y, top.z, { s: ts * 1.6, v: [Math.cos(a) * 1.4 * ts, (0.6 + Math.random()) * ts, Math.sin(a) * 1.4 * ts], col: i % 3 ? 0xffe2a0 : COLOR[b.to] }); }
     };
@@ -1121,7 +1124,7 @@
       if (!pts || pts.length < 2) { const p = (pts && pts[0]) || [m.g.position.x, m.g.position.z]; pts = [p, p]; }
       const tr = S.track(pts), ms = o2.ms || clamp(900 + tr.L * 42, 1100, 2600);
       m.away = false; m.shrink = undefined;
-      return new Promise((res) => { m.moving = { tr, t0: o2.t0 ?? performance.now(), ms, end: o2.end || 'stand', face: o2.face, kind: o2.kind || 'march', done: res, acc: 0 }; dirty = true; });
+      return new Promise((res) => { m.moving = { tr, t0: o2.t0 ?? clock(), ms, end: o2.end || 'stand', face: o2.face, kind: o2.kind || 'march', done: res, acc: 0 }; dirty = true; });
     };
     const stepMarch = (now, dt) => {
       let any = false;
@@ -1237,7 +1240,7 @@
     const battleShow = (b, me, ms0) => {
       if (!BT.on || BT.site !== b.site) battleBegin({ site: b.site, from: b.from, me, siege: b.siege, walls: b.walls });
       if (me) BT.me = me;
-      const now = performance.now(), cells = {}, fresh = !Object.keys(BT.wings).length;
+      const now = clock(), cells = {}, fresh = !Object.keys(BT.wings).length;
       const turnKey = b.turn + ':' + ((b.log && b.log.length) || 0) + ':' + !!b.over, again = BT.shown === turnKey; BT.shown = turnKey;
       const ev = (!again && b.log && b.log.length && b.log[b.log.length - 1].ev) || [], acted = !fresh && ev.length > 0;
       const ms = ms0 || (fresh ? 900 : acted ? 1900 : 900);
@@ -1413,6 +1416,7 @@
     const draw = () => rt.render();
     const frame = (now) => {
       if (!running) return;
+      now /= TS; // the frame's time on the map's clock
       const dt = clamp((now - (last || now)) / 1000, 0, 0.25); last = now;
       if (rigFn) {
         const r = rigFn(now);
@@ -1447,7 +1451,7 @@
     // jump every animation to its end and draw (tests, harness; also a skip)
     const finish = () => {
       if (anim) { Object.assign(cam, anim.to); endFly(); setView(makeView()); scaleMarkers(); }
-      const far = performance.now() + 1e6;
+      const far = clock() + 1e6;
       stepMarch(far, 0); stepBeats(far);
       for (const c of Object.values(camps)) if (c.state === 'rising') { c.u = 1; c.state = 'up'; layCamp(c); } else if (c.state === 'striking') dropCamp(c.id);
       stepBattle(far, 0);
@@ -1463,6 +1467,7 @@
 
     // ------------------------------------------------------------ the season on the map, for its director (src/world/huainan-map-play.js)
     const play = {
+      now: clock, slow: TS,
       get hold() { return holdBeats; }, set hold(v) { holdBeats = !!v; if (!v) flushBeats(); },
       view: () => view,
       stands: (v) => standsFor(v),
