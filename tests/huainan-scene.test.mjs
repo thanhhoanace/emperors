@@ -108,3 +108,102 @@ test('the fixture data the scene reads: towns with a seat or a lon/lat, seats, f
     for (const a of v.armies) assert.ok(d.factions[a.fid], a.fid);
   }
 });
+
+// ---------------------------------------------------------------- the living map (docs/design/v2-polish.md job 5): roads, the season's playback
+const MP = require(path.join(ROOT, 'src/world/huainan-map-play.js'));
+
+test('A* finds the cheap way round a costly block, and says when there is no way', () => {
+  const nx = 12, nz = 8, cost = new Float32Array(nx * nz).fill(1);
+  for (let z = 0; z < 7; z++) cost[z * nx + 6] = 50; // a wall down column 6, open only at the bottom row
+  const s = 3 * nx + 1, g = 3 * nx + 10, cells = S.astar(cost, nx, nz, s, g, 1);
+  assert.equal(cells[0], s); assert.equal(cells[cells.length - 1], g);
+  assert.ok(cells.some((k) => k === 7 * nx + 6), 'through the gap, not the wall');
+  for (let k = 1; k < cells.length; k++) { const a = cells[k - 1], b = cells[k]; assert.ok(Math.abs((a % nx) - (b % nx)) <= 1 && Math.abs(((a / nx) | 0) - ((b / nx) | 0)) <= 1, 'steps between neighbours'); }
+  const shut = new Float32Array(nx * nz).fill(1); for (let z = 0; z < nz; z++) shut[z * nx + 6] = Infinity;
+  assert.equal(S.astar(shut, nx, nz, s, g, 1), null);
+});
+
+test('a path: its length, points along it, cut short at either end, rounded and resampled', () => {
+  const pts = [[0, 0], [10, 0], [10, 10]];
+  assert.equal(S.pathLen(pts), 20);
+  const tr = S.track(pts);
+  assert.deepEqual(tr.at(0.25).slice(0, 2), [5, 0]);
+  assert.deepEqual(tr.at(0.75), [10, 5, 0, 1]);
+  assert.deepEqual(tr.at(1).slice(0, 2), [10, 10]);
+  const cut = S.cutEnd(pts, 4);
+  assert.ok(Math.abs(Math.hypot(cut[cut.length - 1][0] - 10, cut[cut.length - 1][1] - 10) - 4) < 1e-9, 'halts 4 short of the end');
+  assert.deepEqual(S.cutStart(pts, 3)[0], [3, 0]);
+  const round = S.chaikin(pts, 2);
+  assert.deepEqual(round[0], [0, 0]); assert.deepEqual(round[round.length - 1], [10, 10]);
+  assert.ok(S.pathLen(round) < 20, 'the corner is cut');
+  const rs = S.resample(pts, 0.6);
+  for (let k = 1; k < rs.length; k++) assert.ok(Math.hypot(rs[k][0] - rs[k - 1][0], rs[k][1] - rs[k - 1][1]) <= 0.6 + 1e-9);
+});
+
+test('a shortcut keeps a road that pays and straightens a staircase that does not', () => {
+  const stairs = [[0, 0], [1, 0], [1, 1], [2, 1], [2, 2], [3, 2], [3, 3]];
+  assert.deepEqual(S.shortcut(stairs, () => 1, 0.25), [[0, 0], [3, 3]], 'open ground: one straight run');
+  const road = [[0, 0], [5, 0], [5, 5]], costAt = (x, z) => (z < 0.5 || x > 4.5 ? 0.5 : 3); // along the road is cheap, across the field dear
+  assert.deepEqual(S.shortcut(road, costAt, 0.25), road, 'the road is kept');
+});
+
+test('an order badge says what and how many days, foot slower than horse and boats', () => {
+  assert.equal(S.marchDays(60, 'land', false), 4);
+  assert.equal(S.marchDays(60, 'land', true), 2);
+  assert.equal(S.marchDays(60, 'fleet', false), 2);
+  assert.equal(S.marchDays(3, 'land', false), 1, 'at least a day');
+  assert.equal(S.orderBadge('siege', 3), 'Vây · 3 ngày');
+  assert.equal(S.orderBadge('attack', 2), 'Đánh · 2 ngày');
+  assert.equal(S.orderBadge('move', 1), 'Tới · 1 ngày');
+  assert.ok(Math.abs(S.turn(0.1, 6.2) - (6.2 - 2 * Math.PI - 0.1)) < 1e-9, 'the short way round');
+});
+
+const PB = {
+  before: { me: 'zhu', armies: [{ id: 'a1', fid: 'zhu', arm: 'land', at: 'cl', gen: { name: 'Chu Nguyên Chương' } }, { id: 'a2', fid: 'zhu', arm: 'fleet', at: 'cl' }, { id: 'e1', fid: 'cao', arm: 'land', at: 'tx', gen: { name: 'Trương Liêu' } }, { id: 'e2', fid: 'wu', arm: 'fleet', at: 'ld' }], towns: [] },
+  after: {
+    me: 'zhu', pending: true, towns: [{ id: 'hd', name: 'Hu Dị' }],
+    armies: [{ id: 'a1', fid: 'zhu', arm: 'land', at: 'hd', besieging: 'hd', gen: { name: 'Chu Nguyên Chương' } }, { id: 'a2', fid: 'zhu', arm: 'fleet', at: 'hd' }, { id: 'e1', fid: 'cao', arm: 'land', at: 'tx', gen: { name: 'Trương Liêu' } }],
+    moves: [{ id: 'e2', from: 'ld', to: null, leave: true }, { id: 'a1', from: 'cl', to: 'hd' }, { id: 'e1', from: 'tx', to: 'al', attack: true }, { id: 'a2', from: 'cl', to: 'hd' }, { id: 'ghost', from: 'x', to: 'y' }],
+  },
+};
+
+test('the playback plays our moves first, then the others, never an army neither View holds', () => {
+  const shots = MP.plan(PB.before, PB.after);
+  const ids = shots.flatMap((s) => s.moves.map((m) => m.id));
+  assert.ok(!ids.includes('ghost'), 'a hidden army plays no part');
+  assert.deepEqual(shots.map((s) => s.kind), ['siege', 'march', 'leave', 'attack']);
+  assert.deepEqual(shots[0].moves.map((m) => m.id), ['a1']);
+  assert.ok(shots.slice(0, 2).every((s) => s.moves.every((m) => m.mine)), 'ours first');
+  assert.equal(shots[3].clash, false, 'a battle is pending: the attack halts at its line');
+  const total = shots.reduce((n, s) => n + s.ms.march + s.ms.arrive + 250, 0);
+  assert.ok(total <= 11000, 'a season in about ten seconds: ' + total);
+});
+
+test('many moves squeeze into the budget; a siege that goes on gets a look; an attack between others ends in a clash', () => {
+  const armies = [], moves = [];
+  for (let k = 0; k < 9; k++) { armies.push({ id: 'z' + k, fid: 'zhu', arm: 'land', at: 't' + k }); moves.push({ id: 'z' + k, from: 's' + k, to: 't' + k }); }
+  armies.push({ id: 'e1', fid: 'cao', arm: 'land', at: 'tx' }, { id: 'b1', fid: 'zhu', arm: 'land', at: 'hd', besieging: 'hd' });
+  moves.push({ id: 'e1', from: 'tx', to: 'al', attack: true });
+  const before = { me: 'zhu', armies: armies.concat([]).map((a) => (a.id === 'b1' ? a : Object.assign({}, a))) };
+  const after = { me: 'zhu', pending: false, armies, moves, towns: [{ id: 'hd', name: 'Hu Dị' }], report: { lines: ['Hu Dị bị vây: đồn còn 800, lũy còn 1.'], taken: [] } };
+  const shots = MP.plan(before, after);
+  assert.ok(shots.length <= 6, shots.length + ' shots');
+  assert.equal(shots[shots.length - 1].kind, 'many', 'the tail plays at once');
+  const total = shots.reduce((n, s) => n + s.ms.march + s.ms.arrive + 250, 0);
+  assert.ok(total <= 11000, String(total));
+  const few = MP.plan(before, Object.assign({}, after, { moves: [moves[9]] }));
+  assert.deepEqual(few.map((s) => s.kind), ['siegeOn', 'attack']);
+  assert.equal(few[0].line, 'Hu Dị bị vây: đồn còn 800, lũy còn 1.');
+  assert.equal(few[1].clash, true);
+});
+
+test('captions name the general the View names, else the side; the camera looks across a march', () => {
+  const shots = MP.plan(PB.before, PB.after);
+  assert.equal(MP.say(shots[0].moves[0], 'Hu Dị'), 'Chu Nguyên Chương vây Hu Dị');
+  assert.equal(MP.say(shots[2].moves[0], '', 'Ngô'), 'Quân Ngô rời Hoài Nam');
+  assert.equal(MP.say(shots[3].moves[0], 'Âm Lăng'), 'Trương Liêu đánh Âm Lăng');
+  assert.equal(MP.azFor([0, 0], [10, 0]), 0, 'east: from the south, left to right');
+  assert.ok(Math.abs(MP.azFor([0, 0], [-10, 0.5])) < 0.1, 'west: the same side, right to left');
+  const ns = MP.azFor([0, 0], [0, 10]);
+  assert.ok(Math.abs(ns - 0.3) <= 0.75 + 1e-9, 'never far from north up');
+});
