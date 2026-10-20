@@ -14,6 +14,8 @@ const CDN = /^https:\/\/cdn\.jsdelivr\.net\/npm\/three@[^/]+\/(.+)$/;
 const [W, H] = [844, 390];
 const want = process.argv.slice(2);
 const todo = (n) => !want.length || want.includes(n);
+// a named set with only ad hoc shots runs nothing else
+if (want.length && want.every((x) => x.includes('='))) want.push('__none__');
 const report = { shots: {}, errors: [] };
 const browser = await puppeteer.launch({ headless: false, executablePath: process.env.PUPPETEER_EXECUTABLE_PATH, protocolTimeout: 900000,
   args: ['--no-sandbox', '--enable-webgl', '--ignore-gpu-blocklist', '--use-gl=angle', '--use-angle=swiftshader-webgl', `--window-size=${W},${H + 120}`] });
@@ -24,14 +26,19 @@ async function open(query, dpr) {
   page.on('request', (req) => { const m = req.url().match(CDN), f = m && path.join(ROOT, 'node_modules/three', m[1]); if (f && fs.existsSync(f)) return req.respond({ status: 200, contentType: 'application/javascript', body: fs.readFileSync(f) }); req.continue(); });
   page.on('pageerror', (e) => { report.errors.push(e.message); console.error('PAGE_ERROR', e.message); });
   page.on('console', (m) => { if (m.type() === 'error') { report.errors.push(m.text()); console.error('CONSOLE_ERROR', m.text()); } });
-  await page.goto(BASE + 'paper.html?' + query, { waitUntil: 'load', timeout: 120000 });
-  await page.waitForFunction(() => window.__done || window.__error, { timeout: 300000, polling: 500 });
+  await page.goto(query.startsWith('/') ? BASE + query.slice(1) : BASE + 'paper.html?' + query, { waitUntil: 'load', timeout: 120000 });
+  await page.waitForFunction(() => window.__done || window.__error, { timeout: 600000, polling: 500 });
   const err = await page.evaluate(() => window.__error); if (err) throw new Error(err);
   await new Promise((r) => setTimeout(r, 700));
   return page;
 }
 const snap = async (page, name) => { await new Promise((r) => setTimeout(r, 900)); await page.screenshot({ path: path.join(OUT, name + '.png') }); const e = await page.evaluate(() => window.__extra); report.shots[name] = e; console.log(name, JSON.stringify(e)); };
 try {
+  // ad hoc: name=query (e.g. town=map=huainan&tier=high&focus=am_lang&zoom=20), optional @WxH@dpr suffix on the name
+  for (const a of want.filter((x) => x.includes('='))) {
+    const i = a.indexOf('='), name = a.slice(0, i), q = a.slice(i + 1);
+    const p = await open(q); await snap(p, name); await p.close();
+  }
   if (todo('default')) { const p = await open('tier=mid'); await snap(p, 'default'); await p.close(); }
   if (todo('zoom')) { const p = await open('tier=mid&focus=am_lang&zoom=46'); await snap(p, 'zoom'); await p.close(); }
   if (todo('zoomhigh')) { const p = await open('tier=high&focus=am_lang&zoom=42'); await snap(p, 'zoomhigh'); await p.close(); }

@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="icon" href="data:,">
-<title>Hoài Nam bằng giấy</title>
+<title>Thiên hạ bằng giấy</title>
 <style>
 :root{--ink:#3b3226;--card:#fbf3e2;--edge:#d9c7a3;--accent:#c4573a;--bg1:#cfe5e6;--bg2:#f6ead2}
 html,body{margin:0;height:100%;overflow:hidden;touch-action:none;color:var(--ink);font:600 13px/1.25 "Be Vietnam Pro","Noto Sans",system-ui,sans-serif;
@@ -22,6 +22,11 @@ button[disabled]{opacity:.5}
 #toast.on{opacity:1}
 .lbl{position:fixed;left:0;top:0;z-index:4;pointer-events:none;white-space:nowrap;font-size:11px;font-weight:700;background:rgba(251,243,226,.92);border-radius:6px;padding:1px 6px 1px 4px;box-shadow:0 1px 0 var(--edge);will-change:transform}
 .lbl i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:-0.5px;box-shadow:0 0 0 1.5px #fff8}
+.lbl small{display:none;font-weight:600;opacity:.75;margin-left:4px;font-size:10px}
+.lbl.city small{display:inline}
+.legend{right:max(10px,env(safe-area-inset-right));bottom:10px;display:flex;gap:7px;font:700 13px/1 "WenQuanYi Zen Hei","Noto Sans CJK SC",serif}
+.legend span{display:flex;align-items:center;gap:3px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;box-shadow:0 1px 0 #0003}
 #boot{position:fixed;inset:0;display:grid;place-items:center;z-index:9;font-weight:700;letter-spacing:.06em;transition:opacity .6s}
 #boot.out{opacity:0;pointer-events:none}
 </style></head>
@@ -37,5 +42,8 @@ button[disabled]{opacity:.5}
 <script src="src/engine/battle.js"></script>
 <script src="src/engine/v2/huainan.js"></script>
 <script src="src/world/paper.js"></script>
+<script src="src/world/terrain.js"></script>
+<script src="src/world/terrain-real.js"></script>
+<script src="src/world/paper-world.js"></script>
 <script>PaperKit.boot();</script>
 </body></html>

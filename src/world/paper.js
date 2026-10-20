@@ -113,6 +113,7 @@
     { id: 'giang', hw: 3.1, pts: [[104, 19], [118, 16], [140, 10], [165, 5], [185, 1], [197, 1], [215, -2], [226, -6], [240, -11]] },
   ];
   const TOWN_LEVEL = { chung_ly: 3, tho_xuan: 3, am_lang: 3, hu_di: 4, lich_duong: 3 } // plateaus stand level with (not sunk below) the ground round them;
+  const TOWN_RANK = { tho_xuan: 4, chung_ly: 3, am_lang: 2, hu_di: 2, lich_duong: 1 }; // lũy 0–4: Yuan Shu's old capital, the commandery seat, the counties
   const MOUNTAINS = [ // cx, cz, radius, height (peaks stand on the terrain layers; the back range is the frame's far wall)
     [132, -88, 14, 24], [156, -92, 12, 29], [181, -90, 13, 23], [205, -88, 13, 27], [221, -80, 9, 17],
     [125, -68, 9, 14], [219, -50, 8, 11], [121, -20, 7, 9], [222, 10, 6, 7],
@@ -274,15 +275,17 @@
     buildRivers(out.river, T, pal, Bd);
     const mtns = buildMountains(out.mtn, F, topY, pal, rnd);
     scatterProps(out.props, { F, topY, T, towns, mtns, pal, tier, rnd });
-    for (const t of towns) { const tb = new Builder(); buildTown(tb, t, topY(t.x, t.z), pal); appendScaled(out.props, tb, t.x, topY(t.x, t.z), t.z, TOWN_SCALE); }
+    out.towns = new Builder(); out.townInfo = {};
+    for (const t of towns) { const lv = t.town == null ? 3 : t.town; out.townInfo[t.id] = hanTown(out.towns, { x: t.x, y: topY(t.x, t.z) + 0.54 * TOWN_FIT / townPlate(lv), z: t.z, level: lv, seed: t.id, scale: TOWN_FIT / townPlate(lv) }); }
     buildBackdrop(out.back, pal, Bd, rnd);
     out.mtns = mtns;
     return out;
   }
 
-  const TOWN_SCALE = 1.3;
-  function appendScaled(B, tb, cx, cy, cz, k) { // a sub-builder about (cx, cy, cz), uniformly scaled: normals stay
-    for (let i = 0; i < tb.p.length; i += 3) B.p.push(cx + (tb.p[i] - cx) * k, cy + (tb.p[i + 1] - cy) * k, cz + (tb.p[i + 2] - cz) * k);
+  const TOWN_FIT = 6.7; // a Hoài Nam town's plate half-size (its plateau is PLATEAU.r1)
+  function appendScaled(B, tb, cx, cy, cz, k, tx, ty, tz) { // a sub-builder scaled about (cx, cy, cz) and moved to (tx, ty, tz) (default: stays): normals stay
+    if (tx === undefined) { tx = cx; ty = cy; tz = cz; }
+    for (let i = 0; i < tb.p.length; i += 3) B.p.push(tx + (tb.p[i] - cx) * k, ty + (tb.p[i + 1] - cy) * k, tz + (tb.p[i + 2] - cz) * k);
     for (let i = 0; i < tb.n.length; i++) B.n.push(tb.n[i]);
     for (let i = 0; i < tb.c.length; i++) B.c.push(tb.c[i]);
     B.tris += tb.tris;
@@ -480,68 +483,303 @@
     }
   }
 
-  // a Han town (decision 0006): a paper base plate, a rammed-earth ring wall with folded crenellations and fold lines, red-lacquer gate and
-  // corner pavilions under straight (never curved) slate roofs, a hall, small houses. No brick, no barbican, no upturned eaves.
-  const LACQUER = hex('#b3382a'), SLATE = hex('#3f4a53'), RIDGE = hex('#9aa6ad'), GOLD = hex('#e6b34a');
-  function ridgeBeam(B, cx, y, cz, w, rot) { box(B, cx, y, cz, w, 0.13, 0.2, rot, RIDGE, RIDGE, shade(RIDGE, 0.7)); }
-  function slateGable(B, cx, y, cz, w, d, h, rot, ov, tint) { // the gable() roof in slate, a lighter ridge on top
-    const a = shade(SLATE, tint || 1), b2 = shade(SLATE, (tint || 1) * 0.88);
-    gable(B, cx, y, cz, w, d, h, rot, a, b2, hex('#d9bd90'), ov);
-    ridgeBeam(B, cx, y + h, cz, w + ov * 1.6, rot);
-  }
-  function pavilion(B, cx, y, cz, w, d, h, roofH, roofSpan) { // red-lacquer box under a straight hip roof with a pale ridge
-    box(B, cx, y, cz, w, h, d, 0, shade(LACQUER, 1.05), LACQUER, shade(LACQUER, 0.55));
-    box(B, cx, y + h - 0.12, cz, w + 0.28, 0.12, d + 0.28, 0, shade(GOLD, 0.9), shade(GOLD, 0.8), shade(GOLD, 0.6)); // gilt cornice
-    frustum(B, cx, cz, y + h, y + h + roofH, roofSpan * 0.72, roofSpan * 0.26, 4, Math.PI / 4, shade(SLATE, 0.7), SLATE, { sz: d / w * 0.98 + 0.05, cap: SLATE });
-    box(B, cx, y + h + roofH, cz, roofSpan * 0.52, 0.12, 0.2, 0, RIDGE, RIDGE, shade(RIDGE, 0.7));
-  }
-  function buildTown(B, t, y0, pal) {
-    const r = rng(strSeed(t.id)), S = 3.7, wt = 0.6, wh = 1.05, gap = 1.7;
-    const earth = pal.wall, earthTop = lighten(earth, 0.24), earthLow = shade(earth, 0.62), fold = shade(earth, 0.74), timber = hex('#8d5a3b');
-    const cx = t.x, cz = t.z;
-    // base plate: a terracotta card under a cream card, both with a visible paper edge
-    box(B, cx, y0 - 0.02, cz, 2 * S + 3.4, 0.2, 2 * S + 3.4, 0, pal.plate[1], shade(pal.plate[1], 0.82), shade(pal.plate[1], 0.5));
-    box(B, cx, y0 + 0.16, cz, 2 * S + 2.6, 0.2, 2 * S + 2.6, 0, lighten(pal.plate[0], 0.15), shade(pal.plate[0], 0.9), shade(pal.plate[0], 0.58));
-    const y = y0 + 0.36;
-    const segs = [[-S, -S, S, -S, 'x', 0, -1], [S, -S, S, S, 'z', 1, 0], [-S, S, -gap, S, 'x', 0, 1], [gap, S, S, S, 'x', 0, 1], [-S, -S, -S, S, 'z', -1, 0]];
-    for (const [ax, az, bx, bz, ax_, nx, nz] of segs) {
-      const len = Math.hypot(bx - ax, bz - az), mx = t.x + (ax + bx) / 2, mz = t.z + (az + bz) / 2, ux = (bx - ax) / len, uz = (bz - az) / len;
-      box(B, mx, y, mz, ax_ === 'x' ? len + wt : wt, wh, ax_ === 'x' ? wt : len + wt, 0, earthTop, earth, earthLow);
-      const nc = Math.max(2, Math.round(len / 0.62)), step = len / nc, o = wt / 2 + 0.014;
-      for (let i = 0; i < nc; i++) { // folded crenellations: a tooth for every other slot
-        const s0 = (i + 0.5) * step; if (i & 1) continue;
-        box(B, cx + ax + ux * s0, y + wh, cz + az + uz * s0, ax_ === 'x' ? step * 0.78 : wt + 0.08, 0.42, ax_ === 'x' ? wt + 0.08 : step * 0.78, 0, earthTop, shade(earth, 1.04), earth);
+  // ---------------------------------------------------------------- the Han town as crafted paper (decision 0006: straight roofs, rammed
+  // earth, no brick, no barbican). Layout after the v2 model (han-models.js HM.town): a square wall by level (lũy 0–4) with a gate
+  // in each side under a gate tower, corner towers, bastions from level 3, a moat from level 3, the governor's compound north of
+  // the centre facing south, the main streets crossing at a watchtower, courtyard houses in blocks, a market with awnings,
+  // granaries, trees. Paper: card walls with folded crenellations and a lighter cap, slate roofs with a pale ridge and faint tile
+  // folds, red-lacquer gate towers, cream courtyard walls, doors cut as dark slits, all on a two-card base plate.
+  const LACQUER = hex('#a8362a'), SLATE = hex('#4d5868'), RIDGE = hex('#d9ddda'), GOLD = hex('#d9a441');
+  const TOWNC = {
+    earth: hex('#d4b080'), cap: hex('#f1e2c0'), cream: hex('#f3ead6'), creamCap: hex('#5b6470'), slit: hex('#2b2421'), pave: hex('#e9dcc0'),
+    street: hex('#efe4cb'), yard: hex('#d6bd8c'), wood: hex('#8c6142'), thatch: hex('#d8b56a'), plateTop: hex('#f4ead5'), plateLow: hex('#c96f4a'),
+    moat: hex('#3f8f94'), moatDeep: hex('#2a6f78'), foam: hex('#f6f2e6'), field: ['#c9b26a', '#a9a85e', '#d4b878', '#b58f58', '#93a06a', '#dcc98e', '#b9b07a'].map(hex),
+    awning: ['#a8362a', '#2f5f8a', '#c98a2e', '#4d7a4a'].map(hex), tree: ['#c8743a', '#d6a24a', '#4f7f6a', '#a5532f', '#5d8a6a', '#7f9a5a'].map(hex),
+  };
+  // local units: the wall's half-size, height, thickness, gate width by level
+  const TL = (lv) => ({ R: [2.4, 3.0, 3.6, 4.2, 4.8][lv], H: [0.62, 0.78, 1.08, 1.32, 1.52][lv], wt: [0.12, 0.45, 0.56, 0.66, 0.76][lv], gw: [0.7, 0.75, 0.85, 0.95, 1.05][lv], bast: [0, 0, 0, 2, 4][lv], moat: lv >= 3 });
+  const townPlate = (lv) => { const t = TL(lv); return t.R + t.wt / 2 + (t.moat ? 1.55 : 0.75) + 0.55; };
+  // a straight gable roof (ridge along local x) whose slopes carry faint tile folds, a pale ridge, gable ends in wallCol
+  function tileGable(B, cx, y, cz, w, d, h, rot, col, wallCol, ov, folds) {
+    const R = rotator(cx, y, cz, rot), hz = d / 2 + ov, hx = w / 2 + ov * 0.6, n = folds || 1;
+    for (const s of [-1, 1]) {
+      const nrm = R.dir(0, hz, s * h);
+      for (let i = 0; i < n; i++) {
+        const xa = -hx + (2 * hx * i) / n, xb = -hx + (2 * hx * (i + 1)) / n, c = shade(col, i & 1 ? 0.92 : 1.0), lo = shade(c, 0.82);
+        B.quad(R.pt(xa, 0, s * hz), R.pt(xb, 0, s * hz), R.pt(xb, h, 0), R.pt(xa, h, 0), [lo, lo, c, c], nrm);
       }
-      for (let i = 1; i < Math.round(len / 1.15); i++) { // fold lines running up the wall face
-        const s0 = i * 1.15, px = cx + ax + ux * s0 + nx * o, pz = cz + az + uz * s0 + nz * o, w2 = 0.06;
-        B.quad([px - ux * w2, y + 0.03, pz - uz * w2], [px + ux * w2, y + 0.03, pz + uz * w2], [px + ux * w2, y + wh, pz + uz * w2], [px - ux * w2, y + wh, pz - uz * w2], [shade(fold, 0.8), shade(fold, 0.8), fold, fold], [nx, 0, nz]);
+      B.quad(R.pt(-hx, -0.06, s * hz), R.pt(hx, -0.06, s * hz), R.pt(hx, 0, s * hz), R.pt(-hx, 0, s * hz), shade(col, 0.6), R.dir(0, 0, s)); // the eave's paper edge
+    }
+    const gz = d / 2;
+    for (const s of [-1, 1]) B.tri(R.pt(s * w / 2, 0, -gz), R.pt(s * w / 2, 0, gz), R.pt(s * w / 2, h * 0.94, 0), wallCol, R.dir(s, 0, 0));
+    const rr = rotator(cx, y + h - 0.03, cz, rot);
+    const rw = hx + 0.04, rt = clamp(d * 0.07, 0.025, 0.07), rd = rt, rc = mix(RIDGE, col, d < 0.6 ? 0.45 : 0.15);
+    B.quad(rr.pt(-rw, rt, -rd), rr.pt(rw, rt, -rd), rr.pt(rw, rt, rd), rr.pt(-rw, rt, rd), rc, UP);
+    for (const s of [-1, 1]) B.quad(rr.pt(-rw, 0, s * rd), rr.pt(rw, 0, s * rd), rr.pt(rw, rt, s * rd), rr.pt(-rw, rt, s * rd), shade(rc, 0.8), rr.dir(0, 0, s));
+  }
+  // a straight hip roof over w × d (ridge along x), eaves at y; tile folds on the long slopes; pale ridge and hips
+  function tileHip(B, cx, y, cz, w, d, h, col, ov, folds) {
+    const hx = w / 2 + ov, hz = d / 2 + ov, rx = Math.max(0.02, hx - hz * 0.9), n = folds || 1;
+    const e = [[-hx, -hz], [hx, -hz], [hx, hz], [-hx, hz]].map((p) => [cx + p[0], y, cz + p[1]]), r0 = [cx - rx, y + h, cz], r1 = [cx + rx, y + h, cz];
+    for (const s of [-1, 1]) {
+      const a = s < 0 ? e[0] : e[3], b = s < 0 ? e[1] : e[2], nrm = [0, hz, s * h];
+      for (let i = 0; i < n; i++) {
+        const t0 = i / n, t1 = (i + 1) / n, c = shade(col, i & 1 ? 0.92 : 1), lo = shade(c, 0.82);
+        const A = lerp3(a, b, t0), Bq = lerp3(a, b, t1), C = lerp3(r0, r1, t1), D = lerp3(r0, r1, t0);
+        B.quad(A, Bq, C, D, [lo, lo, c, c], nrm);
       }
     }
-    // corner pavilions
+    B.tri(e[0], e[3], r0, [shade(col, 0.74), shade(col, 0.74), shade(col, 0.9)], [-h, hx, 0]);
+    B.tri(e[2], e[1], r1, [shade(col, 0.74), shade(col, 0.74), shade(col, 0.9)], [h, hx, 0]);
+    // eave paper edge and the pale ridge
+    const lo = [shade(col, 0.55)];
+    for (let i = 0; i < 4; i++) { const a = e[i], b = e[(i + 1) & 3]; B.quad([a[0], y - 0.05, a[2]], [b[0], y - 0.05, b[2]], b, a, lo[0], [(a[0] + b[0]) / 2 - cx, 0, (a[2] + b[2]) / 2 - cz]); }
+    const rt = clamp(d * 0.08, 0.03, 0.08), rc = mix(RIDGE, col, d < 0.6 ? 0.45 : 0.12);
+    box(B, cx, y + h - rt * 0.3, cz, 2 * rx + rt * 2, rt, rt * 1.6, 0, rc, shade(rc, 0.82), shade(rc, 0.7));
+  }
+  // a hall: body (cream walls with lacquer posts, or lacquer), a door slit to the south, a roof
+  function hall(B, cx, y, cz, w, d, h, o) {
+    o = o || {};
+    const body = o.lacquer ? LACQUER : o.wall || TOWNC.cream, bodyLo = shade(body, 0.7);
+    box(B, cx, y, cz, w, h, d, 0, body, body, bodyLo);
+    const f = cz + d / 2 + 0.012, slit = TOWNC.slit;
+    if (!o.lacquer && !o.lite) { // lacquer posts on the front
+      const np = Math.max(2, Math.round(w / 0.45));
+      for (let i = 0; i <= np; i++) { const x = cx - w / 2 + (w * i) / np, pw = 0.035; B.quad([x - pw, y, f], [x + pw, y, f], [x + pw, y + h, f], [x - pw, y + h, f], [shade(LACQUER, 0.8), shade(LACQUER, 0.8), LACQUER, LACQUER], [0, 0, 1]); }
+    }
+    const dw = Math.min(0.26, w * 0.22), dh = h * 0.68;
+    B.quad([cx - dw / 2, y, f + 0.004], [cx + dw / 2, y, f + 0.004], [cx + dw / 2, y + dh, f + 0.004], [cx - dw / 2, y + dh, f + 0.004], slit, [0, 0, 1]);
+    if (o.windows) for (const s of [-1, 1]) { const x = cx + s * w * 0.3; B.quad([x - 0.08, y + h * 0.45, f + 0.004], [x + 0.08, y + h * 0.45, f + 0.004], [x + 0.08, y + h * 0.75, f + 0.004], [x - 0.08, y + h * 0.75, f + 0.004], slit, [0, 0, 1]); }
+    const roof = o.roof || SLATE, rh = o.rh || Math.min(w, d) * 0.42;
+    if (o.hip) tileHip(B, cx, y + h, cz, w, d, rh, roof, o.ov || 0.16, o.lite ? 1 : Math.max(2, Math.round(w / 0.32)));
+    else tileGable(B, cx, y + h, cz, w, d, rh, 0, roof, shade(body, 0.95), o.ov || 0.14, o.lite ? 1 : Math.max(2, Math.round(w / 0.3)));
+  }
+  // a red-lacquer tower (gate or corner): body, a cream band, window slits, a straight hip roof; storeys stack, each smaller
+  function lacquerTower(B, cx, y, cz, w, d, storeys, o) {
+    o = o || {};
+    let yy = y, ww = w, dd = d;
+    for (let s = 0; s < storeys; s++) {
+      const h = (o.h || 0.5) * (s ? 0.82 : 1), top = s === storeys - 1, body = o.timber ? TOWNC.wood : LACQUER;
+      box(B, cx, yy, cz, ww, 0.06, dd, 0, TOWNC.cap, TOWNC.cap, shade(TOWNC.cap, 0.7)); // the floor plank
+      box(B, cx, yy + 0.06, cz, ww * 0.88, h, dd * 0.86, 0, body, body, shade(body, 0.6));
+      const f = cz + dd * 0.43 + 0.012, nw = Math.max(1, Math.round(ww / 0.42));
+      if (!o.lite) for (let i = 0; i < nw; i++) { const x = cx - ww * 0.44 + (ww * 0.88 * (i + 0.5)) / nw; B.quad([x - 0.06, yy + 0.06 + h * 0.35, f], [x + 0.06, yy + 0.06 + h * 0.35, f], [x + 0.06, yy + 0.06 + h * 0.78, f], [x - 0.06, yy + 0.06 + h * 0.78, f], TOWNC.slit, [0, 0, 1]); }
+      yy += 0.06 + h;
+      if (top) tileHip(B, cx, yy, cz, ww * 0.88, dd * 0.86, (o.rh || 0.36) * (s ? 0.9 : 1), o.roof || SLATE, o.ov || 0.28, o.lite ? 1 : 5);
+      else { tileHip(B, cx, yy, cz, ww * 0.88, dd * 0.86, 0.2, o.roof || SLATE, (o.ov || 0.28) * 0.9, o.lite ? 1 : 3); yy += 0.12; ww *= 0.8; dd *= 0.82; } // a skirt eave, then the upper storey
+    }
+  }
+  // one wall run from a to b (local, along x or z), outward normal (nx, nz): card body, lighter cap, folded merlons outside, fold lines
+  function wallRun(B, ax, az, bx, bz, nx, nz, T, lv, lite) {
+    const len = Math.hypot(bx - ax, bz - az); if (len < 0.05) return;
+    const ux = (bx - ax) / len, uz = (bz - az) / len, mx = (ax + bx) / 2, mz = (az + bz) / 2, alongX = Math.abs(ux) > 0.5;
+    const sx = alongX ? len : T.wt, sz = alongX ? T.wt : len, earth = TOWNC.earth, cap = TOWNC.cap;
+    if (lv === 0) { // a palisade: a folded strip of sharpened stakes
+      const n = Math.max(3, Math.round(len / 0.16));
+      for (let i = 0; i < n; i++) {
+        const a = i / n, b = (i + 1) / n, m = (a + b) / 2, o = (i & 1 ? 0.05 : -0.05), h = T.H * (0.86 + 0.14 * ((i * 7) % 3) / 2);
+        const p = (t, off) => [ax + (bx - ax) * t + nx * off, 0, az + (bz - az) * t + nz * off];
+        const pa = p(a, -o), pb = p(b, o), pm = p(m, 0), c = shade(TOWNC.wood, i & 1 ? 1.08 : 0.9);
+        B.quad(pa, pb, [pb[0], h, pb[2]], [pa[0], h, pa[2]], [shade(c, 0.7), shade(c, 0.7), c, c], [nx, 0, nz]);
+        B.tri([pa[0], h, pa[2]], [pb[0], h, pb[2]], [pm[0], h + 0.16, pm[2]], lighten(c, 0.15), [nx, 0.3, nz]);
+        B.quad(pb, pa, [pa[0], h, pa[2]], [pb[0], h, pb[2]], shade(c, 0.8), [-nx, 0, -nz]);
+      }
+      return;
+    }
+    box(B, mx, 0, mz, sx, T.H, sz, 0, cap, earth, shade(earth, 0.62));
+    box(B, mx + nx * 0.03, T.H, mz + nz * 0.03, sx + (alongX ? 0.04 : 0.1), 0.06, sz + (alongX ? 0.1 : 0.04), 0, lighten(cap, 0.2), cap, shade(cap, 0.8)); // the lighter cap, overhanging outside
+    if (lite) return;
+    const np = Math.max(1, Math.floor(len / 0.44)), st = len / np, o = T.wt / 2 - 0.05;
+    for (let i = 0; i < np; i++) { // folded merlons on the outer edge: a little tent of card, its fold catching the light
+      const s0 = (i + 0.5) * st, px = ax + ux * s0 + nx * o, pz = az + uz * s0 + nz * o, hw = st * 0.3, y0 = T.H + 0.06, y1 = y0 + 0.32;
+      const A = [px - ux * hw - nx * 0.05, y0, pz - uz * hw - nz * 0.05], Bq = [px + ux * hw - nx * 0.05, y0, pz + uz * hw - nz * 0.05], C = [px + ux * hw + nx * 0.07, y0, pz + uz * hw + nz * 0.07], D = [px - ux * hw + nx * 0.07, y0, pz - uz * hw + nz * 0.07];
+      const A1 = [A[0], y1, A[2]], B1 = [Bq[0], y1, Bq[2]], C1 = [C[0], y1 - 0.05, C[2]], D1 = [D[0], y1 - 0.05, D[2]];
+      const me = shade(earth, 1.04);
+      B.quad(D, C, C1, D1, [shade(me, 0.82), shade(me, 0.82), me, me], [nx, 0, nz]);
+      B.quad(A1, B1, C1, D1, lighten(cap, 0.2), [nx * 0.3, 1, nz * 0.3]);
+      B.quad(Bq, A, A1, B1, shade(me, 0.75), [-nx, 0, -nz]);
+      B.quad(A, D, D1, A1, shade(me, 0.86), [-ux, 0, -uz]); B.quad(C, Bq, B1, C1, shade(me, 0.86), [ux, 0, uz]);
+    }
+    const fo = T.wt / 2 + 0.012, fold = shade(earth, 0.82);
+    for (const f of lv >= 3 ? [0.3, 0.58, 0.84] : [0.36, 0.7]) { // the courses of rammed earth (timber-laced from lũy 3), a darker scored line
+      const y = T.H * f, c2 = lv >= 3 ? mix(TOWNC.wood, earth, 0.45) : shade(earth, 0.8);
+      B.quad([ax + nx * fo, y, az + nz * fo], [bx + nx * fo, y, bz + nz * fo], [bx + nx * fo, y + 0.045, bz + nz * fo], [ax + nx * fo, y + 0.045, az + nz * fo], c2, [nx, 0, nz]);
+    }
+    for (let s0 = 0.55; s0 < len - 0.2; s0 += 0.62) { // fold lines down the outer face (the card was scored)
+      const px = ax + ux * s0 + nx * fo, pz = az + uz * s0 + nz * fo, w2 = 0.025;
+      B.quad([px - ux * w2, 0.02, pz - uz * w2], [px + ux * w2, 0.02, pz + uz * w2], [px + ux * w2, T.H, pz + uz * w2], [px - ux * w2, T.H, pz - uz * w2], [shade(fold, 0.85), shade(fold, 0.85), fold, fold], [nx, 0, nz]);
+    }
+  }
+  // hanTown(B, { x, y, z, level 0–4, seed, lite }) → { plate, flagAt: [x, y, z], R }. Built at (x, y, z) in local town units.
+  function hanTown(B0, o) {
+    const lv = clamp(o.level == null ? 3 : o.level, 0, 4), T = TL(lv), R = T.R, lite = !!o.lite, r = rng(strSeed(o.seed || 'town') + lv);
+    const B = new Builder(), P = townPlate(lv), sw = 0.22 + lv * 0.03, inner = R - T.wt / 2 - 0.12;
+    // the plate: a terracotta card under a cream card, both with a visible edge
+    box(B, 0, -0.36, 0, 2 * P + 0.5, 0.18, 2 * P + 0.5, 0, TOWNC.plateLow, shade(TOWNC.plateLow, 0.85), shade(TOWNC.plateLow, 0.55));
+    box(B, 0, -0.18, 0, 2 * P, 0.18, 2 * P, 0, TOWNC.plateTop, shade(TOWNC.plateTop, 0.9), shade(TOWNC.plateTop, 0.62));
+    // fields round the wall (outside the moat), cut by the four roads
+    const f0 = R + T.wt / 2 + (T.moat ? 1.45 : 0.15), f1 = P - 0.12;
+    if (f1 - f0 > 0.3) for (let side = 0; side < 4; side++) {
+      let a = -f1;
+      while (a < f1 - 0.1) {
+        const w = 0.35 + r() * 0.6, b = Math.min(f1, a + w);
+        if (b - a > 0.12 && !(a < sw * 1.6 && b > -sw * 1.6)) {
+          const c = shade(TOWNC.field[Math.floor(r() * TOWNC.field.length)], 0.95 + 0.1 * r()), z0 = f0 + 0.05, z1 = f1;
+          const pts = side === 0 ? [[a, z0], [b, z0], [b, z1], [a, z1]] : side === 1 ? [[z0, -b], [z0, -a], [z1, -a], [z1, -b]] : side === 2 ? [[-b, -z0], [-a, -z0], [-a, -z1], [-b, -z1]] : [[-z0, a], [-z0, b], [-z1, b], [-z1, a]];
+          if (Math.abs(pts[0][0]) < f0 + 0.05 && Math.abs(pts[0][1]) < f0 + 0.05 && Math.abs(pts[2][0]) < f0 + 0.05 && Math.abs(pts[2][1]) < f0 + 0.05) { a = b + 0.05; continue; }
+          B.quad(...pts.map((p) => [p[0], 0.012, p[1]]), c, UP);
+          if (!lite) for (let f = 1; f < 4; f++) { const t = f / 4, A = pts[0].map((v, i) => v + (pts[3][i] - v) * t), Bq = pts[1].map((v, i) => v + (pts[2][i] - v) * t), dz2 = 0.025; const nzx = (pts[3][0] - pts[0][0]), nzz = (pts[3][1] - pts[0][1]), nl = Math.hypot(nzx, nzz) || 1; B.quad([A[0], 0.016, A[1]], [Bq[0], 0.016, Bq[1]], [Bq[0] + nzx / nl * dz2, 0.016, Bq[1] + nzz / nl * dz2], [A[0] + nzx / nl * dz2, 0.016, A[1] + nzz / nl * dz2], shade(c, 0.82), UP); }
+        }
+        a = b + 0.06;
+      }
+    }
+    // roads out of the gates and the main streets inside
+    box(B, 0, 0, 0, 2 * sw, 0.03, 2 * P - 0.1, 0, TOWNC.street, TOWNC.street, TOWNC.street);
+    box(B, 0, 0, 0, 2 * P - 0.1, 0.03, 2 * sw, 0, TOWNC.street, TOWNC.street, TOWNC.street);
+    // the moat: a water channel with a foam lip, bridged at the gates
+    if (T.moat) {
+      const m0 = R + T.wt / 2 + 0.35, m1 = m0 + 0.75;
+      for (const [sx, sz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        for (const [a0, a1] of [[-m1, -sw - 0.2], [sw + 0.2, m1]]) {
+          const q = (u, v) => (sx ? [sx * v, 0.035, u] : [u, 0.035, sz * v]);
+          B.quad(q(a0, m0), q(a1, m0), q(a1, m1), q(a0, m1), TOWNC.moat, UP);
+          const q2 = (u, v) => (sx ? [sx * v, 0.045, u] : [u, 0.045, sz * v]);
+          B.quad(q2(a0, m0 + 0.08), q2(a1, m0 + 0.08), q2(a1, m0 + 0.2), q2(a0, m0 + 0.2), TOWNC.foam, UP);
+        }
+        const bx2 = sx * (m0 + m1) / 2, bz2 = sz * (m0 + m1) / 2;
+        box(B, bx2, 0.03, bz2, sx ? 1.0 : 2 * sw + 0.5, 0.08, sx ? 2 * sw + 0.5 : 1.0, 0, shade(TOWNC.wood, 1.15), TOWNC.wood, shade(TOWNC.wood, 0.7));
+      }
+    }
+    // the walls: four sides, each two runs either side of its gate
+    const gh = T.gw / 2, sides = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+    for (const [nx, nz] of sides) {
+      const ux = -nz, uz = nx, cxs = nx * R, czs = nz * R;
+      wallRun(B, cxs - ux * R, czs - uz * R, cxs - ux * gh, czs - uz * gh, nx, nz, T, lv, lite);
+      wallRun(B, cxs + ux * gh, czs + uz * gh, cxs + ux * R, czs + uz * R, nx, nz, T, lv, lite);
+      // bastions (mamian) jutting out
+      for (let b = 0; b < T.bast; b++) {
+        const f = T.bast === 2 ? [-0.55, 0.55][b] : [-0.78, -0.4, 0.4, 0.78][b], px = cxs + ux * f * R + nx * (T.wt / 2 + 0.2), pz = czs + uz * f * R + nz * (T.wt / 2 + 0.2);
+        box(B, px, 0, pz, nx ? 0.42 : 0.56, T.H, nx ? 0.56 : 0.42, 0, TOWNC.cap, TOWNC.earth, shade(TOWNC.earth, 0.6));
+        box(B, px, T.H, pz, nx ? 0.5 : 0.64, 0.06, nx ? 0.64 : 0.5, 0, lighten(TOWNC.cap, 0.2), TOWNC.cap, shade(TOWNC.cap, 0.8));
+        if (lv >= 4) lacquerTower(B, px, T.H + 0.06, pz, 0.42, 0.42, 1, { h: 0.26, rh: 0.2, timber: true, lite });
+      }
+      // the gate: an earth gatehouse block, a dark passage, lacquer doors; the gate tower on top
+      const gx = nx * R, gz = nz * R, gwid = T.gw + 0.7, gdep = T.wt * 1.35;
+      if (lv === 0) {
+        for (const s of [-1, 1]) { const px = gx + ux * s * (gh + 0.05), pz = gz + uz * s * (gh + 0.05); box(B, px, 0, pz, 0.14, T.H + 0.35, 0.14, 0, TOWNC.wood, TOWNC.wood, shade(TOWNC.wood, 0.7)); }
+        box(B, gx, T.H + 0.25, gz, nx ? 0.12 : T.gw + 0.3, 0.1, nx ? T.gw + 0.3 : 0.12, 0, TOWNC.wood, TOWNC.wood, TOWNC.wood);
+        continue;
+      }
+      box(B, gx, 0, gz, nx ? gdep : gwid, T.H + 0.06, nx ? gwid : gdep, 0, TOWNC.cap, shade(TOWNC.earth, 0.97), shade(TOWNC.earth, 0.6));
+      const f = gdep / 2 + 0.014, pw = T.gw * 0.32, ph = T.H * 0.72;
+      const pq = (u, y) => [gx + nx * f + ux * u, y, gz + nz * f + uz * u];
+      B.quad(pq(-pw, 0), pq(pw, 0), pq(pw, ph), pq(-pw, ph), TOWNC.slit, [nx, 0, nz]);
+      for (const s of [-1, 1]) B.quad(pq(s * pw, 0), pq(s * (pw + 0.12), 0), pq(s * (pw + 0.12), ph), pq(s * pw, ph), LACQUER, [nx, 0, nz]); // doors folded open
+      const tw = T.gw + 0.75, td = gdep * 1.05, st = lv >= 3 ? 2 : 1;
+      lacquerTower(B, gx, T.H + 0.06, gz, nx ? td : tw, nx ? tw : td, st, { h: lv === 1 ? 0.42 : 0.56, rh: 0.48, ov: 0.32, timber: lv === 1, roof: lv === 1 ? TOWNC.thatch : SLATE, lite });
+    }
+    // corner towers
     for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-      box(B, cx + sx * S, y, cz + sz * S, 1.3, wh + 0.3, 1.3, 0, earthTop, shade(earth, 0.96), earthLow);
-      pavilion(B, cx + sx * S, y + wh + 0.3, cz + sz * S, 0.95, 0.95, 0.62, 0.62, 1.35);
+      if (lv === 0) { box(B, sx * R, 0, sz * R, 0.3, T.H + 0.45, 0.3, 0, TOWNC.wood, TOWNC.wood, shade(TOWNC.wood, 0.7)); tileHip(B, sx * R, T.H + 0.45, sz * R, 0.34, 0.34, 0.26, TOWNC.thatch, 0.06, 1); continue; }
+      const cw = T.wt * 1.9;
+      box(B, sx * R, 0, sz * R, cw, T.H + 0.14, cw, 0, TOWNC.cap, shade(TOWNC.earth, 0.96), shade(TOWNC.earth, 0.6));
+      if (lv >= 2) lacquerTower(B, sx * R, T.H + 0.14, sz * R, cw * 0.9, cw * 0.9, lv >= 4 ? 2 : 1, { h: 0.46, rh: 0.42, ov: 0.3, lite });
     }
-    // the gate: two earth pylons, red doors, a red-lacquer gatehouse on a timber beam, hip roof
-    const gx = cx, gz = cz + S;
-    box(B, gx - gap - 0.4, y, gz, 1.1, wh + 0.9, 1.6, 0, earthTop, earth, earthLow);
-    box(B, gx + gap + 0.4, y, gz, 1.1, wh + 0.9, 1.6, 0, earthTop, earth, earthLow);
-    for (const sgn of [-1, 1]) box(B, gx + sgn * gap * 0.5, y, gz - 0.2, gap * 0.92, 0.95, 0.1, 0, shade(LACQUER, 0.9), shade(LACQUER, 0.8), shade(LACQUER, 0.5));
-    box(B, gx, y + wh + 0.05, gz, gap * 2 + 0.9, 0.3, 1.5, 0, timber, timber, shade(timber, 0.8));
-    pavilion(B, gx, y + wh + 0.35, gz, gap * 2 + 1.6, 1.4, 0.95, 0.9, gap * 2 + 3.0);
-    // houses: warm walls, dark straight gable roofs with a pale ridge
-    const spots = [[-2.0, -1.8], [1.9, -1.9], [-2.1, 0.6], [2.0, 0.5], [0.1, 1.9]];
-    for (let i = 0; i < spots.length; i++) {
-      const hw = 1.5 + 0.4 * r(), hd = 1.0 + 0.3 * r(), hh = 0.85 + 0.25 * r(), rot = (i & 1 ? 0 : Math.PI / 2) * (r() < 0.25 ? 1 : 0), sx = t.x + spots[i][0], sz = t.z + spots[i][1];
-      const wallC = shade(lighten(earth, 0.1), 0.95 + 0.14 * r());
-      box(B, sx, y, sz, hw, hh, hd, rot, wallC, wallC, shade(wallC, 0.7));
-      slateGable(B, sx, y + hh, sz, hw, hd, 0.75 + 0.15 * r(), rot, 0.3, 0.95 + 0.15 * r());
+    // the khuyet pair before the south gate (a governor's seat and up)
+    if (lv >= 2) for (const s of [-1, 1]) {
+      const qx = s * (gh + 0.55), qz = R + T.wt / 2 + (T.moat ? 1.45 : 0.55), qh = 0.7 + lv * 0.1;
+      box(B, qx, 0, qz, 0.26, qh, 0.22, 0, TOWNC.cream, TOWNC.cream, shade(TOWNC.cream, 0.7));
+      tileHip(B, qx, qh, qz, 0.26, 0.22, 0.14, SLATE, 0.08, 1);
+      if (lv >= 4) { box(B, qx + s * 0.22, 0, qz, 0.18, qh * 0.62, 0.17, 0, TOWNC.cream, TOWNC.cream, shade(TOWNC.cream, 0.7)); tileHip(B, qx + s * 0.22, qh * 0.62, qz, 0.18, 0.17, 0.1, SLATE, 0.06, 1); }
     }
-    // the hall: red-lacquer body on an earth plinth, a bigger straight roof
-    box(B, cx, y, cz - 0.5, 3.0, 0.22, 2.0, 0, earthTop, earthTop, earthLow);
-    box(B, cx, y + 0.22, cz - 0.5, 2.5, 1.05, 1.6, 0, shade(LACQUER, 1.05), LACQUER, shade(LACQUER, 0.55));
-    slateGable(B, cx, y + 1.27, cz - 0.5, 2.5, 1.6, 0.95, 0, 0.42, 0.9);
-    for (const sx of [-1, 1]) box(B, cx + sx * 1.38, y + 2.1, cz - 0.5, 0.2, 0.2, 0.2, 0, GOLD, GOLD, shade(GOLD, 0.7));
+    // the governor's compound, north of the centre, facing south down the main street
+    const yx = R * 0.42, yz0 = -inner + 0.12, yz1 = -sw - 0.35, yc = (yz0 + yz1) / 2, ydep = yz1 - yz0;
+    box(B, 0, 0.03, yc, 2 * yx, 0.02, ydep, 0, TOWNC.yard, TOWNC.yard, TOWNC.yard);
+    box(B, 0, 0.05, (yz1 + yc) / 2, 0.36, 0.02, yz1 - yc, 0, TOWNC.pave, TOWNC.pave, TOWNC.pave); // the paved way to the hall
+    const cwH = lv >= 4 ? 0.62 : 0.34, cwT = lv >= 4 ? 0.26 : 0.1, cwCol = lv >= 4 ? TOWNC.earth : TOWNC.cream;
+    const cwalls = [[-yx, yz0, yx, yz0, 0, -1], [-yx, yz0, -yx, yz1, -1, 0], [yx, yz0, yx, yz1, 1, 0], [-yx, yz1, -0.3, yz1, 0, 1], [0.3, yz1, yx, yz1, 0, 1]];
+    for (const [ax, az, bx, bz] of cwalls) {
+      const lx = Math.max(cwT, Math.abs(bx - ax) + cwT), lz = Math.max(cwT, Math.abs(bz - az) + cwT);
+      box(B, (ax + bx) / 2, 0, (az + bz) / 2, lx, cwH, lz, 0, lv >= 4 ? TOWNC.cap : TOWNC.creamCap, cwCol, shade(cwCol, 0.65));
+    }
+    hall(B, 0, 0, yz1, 0.62, 0.36, 0.34, { lite, rh: 0.2 }); // the compound's gate
+    // the main hall on a two-step earth platform, the rear hall, the side wings
+    const hz = yc + ydep * 0.06, hw = yx * 1.3, hd = Math.min(1.05, ydep * 0.46);
+    box(B, 0, 0, hz, hw + 0.36, 0.14, hd + 0.34, 0, TOWNC.cap, TOWNC.earth, shade(TOWNC.earth, 0.6));
+    box(B, 0, 0.14, hz, hw + 0.16, 0.12, hd + 0.16, 0, lighten(TOWNC.cap, 0.15), TOWNC.cap, shade(TOWNC.cap, 0.7));
+    hall(B, 0, 0.26, hz, hw, hd, 0.52 + lv * 0.05, { hip: lv >= 3, rh: 0.5 + lv * 0.04, ov: 0.3, windows: true, lite });
+    if (lv >= 2) hall(B, 0, 0, yz0 + 0.42, hw * 0.85, 0.5, 0.44, { hip: lv >= 4, rh: 0.34, ov: 0.22, lite });
+    for (const s of [-1, 1]) { // side halls along the compound's walls, a tree before each
+      const wx = s * (yx - 0.36), wd = Math.min(1.3, ydep * 0.55);
+      box(B, wx, 0, hz + 0.1, 0.42, 0.38, wd, 0, TOWNC.cream, TOWNC.cream, shade(TOWNC.cream, 0.7));
+      tileGable(B, wx, 0.38, hz + 0.1, wd, 0.42, 0.26, Math.PI / 2, SLATE, TOWNC.cream, 0.12, lite ? 1 : 3);
+    }
+    const flagAt = [0, 0.26 + 0.52 + lv * 0.05 + 0.5 + lv * 0.04 - 0.1, hz + hd * 0.5 + 0.35];
+    // the watchtower at the crossroads
+    if (lv >= 1) {
+      box(B, 0, 0, 0, 0.72, 0.22, 0.72, 0, TOWNC.cap, TOWNC.earth, shade(TOWNC.earth, 0.6));
+      const st = [0, 2, 2, 3, 3][lv];
+      lacquerTower(B, 0, 0.22, 0, 0.62, 0.62, st, { h: 0.4, rh: 0.36, ov: 0.26, timber: lv <= 2, roof: lv === 1 ? TOWNC.thatch : SLATE, lite });
+    }
+    // the blocks: courtyard compounds, the market, the granaries, trees
+    const cell = lv <= 1 ? 1.4 : 0.98, trees = [];
+    const taken = (x0, x1, z0, z1) => (x1 > -sw - 0.05 && x0 < sw + 0.05) || (z1 > -sw - 0.05 && z0 < sw + 0.05) || (x1 > -yx - 0.15 && x0 < yx + 0.15 && z0 < yz1 + 0.15) || (Math.abs((x0 + x1) / 2) < 0.75 && Math.abs((z0 + z1) / 2) < 0.75);
+    let market = false, granary = false;
+    const cells = [];
+    for (let gx = -inner; gx + cell <= inner + 0.01; gx += cell) for (let gz = -inner; gz + cell <= inner + 0.01; gz += cell) cells.push([gx, gz]);
+    cells.sort((p, q) => Math.hypot(p[0] + cell / 2, p[1] + cell / 2) - Math.hypot(q[0] + cell / 2, q[1] + cell / 2));
+    const thatchP = [1, 0.55, 0.12, 0, 0][lv];
+    for (const [gx, gz] of cells) {
+      const x0 = gx + 0.06, x1 = gx + cell - 0.06, z0 = gz + 0.06, z1 = gz + cell - 0.06, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, c = x1 - x0;
+      if (taken(x0, x1, z0, z1)) continue;
+      if (!market && lv >= 1 && cx > 0 && cz > 0) { // the market: a paved square under paper awnings
+        market = true;
+        box(B, cx, 0.03, cz, c, 0.02, c, 0, TOWNC.pave, TOWNC.pave, TOWNC.pave);
+        for (let i = 0; i < 4; i++) {
+          const ax = cx + ((i % 2) - 0.5) * c * 0.48, az = cz + (Math.floor(i / 2) - 0.5) * c * 0.48, col = TOWNC.awning[i % TOWNC.awning.length];
+          box(B, ax, 0.05, az, 0.3, 0.12, 0.2, 0, TOWNC.cap, TOWNC.wood, shade(TOWNC.wood, 0.7));
+          B.quad([ax - 0.24, 0.3, az - 0.2], [ax + 0.24, 0.3, az - 0.2], [ax + 0.24, 0.22, az + 0.2], [ax - 0.24, 0.22, az + 0.2], col, [0, 1, 0.2]);
+          B.quad([ax - 0.24, 0.22, az + 0.2], [ax + 0.24, 0.22, az + 0.2], [ax + 0.24, 0.16, az + 0.22], [ax - 0.24, 0.16, az + 0.22], shade(col, 0.75), [0, 0, 1]);
+        }
+        continue;
+      }
+      if (!granary && lv >= 1 && cx > 0 && cz < 0) { // granaries: round card drums under conical slate roofs
+        granary = true;
+        for (let i = 0; i < 3; i++) { const qx = cx + (i - 1) * c * 0.31; frustum(B, qx, cz, 0.02, 0.42, 0.17, 0.16, 10, 0, shade(TOWNC.cream, 0.8), TOWNC.cream); frustum(B, qx, cz, 0.4, 0.66, 0.24, 0.02, 10, 0, shade(lv === 1 ? TOWNC.thatch : SLATE, 0.8), lv === 1 ? TOWNC.thatch : SLATE); }
+        continue;
+      }
+      // a courtyard compound: cream wall with a slate cap, its gate (a dark slit) to the south, the main house north, wings, a yard
+      const roof = r() < thatchP ? TOWNC.thatch : shade(SLATE, 0.92 + 0.16 * r()), wallC = shade(TOWNC.cream, 0.95 + 0.07 * r()), wh = 0.2, wt = 0.06;
+      box(B, cx, 0.03, cz, c, 0.012, c, 0, TOWNC.yard, TOWNC.yard, TOWNC.yard);
+      if (lv >= 1) for (const [a0, a1, b0, b1] of [[x0, x1, z0, z0], [x0, x0, z0, z1], [x1, x1, z0, z1], [x0, cx - 0.1, z1, z1], [cx + 0.1, x1, z1, z1]]) {
+        const lx = Math.max(wt, a1 - a0 + wt), lz = Math.max(wt, b1 - b0 + wt);
+        box(B, (a0 + a1) / 2, 0, (b0 + b1) / 2, lx, wh, lz, 0, roof === TOWNC.thatch ? shade(TOWNC.thatch, 0.85) : mix(TOWNC.creamCap, wallC, 0.55), wallC, shade(wallC, 0.7));
+      }
+      if (lv >= 1) B.quad([cx - 0.09, 0.0, z1 + wt / 2 + 0.01], [cx + 0.09, 0.0, z1 + wt / 2 + 0.01], [cx + 0.09, wh * 0.85, z1 + wt / 2 + 0.01], [cx - 0.09, wh * 0.85, z1 + wt / 2 + 0.01], TOWNC.slit, [0, 0, 1]);
+      const mw = c * 0.86, md = c * 0.4, mh = 0.34 + 0.06 * r(), rich = lv >= 2 && r() < 0.3;
+      hall(B, cx, 0, z0 + md / 2 + 0.06, mw, md, mh, { wall: wallC, roof, rh: rich ? 0.34 : 0.3, ov: 0.14, hip: rich, lite: true });
+      const wings = r() < 0.75 ? [-1, 1] : [r() < 0.5 ? -1 : 1];
+      for (const s of wings) {
+        const wx = cx + s * (c / 2 - 0.22), wz = cz + 0.14, ww = 0.34, wd = c * 0.46;
+        box(B, wx, 0, wz, ww, 0.3, wd, 0, wallC, wallC, shade(wallC, 0.7));
+        tileGable(B, wx, 0.3, wz, wd, ww, 0.22, Math.PI / 2, roof, wallC, 0.1, lite ? 1 : 2);
+      }
+      if (r() < 0.7) trees.push([cx + (r() - 0.5) * c * 0.2, cz + c * 0.24, 0.66]);
+      if (lv === 0 && r() < 0.8) frustum(B, cx + c * 0.3, cz + c * 0.3, 0.02, 0.36, 0.16, 0.0, 8, 0, shade(TOWNC.thatch, 0.85), lighten(TOWNC.thatch, 0.1)); // a haystack
+    }
+    // trees along the main streets, in the corners inside and a few outside the walls
+    if (lv >= 1) for (let i = 1; i < 4; i++) for (const sx of [-1, 1]) { const d = (inner * i) / 4 + 0.25; trees.push([sx * (sw + 0.22), d + 0.1, 0.55]); if (i > 1) trees.push([d, sx * (sw + 0.22), 0.55]), trees.push([-d, sx * (sw + 0.22), 0.55]); }
+    for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) if (r() < 0.8) trees.push([sx * (inner - 0.3), sz * (inner - 0.3), 0.7]);
+    for (let i = 0; i < 6 + lv; i++) { const a = r() * Math.PI * 2, rr2 = R + T.wt / 2 + (T.moat ? 1.25 : 0.4) + r() * 0.25, x = Math.cos(a) * rr2, z = Math.sin(a) * rr2; if (Math.abs(x) < sw + 0.4 || Math.abs(z) < sw + 0.4) continue; trees.push([clamp(x, -P + 0.25, P - 0.25), clamp(z, -P + 0.25, P - 0.25), 0.75]); }
+    for (const [x, z, s] of trees) {
+      const col = TOWNC.tree[Math.floor(r() * TOWNC.tree.length)], rr = r() * 6;
+      frustum(B, x, z, 0, 0.22 * s, 0.07 * s, 0.06 * s, 5, 0, TOWNC.wood, TOWNC.wood);
+      frustum(B, x, z, 0.2 * s, 0.5 * s, 0.34 * s, 0.42 * s, 8, rr, shade(col, 0.75), shade(col, 0.95));
+      frustum(B, x, z, 0.5 * s, 0.78 * s, 0.42 * s, 0.2 * s, 8, rr + 0.3, shade(col, 0.98), lighten(col, 0.12), { cap: lighten(col, 0.2) });
+    }
+    appendScaled(B0, B, 0, 0, 0, o.scale || 1, o.x || 0, o.y || 0, o.z || 0);
+    const k = o.scale || 1;
+    return { plate: P * k, plateY: o.y || 0, R: R * k, flagAt: [(o.x || 0) + flagAt[0] * k, (o.y || 0) + flagAt[1] * k, (o.z || 0) + flagAt[2] * k], tris: B.tris };
   }
 
   // the backdrop: far paper ridges, a paper sun with its rings and strips of cloud, stacked-disc clouds
@@ -614,11 +852,94 @@
     if (!o.noFlag) { /* the flag is a dynamic mesh the page adds */ }
   }
 
+  // a square frame in the owner's colour round a town's plate (half-size P, ribbon width w, thickness t): a paper ribbon on the card
+  function ownerFrame(THREE, P, w, t) {
+    const B = new Builder(), c = [1, 1, 1];
+    for (const [sx, sz, lx, lz] of [[0, -1, 2 * P + w, w], [0, 1, 2 * P + w, w], [-1, 0, w, 2 * P - w], [1, 0, w, 2 * P - w]]) box(B, sx * (P - w / 2 + w / 2), 0, sz * (P - w / 2 + w / 2), lx, t, lz, 0, c, shade(c, 0.8), shade(c, 0.62));
+    const g = B.geometry(THREE);
+    return new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, color: 0xffffff }));
+  }
+
+  // the stage both maps share: renderer, scene, camera, lights, the paper-fibre material patch and the post pass (MSAA, then a
+  // separable tilt-shift blur + vignette; the low tier draws straight to the canvas). ST.tilt = { c, w0, w1, top, bot } in screen
+  // terms: the sharp band's centre (0 bottom … 1 top), where the blur starts and is full, and the blur radius above / below it.
+  function makeStage(o) {
+    const THREE = o.THREE, doc = o.doc, q = o.q, tier = o.tier;
+    const W0 = +q.get('w') || root.innerWidth, H0 = +q.get('h') || root.innerHeight;
+    // mid/high render into a multisampled target (MSAA), then a separable tilt-shift blur + vignette; low draws straight to the canvas
+    const renderer = new THREE.WebGLRenderer({ antialias: tier.aa && !tier.post, alpha: false, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(+q.get('dpr') || root.devicePixelRatio || 1, tier.dpr));
+    renderer.setSize(W0, H0, false); renderer.info.autoReset = false;
+    renderer.shadowMap.enabled = !!tier.shadow; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    doc.body.insertBefore(renderer.domElement, doc.body.firstChild);
+    const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(32, W0 / H0, 8, 900);
+    scene.fog = new THREE.Fog(0xdfe8ee, 200, 500);
+    const hemi = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.46), key = new THREE.DirectionalLight(0xffffff, 0.98);
+    scene.add(hemi, key, key.target);
+    if (tier.shadow) {
+      key.castShadow = true; key.shadow.mapSize.set(tier.shadow, tier.shadow);
+      const sc = key.shadow.camera; sc.left = -95; sc.right = 95; sc.top = 95; sc.bottom = -95; sc.near = 20; sc.far = 400;
+      key.shadow.bias = -0.0004; key.shadow.normalBias = 0.18; key.shadow.radius = tier.shadow > 2048 ? 4 : 3;
+    }
+    // paper: a very faint world-space fibre/grain noise multiplied into the albedo (no textures), slightly matte
+    const paperize = (mat, amp) => {
+      mat.onBeforeCompile = (sh) => {
+        sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWp;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvWp = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+        sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+varying vec3 vWp;
+float ph(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float pn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(ph(i), ph(i + vec2(1.0, 0.0)), f.x), mix(ph(i + vec2(0.0, 1.0)), ph(i + vec2(1.0, 1.0)), f.x), f.y); }`)
+          .replace('#include <color_fragment>', `#include <color_fragment>
+{ vec2 w = vWp.xz + vWp.y * vec2(0.7, 1.3); float vd = distance(vWp, cameraPosition), near = 1.0 - smoothstep(25.0, 150.0, vd), fine = 1.0 - smoothstep(70.0, 260.0, vd);
+  float fib = pn(w * vec2(9.0, 2.2)) * 0.5 + pn(w * vec2(2.4, 11.0)) * 0.5, grain = pn(w * 26.0), streak = pn(w * vec2(31.0, 4.0));
+  diffuseColor.rgb *= 1.0 + ${amp.toFixed(3)} * (0.55 + 1.5 * near) * ((fib - 0.5) * 1.6 * (0.4 + 0.6 * fine) + ((grain - 0.5) * 0.9 + (streak - 0.5) * 0.7) * fine); }`);
+      };
+      mat.customProgramCacheKey = () => 'paper' + amp;
+      return mat;
+    };
+    const lam = paperize(new THREE.MeshLambertMaterial({ vertexColors: true }), 0.05), bas = new THREE.MeshBasicMaterial({ vertexColors: true });
+    let post = null; // { rtA, rtB, quad, qScene, qCam, mH, mV }
+    function makePost() {
+      const sz = renderer.getDrawingBufferSize(new THREE.Vector2()), pr = renderer.getPixelRatio();
+      if (post) { post.rtA.dispose(); post.rtB.dispose(); post.mH.dispose(); post.mV.dispose(); post.quad.geometry.dispose(); }
+      const rtA = new THREE.WebGLRenderTarget(sz.x, sz.y, { samples: tier.msaa, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter }), rtB = new THREE.WebGLRenderTarget(sz.x, sz.y, { depthBuffer: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
+      const vs = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
+      const fs = (last) => `varying vec2 vUv; uniform sampler2D t; uniform vec2 dir; uniform float aspect; uniform vec4 band; uniform vec2 rad;
+        void main(){
+          float d = abs(vUv.y - band.x), m = smoothstep(band.y, band.z, d), r = m * (vUv.y > band.x ? rad.x : rad.y) * ${pr.toFixed(2)};
+          vec4 c = texture2D(t, vUv) * 0.2270;
+          c += (texture2D(t, vUv + dir * r * 1.3846) + texture2D(t, vUv - dir * r * 1.3846)) * 0.3162;
+          c += (texture2D(t, vUv + dir * r * 3.2308) + texture2D(t, vUv - dir * r * 3.2308)) * 0.0703;
+          ${last ? 'vec2 q = (vUv - 0.5) * vec2(aspect, 1.0); c.rgb *= 1.0 - 0.3 * smoothstep(0.42, 1.05, length(q)); c.rgb = mix(c.rgb, c.rgb * vec3(1.02, 1.0, 0.97), 0.5);' : ''}
+          gl_FragColor = vec4(c.rgb, 1.0);
+        }`;
+      const mk = (last, dir) => new THREE.ShaderMaterial({ vertexShader: vs, fragmentShader: fs(last), uniforms: { t: { value: null }, dir: { value: dir }, aspect: { value: sz.x / sz.y }, band: { value: new THREE.Vector4(0.44, 0.24, 0.62, 0) }, rad: { value: new THREE.Vector2(2.3, 2.3) } }, depthTest: false, depthWrite: false });
+      const mH = mk(false, new THREE.Vector2(1 / sz.x, 0)), mV = mk(true, new THREE.Vector2(0, 1 / sz.y));
+      const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mH); quad.frustumCulled = false;
+      post = { rtA, rtB, quad, qScene: new THREE.Scene(), qCam: new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), mH, mV }; post.qScene.add(quad);
+    }
+    if (tier.post) makePost();
+    const tilt = { c: 0.44, w0: 0.24, w1: 0.62, top: 2.3, bot: 2.3 };
+    function renderFrame() {
+      if (!post) { renderer.render(scene, cam); return; }
+      for (const m of [post.mH, post.mV]) { m.uniforms.band.value.set(tilt.c, tilt.w0, tilt.w1, 0); m.uniforms.rad.value.set(tilt.top, tilt.bot); }
+      renderer.setRenderTarget(post.rtA); renderer.render(scene, cam);
+      post.quad.material = post.mH; post.mH.uniforms.t.value = post.rtA.texture; renderer.setRenderTarget(post.rtB); renderer.render(post.qScene, post.qCam);
+      post.quad.material = post.mV; post.mV.uniforms.t.value = post.rtB.texture; renderer.setRenderTarget(null); renderer.render(post.qScene, post.qCam);
+    }
+
+    const ST = { renderer, scene, cam, hemi, key, paperize, lam, bas, renderFrame, makePost, tilt };
+    Object.defineProperty(ST, 'post', { get: () => post });
+    return ST;
+  }
+
   // ================================================================ the page
   function boot() {
     const THREE = root.THREE, V2 = root.EmperorsV2, doc = root.document;
     const $ = (id) => doc.getElementById(id);
     const q = new URLSearchParams(root.location.search);
+    if ((q.get('map') || 'world') !== 'huainan' && root.PaperWorld) return root.PaperWorld.boot(); // the whole map is the default; ?map=huainan plays Hoài Nam
+    doc.title = 'Hoài Nam bằng giấy';
     const tierName = TIERS[q.get('tier')] ? q.get('tier') : 'mid', tier = TIERS[tierName];
     const lockSeason = q.get('season') ? SEASON_KEY[q.get('season').normalize('NFC')] || (PAL[q.get('season')] ? q.get('season') : null) : null;
     const seed = +q.get('seed') || 3;
@@ -630,74 +951,17 @@
       let g = V2.newGame(data, seed), view = V2.view(g);
       const factions = data.factions;
       const fcol = (fid) => hex((factions[fid] || factions.local).color);
-      const townList = data.towns.map((d) => ({ id: d.id, name: d.name, x: d.xz[0], z: d.xz[1], level: TOWN_LEVEL[d.id] || 2, river: d.river }));
+      const townList = data.towns.map((d) => ({ id: d.id, name: d.name, x: d.xz[0], z: d.xz[1], level: TOWN_LEVEL[d.id] || 2, town: TOWN_RANK[d.id] == null ? 2 : TOWN_RANK[d.id], river: d.river }));
       const townById = Object.fromEntries(townList.map((t) => [t.id, t]));
       const seasonOf = (v) => SEASON_KEY[v.calendar.split(' ')[0]] || 'autumn';
       let seasonKey = lockSeason || seasonOf(view);
 
       // ---- renderer / scene
-      const W0 = +q.get('w') || root.innerWidth, H0 = +q.get('h') || root.innerHeight;
-      // mid/high render into a multisampled target (MSAA), then a separable tilt-shift blur + vignette; low draws straight to the canvas
-      const renderer = new THREE.WebGLRenderer({ antialias: tier.aa && !tier.post, alpha: false, powerPreference: 'high-performance' });
-      renderer.setPixelRatio(Math.min(+q.get('dpr') || root.devicePixelRatio || 1, tier.dpr));
-      renderer.setSize(W0, H0, false); renderer.info.autoReset = false;
-      renderer.shadowMap.enabled = !!tier.shadow; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      doc.body.insertBefore(renderer.domElement, doc.body.firstChild);
-      const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(32, W0 / H0, 8, 900);
-      scene.fog = new THREE.Fog(0xdfe8ee, 200, 500);
-      const hemi = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.46), key = new THREE.DirectionalLight(0xffffff, 0.98);
-      scene.add(hemi, key, key.target);
-      if (tier.shadow) {
-        key.castShadow = true; key.shadow.mapSize.set(tier.shadow, tier.shadow);
-        const sc = key.shadow.camera; sc.left = -95; sc.right = 95; sc.top = 95; sc.bottom = -95; sc.near = 20; sc.far = 400;
-        key.shadow.bias = -0.0004; key.shadow.normalBias = 0.18; key.shadow.radius = tier.shadow > 2048 ? 4 : 3;
-      }
+      const ST = makeStage({ THREE, doc, q, tier });
+      const { renderer, scene, cam, hemi, key, paperize, lam, bas, renderFrame } = ST;
       const world = new THREE.Group(); scene.add(world);
       const dyn = new THREE.Group(); scene.add(dyn);
-      // paper: a very faint world-space fibre/grain noise multiplied into the albedo (no textures), slightly matte
-      const paperize = (mat, amp) => {
-        mat.onBeforeCompile = (sh) => {
-          sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWp;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvWp = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-          sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
-varying vec3 vWp;
-float ph(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-float pn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(ph(i), ph(i + vec2(1.0, 0.0)), f.x), mix(ph(i + vec2(0.0, 1.0)), ph(i + vec2(1.0, 1.0)), f.x), f.y); }`)
-            .replace('#include <color_fragment>', `#include <color_fragment>
-{ vec2 w = vWp.xz + vWp.y * vec2(0.7, 1.3);
-  float fib = pn(w * vec2(9.0, 2.2)) * 0.5 + pn(w * vec2(2.4, 11.0)) * 0.5, grain = pn(w * 26.0);
-  diffuseColor.rgb *= 1.0 + ${amp.toFixed(3)} * ((fib - 0.5) * 1.6 + (grain - 0.5) * 0.9); }`);
-        };
-        mat.customProgramCacheKey = () => 'paper' + amp;
-        return mat;
-      };
-      const lam = paperize(new THREE.MeshLambertMaterial({ vertexColors: true }), 0.05), bas = new THREE.MeshBasicMaterial({ vertexColors: true });
-      let post = null; // { rtA, rtB, quad, qScene, qCam, mH, mV }
-      function makePost() {
-        const sz = renderer.getDrawingBufferSize(new THREE.Vector2()), pr = renderer.getPixelRatio();
-        if (post) { post.rtA.dispose(); post.rtB.dispose(); post.mH.dispose(); post.mV.dispose(); post.quad.geometry.dispose(); }
-        const rtA = new THREE.WebGLRenderTarget(sz.x, sz.y, { samples: tier.msaa, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter }), rtB = new THREE.WebGLRenderTarget(sz.x, sz.y, { depthBuffer: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
-        const vs = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
-        const fs = (last) => `varying vec2 vUv; uniform sampler2D t; uniform vec2 dir; uniform float aspect;
-          void main(){
-            float d = abs(vUv.y - 0.44), m = smoothstep(0.24, 0.62, d), r = m * ${(2.3 * pr).toFixed(2)};
-            vec4 c = texture2D(t, vUv) * 0.2270;
-            c += (texture2D(t, vUv + dir * r * 1.3846) + texture2D(t, vUv - dir * r * 1.3846)) * 0.3162;
-            c += (texture2D(t, vUv + dir * r * 3.2308) + texture2D(t, vUv - dir * r * 3.2308)) * 0.0703;
-            ${last ? 'vec2 q = (vUv - 0.5) * vec2(aspect, 1.0); c.rgb *= 1.0 - 0.3 * smoothstep(0.42, 1.05, length(q)); c.rgb = mix(c.rgb, c.rgb * vec3(1.02, 1.0, 0.97), 0.5);' : ''}
-            gl_FragColor = vec4(c.rgb, 1.0);
-          }`;
-        const mk = (last, dir) => new THREE.ShaderMaterial({ vertexShader: vs, fragmentShader: fs(last), uniforms: { t: { value: null }, dir: { value: dir }, aspect: { value: sz.x / sz.y } }, depthTest: false, depthWrite: false });
-        const mH = mk(false, new THREE.Vector2(1 / sz.x, 0)), mV = mk(true, new THREE.Vector2(0, 1 / sz.y));
-        const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mH); quad.frustumCulled = false;
-        post = { rtA, rtB, quad, qScene: new THREE.Scene(), qCam: new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), mH, mV }; post.qScene.add(quad);
-      }
-      if (tier.post) makePost();
-      function renderFrame() {
-        if (!post) { renderer.render(scene, cam); return; }
-        renderer.setRenderTarget(post.rtA); renderer.render(scene, cam);
-        post.quad.material = post.mH; post.mH.uniforms.t.value = post.rtA.texture; renderer.setRenderTarget(post.rtB); renderer.render(post.qScene, post.qCam);
-        post.quad.material = post.mV; post.mV.uniforms.t.value = post.rtB.texture; renderer.setRenderTarget(null); renderer.render(post.qScene, post.qCam);
-      }
+      const makePost = ST.makePost;
       let S = null, glow = null; const fogCol = new THREE.Color(); // the current static scene
       const stats = { tris: 0, calls: 0 };
 
@@ -707,7 +971,7 @@ float pn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); 
         const pal = palette(name), st = buildStatic({ tier: tierName, pal, towns: townList, seed: 7 });
         const meshes = [];
         const add = (b, mat, cast, recv) => { const m = new THREE.Mesh(b.geometry(THREE), mat); m.castShadow = cast; m.receiveShadow = recv; world.add(m); meshes.push(m); return m; };
-        add(st.terrain, lam, true, true); add(st.river, lam, false, true); add(st.mtn, lam, true, true); add(st.props, lam, true, true); add(st.back, bas, false, false);
+        add(st.terrain, lam, true, true); add(st.river, lam, false, true); add(st.mtn, lam, true, true); add(st.props, lam, true, true); add(st.towns, lam, true, true); add(st.back, bas, false, false);
         // sun glow: a soft additive sprite behind the paper sun
         const cv = doc.createElement('canvas'); cv.width = cv.height = 128; const cx = cv.getContext('2d'), gr = cx.createRadialGradient(64, 64, 8, 64, 64, 64);
         const sc = pal.sun[0], rgb = `${Math.round(sc[0] * 255)},${Math.round(sc[1] * 255)},${Math.round(sc[2] * 255)}`;
@@ -721,7 +985,7 @@ float pn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); 
         const sk = doc.createElement('canvas'); sk.width = 4; sk.height = 256; const sx = sk.getContext('2d'), sg = sx.createLinearGradient(0, 0, 0, 256); sg.addColorStop(0, pal.bgCss[0]); sg.addColorStop(1, pal.bgCss[1]); sx.fillStyle = sg; sx.fillRect(0, 0, 4, 256);
         scene.background = new THREE.CanvasTexture(sk); fogCol.setRGB(...mix(mix(hex(pal.bgCss[0]), hex(pal.bgCss[1]), 0.5), [0.8, 0.88, 0.93], 0.2)); scene.fog.color.copy(fogCol);
         doc.documentElement.style.setProperty('--bg1', pal.bgCss[0]); doc.documentElement.style.setProperty('--bg2', pal.bgCss[1]);
-        P.season = name; P.tris = st.terrain.tris + st.river.tris + st.mtn.tris + st.props.tris + st.back.tris;
+        P.season = name; P.tris = st.terrain.tris + st.river.tris + st.mtn.tris + st.props.tris + st.towns.tris + st.back.tris;
         rebuildTowns(); syncAll(false);
       }
 
@@ -755,10 +1019,9 @@ float pn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); 
         hitTowns.length = 0;
         for (const t of townList) {
           const y = S.topY(t.x, t.z), g = new THREE.Group(); g.position.set(t.x, y, t.z);
-          const ring = new THREE.Mesh(new THREE.RingGeometry(PLATEAU.r1 - 1.0, PLATEAU.r1 - 0.3, 40), new THREE.MeshLambertMaterial({ color: 0xffffff }));
-          ring.rotation.x = -Math.PI / 2; ring.position.y = 0.06; ring.receiveShadow = true; g.add(ring);
-          const banner = new THREE.Group(); g.add(banner); banner.userData.t = 1; const pole = new THREE.Mesh(new THREE.BoxGeometry(0.2, 6.4, 0.2), new THREE.MeshLambertMaterial({ color: 0x7a5a3a })); pole.position.set(0, 4.9, -0.7); banner.add(pole);
-          const flag = makeFlag(3.6, 2.1, 6); flag.userData.ph = t.x; flag.position.set(0.1, 7.7, -0.7); flag.castShadow = true; banner.add(flag); flags.push(flag);
+          const info = S.st.townInfo[t.id], ring = ownerFrame(THREE, info.plate, 0.55, 0.16); ring.position.y = info.plateY - y; ring.receiveShadow = true; g.add(ring);
+          const banner = new THREE.Group(); g.add(banner); banner.position.set(info.flagAt[0] - t.x, info.flagAt[1] - y, info.flagAt[2] - t.z); const pole = new THREE.Mesh(new THREE.BoxGeometry(0.2, 4.2, 0.2), new THREE.MeshLambertMaterial({ color: 0x7a5a3a })); pole.position.set(0, 2.1, 0); banner.add(pole);
+          const flag = makeFlag(3.6, 2.1, 6); flag.userData.ph = t.x; flag.position.set(0.1, 3.3, 0); flag.castShadow = true; banner.add(flag); flags.push(flag);
           const hit = new THREE.Mesh(new THREE.CylinderGeometry(6.4, 6.4, 8, 10), new THREE.MeshBasicMaterial({ visible: false })); hit.position.y = 3; hit.userData = { kind: 'town', id: t.id }; g.add(hit); hitTowns.push(hit);
           dyn.add(g); townObj[t.id] = { g, ring, flag, y, banner };
         }
@@ -1031,7 +1294,7 @@ float pn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); 
   }
 
   return {
-    boot, palette, PAL, TIERS, BOUNDS, RIVERS, MOUNTAINS, Builder, buildStatic,
-    _: { clamp, smooth, rng, hash2, vnoise, fbm, polyPrep, polyAt, polyNearest, makeTerrain, makeField, sliceCell, contourLevel, edgeInterval, box, frustum, gable, standee, boat, LAYER, LEVELS, PLATEAU },
+    boot, makeStage, palette, PAL, TIERS, BOUNDS, RIVERS, MOUNTAINS, Builder, buildStatic,
+    _: { clamp, lerp, smooth, rng, hash2, vnoise, fbm, strSeed, hex, mix, shade, lighten, ramp, polyPrep, polyAt, polyNearest, makeTerrain, makeField, sliceCell, contourLevel, edgeInterval, box, frustum, gable, wallQuad: wall, appendScaled, hanTown, townPlate, TL, TOWNC, LACQUER, SLATE, ownerFrame, paperTree: tree, rock, standee, boat, UP, LAYER, LEVELS, PLATEAU },
   };
 });
