@@ -340,9 +340,9 @@
     return o;
   }
   const TIERS = {
-    low: { cs: 3.6, peaks: 110, trees: 260, dpr: 1, shadow: 0, post: false, msaa: 0, lite: true, folds: false },
-    mid: { cs: 2.4, peaks: 220, trees: 700, dpr: 2, shadow: 2048, post: true, msaa: 4, lite: false, folds: true },
-    high: { cs: 1.7, peaks: 320, trees: 1300, dpr: 2, shadow: 4096, post: true, msaa: 4, lite: false, folds: true },
+    low: { cs: 3.6, peaks: 130, trees: 260, dpr: 1, shadow: 0, post: false, msaa: 0, lite: true, folds: false },
+    mid: { cs: 2.4, peaks: 270, trees: 700, dpr: 2, shadow: 2048, post: true, msaa: 4, lite: false, folds: true },
+    high: { cs: 1.7, peaks: 400, trees: 1300, dpr: 2, shadow: 4096, post: true, msaa: 4, lite: false, folds: true },
   };
 
   // ---------------------------------------------------------------- the static geometry
@@ -360,7 +360,7 @@
       return { id: p.id, name: p.name, city: p.city, x, z, level, scale: k, plate: PK._.townPlate(level) * k, owner: own, color: spec.colorOf ? spec.colorOf(own) : hex('#8a7a55') };
     });
     const rivers = riverList(spec.water, B, seats), lakes = lakeList(spec.water, B);
-    const F = worldField({ S, B, cs: tier.cs, towns: seats, rivers, lakes, seed });
+    const F = worldField({ S, B, cs: tier.cs, towns: seats, rivers, lakes, seed }); F.proj = spec.proj;
     const P = partition(S, seats, B, 3, 600), lines = borders(P);
     const G = F.G, g = F.g;
     const out = { terrain: new Builder(), water: new Builder(), mtn: new Builder(), trees: new Builder(), towns: new Builder(), borders: new Builder(), F, P, seats, rivers, lakes, pal, tier, lines };
@@ -535,16 +535,26 @@
     const last = rings[rings.length - 1];
     for (let i = 0; i < n; i++) facet(last[i], last[(i + 1) % n], top);
   }
+  // the ranges the overview must show as folded paper (lon, lat polylines): Qinling, Daba, Taihang, Dabie, Wuyi, Nanling, Wuling,
+  // the plateau's eastern edge (Hengduan, Min shan), Qilian, Yin shan
+  const RANGES = [
+    [[104.3, 34.3], [106.5, 34.0], [108.5, 33.9], [110.2, 33.8], [111.5, 33.6]], [[106.3, 32.4], [108.3, 32.0], [110.2, 31.5]],
+    [[112.6, 35.3], [113.5, 36.5], [113.9, 37.8], [114.3, 39.3]], [[114.2, 31.3], [115.6, 31.1], [116.6, 30.9]], [[116.3, 26.3], [117.5, 27.4], [118.6, 28.3]],
+    [[109.8, 25.4], [112.0, 25.2], [114.3, 24.8], [115.4, 24.6]], [[108.4, 28.2], [109.6, 29.0], [110.6, 29.9]],
+    [[102.2, 27.0], [102.6, 29.2], [103.0, 30.9], [103.6, 32.4], [104.0, 33.3]], [[97.8, 39.2], [99.8, 38.4], [101.8, 37.6], [103.0, 37.0]], [[106.6, 41.0], [109.5, 41.1], [112.0, 41.2]],
+  ];
   function buildPeaks(B, F, S, seats, pal, tier, rnd) {
-    const cand = [], sp = 6.5;
+    const cand = [], sp = 6.5, lines = (F.proj ? RANGES.map((L) => L.map((p) => F.proj.toWorld(p[0], p[1]))) : []);
+    const nearRange = (x, z) => { let d = 1e9; for (const L of lines) for (let i = 0; i + 1 < L.length; i++) { const a = L[i], b = L[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz, t = clamp(((x - a[0]) * dx + (z - a[1]) * dz) / l2, 0, 1); d = Math.min(d, Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t)); } return d; };
     for (let z = WB.z0 + 6; z < WB.z1 - 6; z += sp) for (let x = WB.x0 + 6; x < WB.x1 - 6; x += sp) {
       const px = x + (rnd() - 0.5) * sp * 0.8, pz = z + (rnd() - 0.5) * sp * 0.8, m = Math.max(0, S.metres(S.H(px, pz)));
-      if (m < 700) continue;
+      if (m < 450) continue;
       let lo = 1e9, hi = -1e9;
       for (let a = 0; a < 8; a++) { const mm = S.metres(S.H(px + Math.cos(a * 0.785) * 7, pz + Math.sin(a * 0.785) * 7)); lo = Math.min(lo, mm); hi = Math.max(hi, mm); }
       const relief = Math.max(hi, m) - lo;
-      if (relief < 420 && m < 3300) continue;
-      cand.push({ x: px, z: pz, m, relief, score: relief / 900 + Math.max(0, m - 1200) / 2600 + rnd() * 0.35 });
+      const rg = nearRange(px, pz) < 14 ? 1 : 0;
+      if (relief < (rg ? 250 : 420) && m < 3300) continue;
+      cand.push({ x: px, z: pz, m, relief: Math.max(relief, rg * 700), score: relief / 900 + Math.max(0, m - 1200) / 2600 + rg * 3 + rnd() * 0.35 });
     }
     cand.sort((a, b) => b.score - a.score);
     const placed = [];
@@ -786,7 +796,7 @@
           const t = st.seats[i], el = labels[i], bs = Math.max(1, us * 0.75); v3.set(t.info.flagAt[0], t.info.flagAt[1] + 4.4 * bs, t.info.flagAt[2]).project(cam);
           const x = ((v3.x + 1) / 2) * W, y = ((1 - v3.y) / 2) * H, w = el.offsetWidth, h = el.offsetHeight, r = [x - w / 2, y - h, x + w / 2, y];
           const hit = v3.z > 1 || x < -w || x > W + w || y < 0 || y > H + h || rects.some((o) => r[0] < o[2] && r[2] > o[0] && r[1] < o[3] && r[3] > o[1]);
-          el.classList.toggle('city', close);
+          el.classList.toggle('city', close); el.classList.toggle('far', camS.dist > 700);
           el.style.visibility = hit ? 'hidden' : 'visible'; if (!hit) rects.push(r);
           el.style.transform = `translate(${x - w / 2}px,${y - h}px)`;
         }

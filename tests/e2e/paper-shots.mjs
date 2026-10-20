@@ -1,6 +1,6 @@
 // Browser QA + screenshots for paper.html (v3 paper-cut diorama, docs/design/v3-paper.md). Needs `PORT=3120 node server/server.js` running.
 //   PUPPETEER_EXECUTABLE_PATH=/path/to/chromium xvfb-run -a node tests/e2e/paper-shots.mjs [shot ...]   (default: all)
-// shots: default zoom zoomhigh winter spring summer low play   -> test-results/paper/<name>.png + paper-report.json (triangles, draw calls per tier)
+// shots: world worldhigh worldlow province town towns (the whole map, paper-world.js) · default zoom zoomhigh winter spring summer low play (Hoài Nam)   -> test-results/paper/<name>.png + paper-report.json (triangles, draw calls per tier)
 import { createRequire } from 'module';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -39,15 +39,21 @@ try {
     const i = a.indexOf('='), name = a.slice(0, i), q = a.slice(i + 1);
     const p = await open(q); await snap(p, name); await p.close();
   }
-  if (todo('default')) { const p = await open('tier=mid'); await snap(p, 'default'); await p.close(); }
-  if (todo('zoom')) { const p = await open('tier=mid&focus=am_lang&zoom=46'); await snap(p, 'zoom'); await p.close(); }
-  if (todo('zoomhigh')) { const p = await open('tier=high&focus=am_lang&zoom=42'); await snap(p, 'zoomhigh'); await p.close(); }
-  if (todo('winter')) { const p = await open('tier=mid&season=' + encodeURIComponent('Đông')); await snap(p, 'winter'); await p.close(); }
-  if (todo('spring')) { const p = await open('tier=mid&season=' + encodeURIComponent('Xuân')); await snap(p, 'spring'); await p.close(); }
-  if (todo('summer')) { const p = await open('tier=mid&season=' + encodeURIComponent('Hạ')); await snap(p, 'summer'); await p.close(); }
-  if (todo('low')) { const p = await open('tier=low'); await snap(p, 'low'); await p.close(); }
+  if (todo('world')) { const p = await open('tier=mid'); await snap(p, 'world-overview-mid'); await p.close(); }
+  if (todo('worldhigh')) { const p = await open('tier=high'); await snap(p, 'world-overview-high'); await p.close(); }
+  if (todo('worldlow')) { const p = await open('tier=low'); await snap(p, 'world-overview-low'); await p.close(); }
+  if (todo('province')) { const p = await open('tier=mid&focus=jing_nan&zoom=150'); await snap(p, 'world-province-mid'); await p.close(); }
+  if (todo('town')) { const p = await open('tier=high&focus=si_li&zoom=30'); await snap(p, 'world-town-high'); await p.close(); }
+  if (todo('towns')) { const p = await open('map=towns&tier=high'); await snap(p, 'towns-levels-high'); await p.close(); }
+  if (todo('default')) { const p = await open('map=huainan&tier=mid'); await snap(p, 'default'); await p.close(); }
+  if (todo('zoom')) { const p = await open('map=huainan&tier=mid&focus=am_lang&zoom=46'); await snap(p, 'zoom'); await p.close(); }
+  if (todo('zoomhigh')) { const p = await open('map=huainan&tier=high&focus=am_lang&zoom=42'); await snap(p, 'zoomhigh'); await p.close(); }
+  if (todo('winter')) { const p = await open('map=huainan&tier=mid&season=' + encodeURIComponent('Đông')); await snap(p, 'winter'); await p.close(); }
+  if (todo('spring')) { const p = await open('map=huainan&tier=mid&season=' + encodeURIComponent('Xuân')); await snap(p, 'spring'); await p.close(); }
+  if (todo('summer')) { const p = await open('map=huainan&tier=mid&season=' + encodeURIComponent('Hạ')); await snap(p, 'summer'); await p.close(); }
+  if (todo('low')) { const p = await open('map=huainan&tier=low'); await snap(p, 'low'); await p.close(); }
   if (todo('play')) {
-    const p = await open('tier=mid');
+    const p = await open('map=huainan&tier=mid');
     await p.evaluate(() => window.__paper.select('a1')); await snap(p, 'play-1-selected');
     const tg = await p.evaluate(() => window.__paper.V2.targets(window.__paper.game(), 'a1')); console.log('targets', JSON.stringify(tg));
     const t = tg.find((x) => x.kind === 'town' && x.intent === 'ask') || tg[0];

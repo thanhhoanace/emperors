@@ -789,7 +789,6 @@
     for (let i = 0; i < n; i++) {
       const a = pts[i], b = pts[i + 1];
       B.quad([a[0], yBase - 6, zc], [b[0], yBase - 6, zc], [b[0], b[1], zc], [a[0], a[1], zc], [colBot, colBot, colTop, colTop], [0, 0, 1]);
-      B.quad([a[0], yBase - 60, zc], [b[0], yBase - 60, zc], [b[0], yBase - 6, zc], [a[0], yBase - 6, zc], colBot, [0, 0, 1]);
       B.quad([a[0], a[1], zc - thick], [b[0], b[1], zc - thick], [b[0], b[1], zc], [a[0], a[1], zc], shade(colTop, 0.9), UP);
     }
   }
@@ -802,8 +801,7 @@
   function buildBackdrop(B, pal, Bd, rnd) {
     const cx = (Bd.x0 + Bd.x1) / 2;
     const fade = mix(hex(pal.bgCss[0]), hex(pal.bgCss[1]), 0.5); // the ridges melt into the sky's middle tone
-    waveRidge(B, cx - 190, cx + 190, Bd.z0 - 46, 9, 16, 5, pal.far[1], mix(pal.far[1], fade, 0.75), 1.2);
-    waveRidge(B, cx - 190, cx + 190, Bd.z0 - 34, 5, 11, 11, pal.far[0], fade, 1.2);
+    void fade; // round 3: no far ridges (they read as a pale slab behind the plate); the sky gradient is the backdrop
     const sx = cx + 76, sy = 17, sz = Bd.z0 - 52;
     disc(B, sx, sy, sz - 0.4, 19, 0.6, mix(pal.sun[2], pal.sun[0], 0.25), 40);
     disc(B, sx, sy, sz, 15.5, 0.8, pal.sun[0], 40);
