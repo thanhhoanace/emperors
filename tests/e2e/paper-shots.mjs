@@ -1,6 +1,6 @@
 // Browser QA + screenshots for paper.html (v3 paper-cut diorama, docs/design/v3-paper.md). Needs `PORT=3120 node server/server.js` running.
 //   PUPPETEER_EXECUTABLE_PATH=/path/to/chromium xvfb-run -a node tests/e2e/paper-shots.mjs [shot ...]   (default: all)
-// shots: default zoom winter spring summer low play   -> test-results/paper/<name>.png + paper-report.json (triangles, draw calls per tier)
+// shots: default zoom zoomhigh winter spring summer low play   -> test-results/paper/<name>.png + paper-report.json (triangles, draw calls per tier)
 import { createRequire } from 'module';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -17,9 +17,9 @@ const todo = (n) => !want.length || want.includes(n);
 const report = { shots: {}, errors: [] };
 const browser = await puppeteer.launch({ headless: false, executablePath: process.env.PUPPETEER_EXECUTABLE_PATH, protocolTimeout: 900000,
   args: ['--no-sandbox', '--enable-webgl', '--ignore-gpu-blocklist', '--use-gl=angle', '--use-angle=swiftshader-webgl', `--window-size=${W},${H + 120}`] });
-async function open(query) {
+async function open(query, dpr) {
   const page = await browser.newPage();
-  await page.setViewport({ width: W, height: H, deviceScaleFactor: 1 });
+  await page.setViewport({ width: W, height: H, deviceScaleFactor: dpr || (/tier=low/.test(query) ? 1 : 2) });
   await page.setRequestInterception(true);
   page.on('request', (req) => { const m = req.url().match(CDN), f = m && path.join(ROOT, 'node_modules/three', m[1]); if (f && fs.existsSync(f)) return req.respond({ status: 200, contentType: 'application/javascript', body: fs.readFileSync(f) }); req.continue(); });
   page.on('pageerror', (e) => { report.errors.push(e.message); console.error('PAGE_ERROR', e.message); });
@@ -33,7 +33,8 @@ async function open(query) {
 const snap = async (page, name) => { await new Promise((r) => setTimeout(r, 900)); await page.screenshot({ path: path.join(OUT, name + '.png') }); const e = await page.evaluate(() => window.__extra); report.shots[name] = e; console.log(name, JSON.stringify(e)); };
 try {
   if (todo('default')) { const p = await open('tier=mid'); await snap(p, 'default'); await p.close(); }
-  if (todo('zoom')) { const p = await open('tier=high&focus=chung_ly&zoom=44'); await snap(p, 'zoom'); await p.close(); }
+  if (todo('zoom')) { const p = await open('tier=mid&focus=am_lang&zoom=46'); await snap(p, 'zoom'); await p.close(); }
+  if (todo('zoomhigh')) { const p = await open('tier=high&focus=am_lang&zoom=42'); await snap(p, 'zoomhigh'); await p.close(); }
   if (todo('winter')) { const p = await open('tier=mid&season=' + encodeURIComponent('Đông')); await snap(p, 'winter'); await p.close(); }
   if (todo('spring')) { const p = await open('tier=mid&season=' + encodeURIComponent('Xuân')); await snap(p, 'spring'); await p.close(); }
   if (todo('summer')) { const p = await open('tier=mid&season=' + encodeURIComponent('Hạ')); await snap(p, 'summer'); await p.close(); }
